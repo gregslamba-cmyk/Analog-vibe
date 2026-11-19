@@ -411,6 +411,16 @@ fn run_case(
     }
 
     let params = unsafe { extension::<clap_plugin_params>(plugin, CLAP_EXT_PARAMS.as_ptr())? };
+    if plugin_id == SURGICAL_EQ_CLAP_ID {
+        let parameter_count =
+            unsafe { params.count.expect("parameter count callback missing")(plugin) };
+        if parameter_count != 52 {
+            return Err(format!(
+                "ten-band surgical EQ should expose 52 parameters, got {parameter_count}"
+            )
+            .into());
+        }
+    }
     set_parameter(plugin, params, "Bypass", f64::from(case.bypass))?;
     if plugin_id == SURGICAL_EQ_CLAP_ID {
         set_parameter(plugin, params, "Phase Mode", case.mode_index)?;

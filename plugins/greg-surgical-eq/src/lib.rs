@@ -7,7 +7,7 @@ use core_dsp::core_dsp_modules::{
 };
 use nih_plug::prelude::*;
 
-const BAND_COUNT: usize = 8;
+const BAND_COUNT: usize = 10;
 const LINEAR_PHASE_TAPS: usize = 257;
 const MAX_DRY_DELAY: usize = 256;
 
@@ -328,7 +328,7 @@ impl Plugin for GregSurgicalEq {
 impl ClapPlugin for GregSurgicalEq {
     const CLAP_ID: &'static str = "com.greg.audio.greg-surgical-eq";
     const CLAP_DESCRIPTION: Option<&'static str> =
-        Some("Eight-band precision equalizer with minimum and linear phase modes");
+        Some("Ten-band precision equalizer with minimum and linear phase modes");
     const CLAP_MANUAL_URL: Option<&'static str> = None;
     const CLAP_SUPPORT_URL: Option<&'static str> = None;
     const CLAP_FEATURES: &'static [ClapFeature] = &[

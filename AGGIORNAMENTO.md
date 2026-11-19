@@ -26,7 +26,7 @@ Realizzare una suite di plugin audio CLAP in Rust con DSP prioritario, senza GUI
 - DA FARE: preamplificatore con trasformatore.
 - DA FARE: compressore multibanda con quattro bande iniziali ed espansione configurabile.
 - DA FARE: limiter/maximizer con input e limite di uscita.
-- ALPHA: EQ chirurgico a otto bande configurabili con filtri selezionabili e modalità a fase minima/lineare.
+- ALPHA: EQ chirurgico a dieci bande configurabili con filtri selezionabili e modalità a fase minima/lineare.
 - DA FARE: exciter armonico con controllo per bande e livello di picco.
 - DA FARE: low enhancer con generazione di sub-armoniche e controllo dinamico.
 - DA FARE: distorsore multi-tecnologia con algoritmi e filtri pre/post selezionabili.
@@ -75,7 +75,7 @@ Realizzare una suite di plugin audio CLAP in Rust con DSP prioritario, senza GUI
 - Il controllo NIH-plug delle allocazioni e' abilitato nei build debug.
 
 ## EQ chirurgico `greg-surgical-eq` (2026-11-19)
-- Aggiunto il crate CLAP con otto bande attivabili e filtri Bell, Low/High Shelf, High/Low Pass, Notch e Band Pass.
+- Aggiunto il crate CLAP con dieci bande attivabili e filtri Bell, Low/High Shelf, High/Low Pass, Notch e Band Pass.
 - Il modulo `core-dsp::surgical_eq` riutilizza i biquad condivisi per la modalita' minimum-phase e implementa la modalita' linear-phase con FIR simmetrico a 257 tap.
 - Latenza dichiarata all'host: 0 campioni minimum-phase, 128 campioni linear-phase; bypass crossfade e percorso dry allineato alla latenza attiva.
 - Test DSP: boost sinusoidale min/linear-phase, simmetria della risposta impulsiva, latenza del FIR, risposta identita' e rifiuto di configurazioni non valide.

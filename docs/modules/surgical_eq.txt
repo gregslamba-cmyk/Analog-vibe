@@ -1,7 +1,7 @@
 ID: surgical_eq
 File sorgente: core-dsp/src/core_dsp_modules/surgical_eq.rs
 Stato: primitive alpha condivise per equalizzazione parametrica minimum-phase e linear-phase.
-API: EqBand<T>, EqPhaseMode, LinearPhaseFir<TAPS, T> e SurgicalEq<BANDS, TAPS, T>.
+API: EqBand<T>, EqPhaseMode, LinearPhaseFir<TAPS, T> e SurgicalEq<BANDS, TAPS, T>; il plugin instanzia dieci bande.
 Minimum phase: Biquad condivisi in cascata, con filtri attivabili per banda.
 Linear phase: FIR simmetrico dispari, massimo 513 tap, disegnato dalla risposta in ampiezza composta dei biquad con finestra Blackman; coefficiente di gruppo/host pari a TAPS/2.
 Vincoli: FIR > 2 tap, lunghezza dispari e <= 513; frequenza, Q, gain e sample rate devono essere finiti e validi per Biquad.

@@ -2,8 +2,8 @@ ID: greg_surgical_eq
 Categoria: equalizzatore chirurgico
 Stato: alpha implementata; test DSP e caricamento nell'host CLAP offline passati.
 Crate: plugins/greg-surgical-eq; ID CLAP: com.greg.audio.greg-surgical-eq.
-Scopo: equalizzatore parametrico chirurgico a otto bande indipendenti, attivabili e configurabili.
-Controlli globali: Phase Mode (Minimum Phase/Linear Phase), Bypass.
+Scopo: equalizzatore parametrico chirurgico a dieci bande indipendenti, attivabili e configurabili, con workflow ispirato agli equalizzatori parametrici multibanda tipo Q10.
+Controlli globali: Phase Mode (Minimum Phase/Linear Phase), Bypass. L'interfaccia attuale espone i parametri CLAP raggruppati per banda; una GUI custom in stile Q10 non e' ancora implementata.
 Controlli per banda: Enabled, Type, Frequency (20-20000 Hz), Gain (-24/+24 dB), Q (0.1-18).
 Filtri: Bell, Low-Shelf, High-Shelf, High-Pass, Low-Pass, Notch, Band-Pass; le implementazioni derivano dal modulo biquad condiviso.
 Minimum phase: cascata IIR biquad, latenza algoritmica dichiarata 0 campioni.
