@@ -214,6 +214,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "greg-ms-decoder"
+version = "0.1.0"
+dependencies = [
+ "core-dsp",
+ "nih_plug",
+]
+
+[[package]]
+name = "greg-ms-encoder"
+version = "0.1.0"
+dependencies = [
+ "core-dsp",
+ "nih_plug",
+]
+
+[[package]]
 name = "greg-surgical-eq"
 version = "0.1.0"
 dependencies = [

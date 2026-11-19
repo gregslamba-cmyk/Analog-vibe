@@ -3,4 +3,5 @@ File sorgente: core-dsp/src/core_dsp_modules/routing_matrix.rs
 Stato: implementazione alpha.
 Responsabilita: routing mono, stereo, dual-mono e codifica/decodifica M/S con scala normalizzata; inversione di polarita per canale.
 Limite: l'API di slice tratta coppie stereo; routing multicanale generale e policy layout host non sono ancora completati.
-Test: round-trip M/S e comportamento mono.
+Convenzione M/S: M=(L+R)/sqrt(2), S=(L-R)/sqrt(2); la decodifica usa L=(M+S)/sqrt(2), R=(M-S)/sqrt(2). La trasformazione e' ortonormale e a latenza zero.
+Test: round-trip M/S e comportamento mono. `greg_ms_encoder` e `greg_ms_decoder` sono i wrapper CLAP distinti di questa matrice.

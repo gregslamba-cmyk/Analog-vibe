@@ -4,5 +4,7 @@ members = [
     "core-dsp",
     "plugins/greg-fet",
     "plugins/greg-surgical-eq",
+    "plugins/greg-ms-encoder",
+    "plugins/greg-ms-decoder",
     "tools/clap-signal-host",
 ]

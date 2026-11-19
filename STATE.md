@@ -1,5 +1,12 @@
 # Stato del progetto
 
+## Ultimo modulo: utility Mid/Side
+- [COMPLETATO] Implementare `greg_ms_encoder` e `greg_ms_decoder` come plugin CLAP distinti.
+- [COMPLETATO] Riutilizzare la matrice M/S condivisa, documentare la scala ortonormale e il comportamento mono.
+- [COMPLETATO] Aggiungere bypass crossfade di 5 ms, trim M/S, bilanciamento L/R e inversione di polarita'.
+- [COMPLETATO] Verificare build, latenza zero e mapping M/S nell'host CLAP offline.
+- [COMPLETATO] Aggiornare schede TXT, inventario, README e documentazione del test host.
+
 ## Obiettivo
 Creare una suite di plugin audio CLAP in Rust, con DSP senza interfaccia grafica nella fase iniziale e requisiti real-time. Allineare il catalogo breve e quello esteso.
 
@@ -13,6 +20,7 @@ Creare una suite di plugin audio CLAP in Rust, con DSP senza interfaccia grafica
 - [COMPLETATO] Creare un host CLAP offline riutilizzabile per caricare il plugin e inviare segnali audio sintetici.
 - [COMPLETATO] Verificare in host CLAP i fattori oversampling, latenza dichiarata, bypass e inversione L/R del FET.
 - [COMPLETATO] Implementare `greg_surgical_eq` alpha con dieci bande, filtri selezionabili e modalita' min/linear phase.
+- [COMPLETATO] Implementare `greg_ms_encoder` e `greg_ms_decoder` CLAP con trim, balance, polarita', bypass e latenza zero.
 - [COMPLETATO] Aggiungere alla libreria DSP condivisa FIR linear-phase, latenza fissa e test numerici.
 - [COMPLETATO] Caricare FET ed EQ nell'host CLAP offline e verificare processing e latenze dichiarate.
 - [DA FARE] Ampliare le schede da specifiche iniziali a manuali/API completi durante l'implementazione di ciascun componente.
@@ -56,6 +64,8 @@ Oversampling FIR 1x/2x/4x/8x integrato nello stadio di saturazione FET; il ritar
 `cargo fmt --all -- --check` e `cargo test -p greg-fet` passano (7 test). Il percorso audio applica input drive, envelope follower, compressione soft-knee, output level e saturazione morbida. NIH-plug ha `assert_process_allocs` abilitato nei build debug.
 Host offline: `clap-signal-host` carica realmente `target/release/libgreg_fet.so`, processa sinusoidi a 440 Hz per 1x/2x/4x/8x e una sinusoide a 1 kHz con bypass/inversione L. Output finito, livelli, correlazione bypass e latenza CLAP 0/15/22/25 campioni verificati. La latenza totale percepita dipende anche da DAW, driver, interfaccia audio e dimensione del buffer; non è misurata da questo host. Il build release è un ELF condiviso che esporta `clap_entry`.
 `greg-surgical-eq` aggiunto al workspace: 10 bande con sette tipi di filtro, DSP minimum-phase biquad e linear-phase FIR simmetrico a 257 tap; latenza CLAP 0/128 campioni. Test core verificano boost min/linear-phase, simmetria FIR, identita' con ritardo dichiarato e input invalidi. Host CLAP conferma caricamento, sinusoidi d'identita', correlazione e latenza in entrambi i modi.
+
+Utility M/S: `greg_ms_encoder` e `greg_ms_decoder` sono crate CLAP separati e riusano `StereoFrame::route(MidSide)` e `from_mid_side()` con scala ortonormale. Entrambi espongono trim Mid/Side (-24..+24 dB), Balance L/R (-1..+1), inversione selettiva, bypass crossfade 5 ms e latenza zero. Layout mono: pass-through con inversione L opzionale. `cargo test --workspace` (29 test), Clippy e build release passano; host offline verifica M attivo/S nullo nell'encoder, L=R nel decoder, bypass e output finito.
 
 ## Vincoli
 - `nih_plug::Buffer` espone campioni `f32`: un core DSP generico può supportare `f32` e `f64`, ma il wrapper NIH-plug non fornisce processing host-native `f64`.

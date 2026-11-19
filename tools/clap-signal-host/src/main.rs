@@ -34,6 +34,8 @@ static HOST_VENDOR: &CStr = c"Greg Audio";
 static HOST_URL: &CStr = c"https://example.invalid";
 static HOST_VERSION: &CStr = c"0.1.0";
 static SURGICAL_EQ_CLAP_ID: &CStr = c"com.greg.audio.greg-surgical-eq";
+static MS_ENCODER_CLAP_ID: &CStr = c"com.greg.audio.greg-ms-encoder";
+static MS_DECODER_CLAP_ID: &CStr = c"com.greg.audio.greg-ms-decoder";
 
 static HOST_THREAD_CHECK: clap_host_thread_check = clap_host_thread_check {
     is_main_thread: Some(host_is_thread),
@@ -194,6 +196,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let is_surgical_eq = plugin_id == SURGICAL_EQ_CLAP_ID;
+    let is_ms_encoder = plugin_id == MS_ENCODER_CLAP_ID;
+    let is_ms_decoder = plugin_id == MS_DECODER_CLAP_ID;
     let cases = if is_surgical_eq {
         vec![
             TestCase {
@@ -220,6 +224,31 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 bypass: false,
                 invert_left: false,
                 boost_first_eq_band: true,
+                frequency: 1_000.0,
+                amplitude: 0.25,
+            },
+        ]
+    } else if is_ms_encoder || is_ms_decoder {
+        vec![
+            TestCase {
+                name: if is_ms_encoder {
+                    "M/S encoder orthonormal mapping"
+                } else {
+                    "M/S decoder orthonormal mapping"
+                },
+                mode_index: 0.0,
+                bypass: false,
+                invert_left: false,
+                boost_first_eq_band: false,
+                frequency: 1_000.0,
+                amplitude: 0.5,
+            },
+            TestCase {
+                name: "M/S utility bypass",
+                mode_index: 0.0,
+                bypass: true,
+                invert_left: false,
+                boost_first_eq_band: false,
                 frequency: 1_000.0,
                 amplitude: 0.25,
             },
@@ -281,6 +310,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let expected_latencies = if is_surgical_eq {
         vec![0, 128, 0]
+    } else if is_ms_encoder || is_ms_decoder {
+        vec![0, 0]
     } else {
         vec![0, 15, 22, 25, 25]
     };
@@ -310,6 +341,39 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 results[2].left_rms, results[2].right_rms
             )
             .into());
+        }
+    } else if is_ms_encoder {
+        let encoded = &results[0];
+        let bypass = &results[1];
+        if (encoded.left_rms - 0.5).abs() > 0.01 || encoded.right_rms > 0.001 {
+            return Err(format!(
+                "M/S encoder mapping failed: mid RMS {}, side RMS {}",
+                encoded.left_rms, encoded.right_rms
+            )
+            .into());
+        }
+        if (bypass.left_rms - bypass.right_rms).abs() > 0.001
+            || bypass.left_correlation < 0.98
+            || bypass.right_correlation < 0.98
+        {
+            return Err("M/S encoder bypass did not preserve stereo input".into());
+        }
+    } else if is_ms_decoder {
+        let decoded = &results[0];
+        let bypass = &results[1];
+        if (decoded.left_rms - 0.25).abs() > 0.01
+            || (decoded.right_rms - 0.25).abs() > 0.01
+            || decoded.left_correlation < 0.98
+            || decoded.right_correlation < 0.98
+        {
+            return Err(format!(
+                "M/S decoder mapping failed: L/R RMS {}, {}",
+                decoded.left_rms, decoded.right_rms
+            )
+            .into());
+        }
+        if bypass.left_correlation < 0.98 || bypass.right_correlation < 0.98 {
+            return Err("M/S decoder bypass did not preserve M/S input".into());
         }
     } else {
         let dry = &results[4];
@@ -428,6 +492,10 @@ fn run_case(
             set_parameter(plugin, params, "Enabled", 1.0)?;
             set_parameter(plugin, params, "Gain", 0.6875)?;
         }
+    } else if plugin_id == MS_ENCODER_CLAP_ID || plugin_id == MS_DECODER_CLAP_ID {
+        set_parameter(plugin, params, "Mid Trim", 0.5)?;
+        set_parameter(plugin, params, "Side Trim", 0.5)?;
+        set_parameter(plugin, params, "Balance", 0.5)?;
     } else {
         set_parameter(plugin, params, "Oversampling", case.mode_index)?;
         set_parameter(
@@ -505,7 +573,13 @@ fn run_case(
             let phase = std::f64::consts::TAU * case.frequency * sample_index as f64 / SAMPLE_RATE;
             let sample = case.amplitude * phase.sin() as f32;
             input_left[offset] = sample;
-            input_right[offset] = sample;
+            input_right[offset] = if !case.bypass && plugin_id == MS_ENCODER_CLAP_ID {
+                sample
+            } else if !case.bypass && plugin_id == MS_DECODER_CLAP_ID {
+                0.0
+            } else {
+                sample
+            };
             output_left[offset] = 0.0;
             output_right[offset] = 0.0;
         }

@@ -15,6 +15,7 @@ Realizzare una suite di plugin audio CLAP in Rust con DSP prioritario, senza GUI
 
 ## Stato dei moduli
 - IN CORSO: compressore FET `greg-fet`; scheletro CLAP e DSP alpha implementati.
+- ALPHA: coppia di utility `greg_ms_encoder` e `greg_ms_decoder`, implementate in crate separati; mapping, bypass e latenza zero verificati nell'host CLAP offline.
 - DA FARE: compressore opto valvolare.
 - DA FARE: compressore opto a stato solido.
 - DA FARE: compressore Vari-Mu.
@@ -82,6 +83,16 @@ Realizzare una suite di plugin audio CLAP in Rust con DSP prioritario, senza GUI
 - Host CLAP carica il plugin e verifica toni identita' in entrambe le modalita', correlazione e latenza.
 - Verifiche passate: formattazione, `cargo test --workspace` (29 test), Clippy con `-D warnings` e build release.
 - Limiti alpha: FIR diretto a 257 tap; risposta spettrale linear-phase approssimata; riconfigurazione parametri ai confini dei blocchi. Restano da misurare prestazioni e risposta in DAW.
+
+## Utility Mid/Side `greg_ms_encoder` e `greg_ms_decoder` (2026-11-19)
+- Creati due plugin CLAP distinti che riusano il modulo `routing_matrix`.
+- Convenzione ortonormale: M=(L+R)/sqrt(2), S=(L-R)/sqrt(2); il decoder ricostruisce L=(M+S)/sqrt(2), R=(M-S)/sqrt(2).
+- Entrambi espongono trim Mid/Side (-24..+24 dB), balance stereo (-1..+1), inversione di polarita' indipendente e bypass con crossfade di 5 ms.
+- Layout mono: pass-through con inversione L opzionale; trim e balance non applicati. Stereo: processamento in-place senza allocazioni; latenza dichiarata zero.
+- Schede plugin aggiornate con parametri, convenzioni, layout, test e limiti alpha; aggiornati README, inventario, scheda routing matrix e documentazione dell'host.
+- Verifiche passate: `cargo fmt --all -- --check`, `cargo check --workspace`, `cargo test --workspace` (29 test), `cargo clippy --workspace --all-targets -- -D warnings`, `cargo build --workspace --release`.
+- Host CLAP offline: encoder L=R produce M attivo e S nullo; decoder M con S nullo produce L=R; bypass passa; latenza zero per entrambi.
+- Prossimo: testare i due plugin in DAW reale; continuare con i moduli rimanenti.
 
 ## Limiti e verifiche aperte
 - Il plugin e' stato caricato dall'host CLAP offline; resta da validare in una DAW reale e la latenza totale di monitoraggio non e' misurata.

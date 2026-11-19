@@ -1,7 +1,29 @@
 ID: greg_ms_encoder
-Categoria: codificatore Mid/Side
-Stato: pianificato
-Scopo: trasformare coppie audio Left/Right in Mid/Side con convenzione di scala documentata.
-Requisiti: mono/stereo validation, trim M/S e comportamento a latenza zero.
-Riutilizzare: routing_matrix e phase_inversion.
-Da documentare all'implementazione: matrice, normalizzazione, fase e test round-trip.
+Nome CLAP: Greg M/S Encoder
+Stato: alpha implementato
+Scopo: convertire un ingresso stereo Left/Right in Mid/Side per elaborazione M/S.
+
+Convenzione
+Il routing condiviso applica la trasformazione ortonormale:
+M = (L + R) / sqrt(2)
+S = (L - R) / sqrt(2)
+La scala conserva l'energia e si annulla con il decoder quando i trim sono a 0 dB e il bilanciamento e' centrato.
+
+Parametri CLAP
+- Mid Trim: guadagno del canale M, da -24 a +24 dB; default 0 dB.
+- Side Trim: guadagno del canale S, da -24 a +24 dB; default 0 dB.
+- Balance: da -1 (solo L) a +1 (solo R), con 0 al centro; attenua il canale opposto con curva coseno e non aumenta il canale mantenuto.
+- Invert Left Polarity / Invert Right Polarity: inversione degli ingressi L/R prima della codifica.
+- Bypass: crossfade di 5 ms tra ingresso L/R e uscita processata M/S.
+
+Layout e tempo reale
+- Accetta layout mono e stereo. In mono, passa il segnale invariato, salvo l'inversione sinistra eventualmente attiva; trim e balance M/S non si applicano.
+- In stereo, legge e scrive coppie di canali in-place senza allocazioni nel callback.
+- Latenza dichiarata: 0 campioni a ogni sample rate.
+- I campioni non finiti sono sostituiti con zero.
+
+Test
+`clap-signal-host` controlla la codifica di un segnale mono centrato (M attivo, S nullo), bypass e latenza zero. `core-dsp` verifica il round-trip numerico della matrice.
+
+Limiti alpha
+Nessuna GUI custom; i parametri sono esposti tramite CLAP. Il bilanciamento e' un attenuatore L/R, non un pan law o un controllo di larghezza.

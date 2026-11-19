@@ -1,0 +1,207 @@
+use std::{num::NonZeroU32, sync::Arc};
+
+use core_dsp::core_dsp_modules::realtime_controls::BypassCrossfade;
+use core_dsp::core_dsp_modules::routing_matrix::{RoutingMode, StereoFrame};
+use nih_plug::prelude::*;
+
+#[derive(Params)]
+struct MidSideEncoderParams {
+    #[id = "mid_trim"]
+    mid_trim: FloatParam,
+    #[id = "side_trim"]
+    side_trim: FloatParam,
+    #[id = "balance"]
+    balance: FloatParam,
+    #[id = "invert_left"]
+    invert_left: BoolParam,
+    #[id = "invert_right"]
+    invert_right: BoolParam,
+    #[id = "bypass"]
+    bypass: BoolParam,
+}
+
+impl Default for MidSideEncoderParams {
+    fn default() -> Self {
+        Self {
+            mid_trim: FloatParam::new(
+                "Mid Trim",
+                0.0,
+                FloatRange::Linear {
+                    min: -24.0,
+                    max: 24.0,
+                },
+            )
+            .with_unit(" dB"),
+            side_trim: FloatParam::new(
+                "Side Trim",
+                0.0,
+                FloatRange::Linear {
+                    min: -24.0,
+                    max: 24.0,
+                },
+            )
+            .with_unit(" dB"),
+            balance: FloatParam::new(
+                "Balance",
+                0.0,
+                FloatRange::Linear {
+                    min: -1.0,
+                    max: 1.0,
+                },
+            ),
+            invert_left: BoolParam::new("Invert Left Polarity", false),
+            invert_right: BoolParam::new("Invert Right Polarity", false),
+            bypass: BoolParam::new("Bypass", false),
+        }
+    }
+}
+
+struct GregMsEncoder {
+    params: Arc<MidSideEncoderParams>,
+    bypass_crossfades: [BypassCrossfade<f32>; 2],
+    last_bypassed: bool,
+    bypass_ramp_samples: u32,
+}
+
+impl Default for GregMsEncoder {
+    fn default() -> Self {
+        Self {
+            params: Arc::new(MidSideEncoderParams::default()),
+            bypass_crossfades: [BypassCrossfade::default(); 2],
+            last_bypassed: false,
+            bypass_ramp_samples: 1,
+        }
+    }
+}
+
+impl Plugin for GregMsEncoder {
+    const NAME: &'static str = "Greg M/S Encoder";
+    const VENDOR: &'static str = "Greg Audio";
+    const URL: &'static str = "https://example.invalid";
+    const EMAIL: &'static str = "support@example.invalid";
+    const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+
+    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[
+        AudioIOLayout {
+            main_input_channels: NonZeroU32::new(2),
+            main_output_channels: NonZeroU32::new(2),
+            ..AudioIOLayout::const_default()
+        },
+        AudioIOLayout {
+            main_input_channels: NonZeroU32::new(1),
+            main_output_channels: NonZeroU32::new(1),
+            ..AudioIOLayout::const_default()
+        },
+    ];
+
+    const MIDI_INPUT: MidiConfig = MidiConfig::None;
+    const SAMPLE_ACCURATE_AUTOMATION: bool = true;
+
+    type SysExMessage = ();
+    type BackgroundTask = ();
+
+    fn params(&self) -> Arc<dyn Params> {
+        self.params.clone()
+    }
+
+    fn initialize(
+        &mut self,
+        _audio_io_layout: &AudioIOLayout,
+        buffer_config: &BufferConfig,
+        context: &mut impl InitContext<Self>,
+    ) -> bool {
+        self.bypass_ramp_samples = (buffer_config.sample_rate * 0.005).round().max(1.0) as u32;
+        self.last_bypassed = self.params.bypass.value();
+        for crossfade in &mut self.bypass_crossfades {
+            crossfade.set_bypassed(self.last_bypassed, 0);
+        }
+        context.set_latency_samples(0);
+        true
+    }
+
+    fn reset(&mut self) {
+        self.last_bypassed = self.params.bypass.value();
+        for crossfade in &mut self.bypass_crossfades {
+            crossfade.set_bypassed(self.last_bypassed, 0);
+        }
+    }
+
+    fn process(
+        &mut self,
+        buffer: &mut Buffer,
+        _aux: &mut AuxiliaryBuffers,
+        _context: &mut impl ProcessContext<Self>,
+    ) -> ProcessStatus {
+        let bypassed = self.params.bypass.value();
+        if bypassed != self.last_bypassed {
+            for crossfade in &mut self.bypass_crossfades {
+                crossfade.set_bypassed(bypassed, self.bypass_ramp_samples);
+            }
+            self.last_bypassed = bypassed;
+        }
+
+        let mid_gain = util::db_to_gain(self.params.mid_trim.value());
+        let side_gain = util::db_to_gain(self.params.side_trim.value());
+        let (left_balance, right_balance) = balance_gains(self.params.balance.value());
+        let invert_left = self.params.invert_left.value();
+        let invert_right = self.params.invert_right.value();
+
+        for mut frame in buffer.iter_samples() {
+            let mut samples = frame.iter_mut();
+            let Some(left_sample) = samples.next() else {
+                continue;
+            };
+            let left_input = finite(*left_sample);
+            let Some(right_sample) = samples.next() else {
+                let polarity = if invert_left { -1.0 } else { 1.0 };
+                *left_sample = self.bypass_crossfades[0].process(left_input, left_input * polarity);
+                continue;
+            };
+            let right_input = finite(*right_sample);
+            let left = left_input * left_balance * if invert_left { -1.0 } else { 1.0 };
+            let right = right_input * right_balance * if invert_right { -1.0 } else { 1.0 };
+            let encoded = StereoFrame { left, right }.route(RoutingMode::MidSide);
+            let mid = encoded.left * mid_gain;
+            let side = encoded.right * side_gain;
+            *left_sample = finite(self.bypass_crossfades[0].process(left_input, mid));
+            *right_sample = finite(self.bypass_crossfades[1].process(right_input, side));
+        }
+
+        ProcessStatus::Normal
+    }
+}
+
+impl ClapPlugin for GregMsEncoder {
+    const CLAP_ID: &'static str = "com.greg.audio.greg-ms-encoder";
+    const CLAP_DESCRIPTION: Option<&'static str> =
+        Some("Zero-latency L/R to M/S encoder with orthonormal scaling");
+    const CLAP_MANUAL_URL: Option<&'static str> = None;
+    const CLAP_SUPPORT_URL: Option<&'static str> = None;
+    const CLAP_FEATURES: &'static [ClapFeature] = &[
+        ClapFeature::AudioEffect,
+        ClapFeature::Utility,
+        ClapFeature::Mono,
+        ClapFeature::Stereo,
+    ];
+}
+
+fn balance_gains(balance: f32) -> (f32, f32) {
+    let balance = balance.clamp(-1.0, 1.0);
+    let left = if balance > 0.0 {
+        (balance * std::f32::consts::FRAC_PI_2).cos()
+    } else {
+        1.0
+    };
+    let right = if balance < 0.0 {
+        (balance * std::f32::consts::FRAC_PI_2).cos()
+    } else {
+        1.0
+    };
+    (left, right)
+}
+
+fn finite(sample: f32) -> f32 {
+    if sample.is_finite() { sample } else { 0.0 }
+}
+
+nih_export_clap!(GregMsEncoder);

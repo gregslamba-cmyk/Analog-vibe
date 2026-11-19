@@ -5,7 +5,7 @@ Ogni ID plugin ha una scheda in docs/plugins/<id>.txt.
 Ogni modulo riutilizzabile ha una scheda in docs/modules/<id>.txt.
 Stato "pianificato" significa non implementato; la presenza della scheda non equivale al completamento.
 
-Stato implementazione attuale: greg_76 e greg_surgical_eq hanno crate CLAP alpha; gli altri plugin sono documentati ma non ancora implementati.
+Stato implementazione attuale: greg_76, greg_surgical_eq, greg_ms_encoder e greg_ms_decoder hanno crate CLAP alpha; gli altri plugin sono documentati ma non ancora implementati.
 
 COPERTURA RICHIESTA
 - Compressori: greg_76, greg_a2a, greg_a3a, greg_child, greg_bus_comp, greg_harrison_comp, greg_manley_comp, greg_multiband_comp (4 bande iniziali, espandibile), greg_lin_comp.
