@@ -33,6 +33,7 @@ static HOST_NAME: &CStr = c"Greg Audio Signal Test Host";
 static HOST_VENDOR: &CStr = c"Greg Audio";
 static HOST_URL: &CStr = c"https://example.invalid";
 static HOST_VERSION: &CStr = c"0.1.0";
+static SURGICAL_EQ_CLAP_ID: &CStr = c"com.greg.audio.greg-surgical-eq";
 
 static HOST_THREAD_CHECK: clap_host_thread_check = clap_host_thread_check {
     is_main_thread: Some(host_is_thread),
@@ -117,9 +118,10 @@ impl Drop for EntryGuard {
 #[derive(Clone, Copy)]
 struct TestCase {
     name: &'static str,
-    oversampling_index: f64,
+    mode_index: f64,
     bypass: bool,
     invert_left: bool,
+    boost_first_eq_band: bool,
     frequency: f64,
     amplitude: f32,
 }
@@ -191,55 +193,98 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         plugin_id.to_string_lossy()
     );
 
-    let cases = [
-        TestCase {
-            name: "440 Hz sine at 1x",
-            oversampling_index: 0.0,
-            bypass: false,
-            invert_left: false,
-            frequency: 440.0,
-            amplitude: 0.5,
-        },
-        TestCase {
-            name: "440 Hz sine at 2x",
-            oversampling_index: 1.0,
-            bypass: false,
-            invert_left: false,
-            frequency: 440.0,
-            amplitude: 0.5,
-        },
-        TestCase {
-            name: "440 Hz sine at 4x",
-            oversampling_index: 2.0,
-            bypass: false,
-            invert_left: false,
-            frequency: 440.0,
-            amplitude: 0.5,
-        },
-        TestCase {
-            name: "440 Hz sine at 8x",
-            oversampling_index: 3.0,
-            bypass: false,
-            invert_left: false,
-            frequency: 440.0,
-            amplitude: 0.5,
-        },
-        TestCase {
-            name: "bypassed 1 kHz sine with left polarity inversion",
-            oversampling_index: 3.0,
-            bypass: true,
-            invert_left: true,
-            frequency: 1_000.0,
-            amplitude: 0.25,
-        },
-    ];
+    let is_surgical_eq = plugin_id == SURGICAL_EQ_CLAP_ID;
+    let cases = if is_surgical_eq {
+        vec![
+            TestCase {
+                name: "surgical EQ minimum-phase identity",
+                mode_index: 0.0,
+                bypass: false,
+                invert_left: false,
+                boost_first_eq_band: false,
+                frequency: 440.0,
+                amplitude: 0.5,
+            },
+            TestCase {
+                name: "surgical EQ linear-phase identity",
+                mode_index: 1.0,
+                bypass: false,
+                invert_left: false,
+                boost_first_eq_band: false,
+                frequency: 1_000.0,
+                amplitude: 0.5,
+            },
+            TestCase {
+                name: "surgical EQ minimum-phase first-band boost",
+                mode_index: 0.0,
+                bypass: false,
+                invert_left: false,
+                boost_first_eq_band: true,
+                frequency: 1_000.0,
+                amplitude: 0.25,
+            },
+        ]
+    } else {
+        vec![
+            TestCase {
+                name: "440 Hz sine at 1x",
+                mode_index: 0.0,
+                bypass: false,
+                invert_left: false,
+                boost_first_eq_band: false,
+                frequency: 440.0,
+                amplitude: 0.5,
+            },
+            TestCase {
+                name: "440 Hz sine at 2x",
+                mode_index: 1.0,
+                bypass: false,
+                invert_left: false,
+                boost_first_eq_band: false,
+                frequency: 440.0,
+                amplitude: 0.5,
+            },
+            TestCase {
+                name: "440 Hz sine at 4x",
+                mode_index: 2.0,
+                bypass: false,
+                invert_left: false,
+                boost_first_eq_band: false,
+                frequency: 440.0,
+                amplitude: 0.5,
+            },
+            TestCase {
+                name: "440 Hz sine at 8x",
+                mode_index: 3.0,
+                bypass: false,
+                invert_left: false,
+                boost_first_eq_band: false,
+                frequency: 440.0,
+                amplitude: 0.5,
+            },
+            TestCase {
+                name: "bypassed 1 kHz sine with left polarity inversion",
+                mode_index: 3.0,
+                bypass: true,
+                invert_left: true,
+                boost_first_eq_band: false,
+                frequency: 1_000.0,
+                amplitude: 0.25,
+            },
+        ]
+    };
 
     let mut results = Vec::with_capacity(cases.len());
     for case in cases {
         results.push(run_case(factory, plugin_id, case)?);
     }
 
-    for (result, expected_latency) in results.iter().zip([0, 15, 22, 25, 25]) {
+    let expected_latencies = if is_surgical_eq {
+        vec![0, 128, 0]
+    } else {
+        vec![0, 15, 22, 25, 25]
+    };
+    for (result, expected_latency) in results.iter().zip(expected_latencies) {
         if result.latency != expected_latency {
             return Err(format!(
                 "{} latency mismatch: expected {expected_latency}, got {}",
@@ -249,23 +294,39 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    let dry = &results[4];
-    if dry.latency != 25 {
-        return Err(format!("8x latency mismatch: expected 25, got {}", dry.latency).into());
-    }
-    if dry.left_rms < 0.15 || dry.right_rms < 0.15 {
-        return Err(format!(
-            "bypass level too low: left RMS {}, right RMS {}",
-            dry.left_rms, dry.right_rms
-        )
-        .into());
-    }
-    if dry.left_correlation > -0.98 || dry.right_correlation < 0.98 {
-        return Err(format!(
-            "polarity check failed: left correlation {}, right correlation {}",
-            dry.left_correlation, dry.right_correlation
-        )
-        .into());
+    if is_surgical_eq {
+        for result in &results[..2] {
+            if result.left_correlation < 0.98 || result.right_correlation < 0.98 {
+                return Err(format!(
+                    "{} identity correlation failed: L {}, R {}",
+                    result.name, result.left_correlation, result.right_correlation
+                )
+                .into());
+            }
+        }
+        if results[2].left_rms < 0.3 || results[2].right_rms < 0.3 {
+            return Err(format!(
+                "first EQ band boost too small: L {}, R {}",
+                results[2].left_rms, results[2].right_rms
+            )
+            .into());
+        }
+    } else {
+        let dry = &results[4];
+        if dry.left_rms < 0.15 || dry.right_rms < 0.15 {
+            return Err(format!(
+                "bypass level too low: left RMS {}, right RMS {}",
+                dry.left_rms, dry.right_rms
+            )
+            .into());
+        }
+        if dry.left_correlation > -0.98 || dry.right_correlation < 0.98 {
+            return Err(format!(
+                "polarity check failed: left correlation {}, right correlation {}",
+                dry.left_correlation, dry.right_correlation
+            )
+            .into());
+        }
     }
 
     for result in results {
@@ -350,14 +411,22 @@ fn run_case(
     }
 
     let params = unsafe { extension::<clap_plugin_params>(plugin, CLAP_EXT_PARAMS.as_ptr())? };
-    set_parameter(plugin, params, "Oversampling", case.oversampling_index)?;
     set_parameter(plugin, params, "Bypass", f64::from(case.bypass))?;
-    set_parameter(
-        plugin,
-        params,
-        "Invert Left Polarity",
-        f64::from(case.invert_left),
-    )?;
+    if plugin_id == SURGICAL_EQ_CLAP_ID {
+        set_parameter(plugin, params, "Phase Mode", case.mode_index)?;
+        if case.boost_first_eq_band {
+            set_parameter(plugin, params, "Enabled", 1.0)?;
+            set_parameter(plugin, params, "Gain", 0.6875)?;
+        }
+    } else {
+        set_parameter(plugin, params, "Oversampling", case.mode_index)?;
+        set_parameter(
+            plugin,
+            params,
+            "Invert Left Polarity",
+            f64::from(case.invert_left),
+        )?;
+    }
 
     let latency_extension =
         unsafe { extension::<clap_plugin_latency>(plugin, CLAP_EXT_LATENCY.as_ptr())? };
@@ -546,6 +615,16 @@ fn set_parameter(
     let output_events = empty_output_events();
     unsafe {
         params.flush.expect("parameter flush callback missing")(plugin, &events, &output_events);
+    }
+    let mut current_value = 0.0;
+    if let Some(get_value) = params.get_value
+        && unsafe { get_value(plugin, parameter_id, &mut current_value) }
+        && (current_value - value).abs() > 1.0e-6
+    {
+        return Err(format!(
+            "parameter {parameter_name} did not accept {value}; current value is {current_value}"
+        )
+        .into());
     }
     Ok(())
 }

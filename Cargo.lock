@@ -214,6 +214,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "greg-surgical-eq"
+version = "0.1.0"
+dependencies = [
+ "core-dsp",
+ "nih_plug",
+]
+
+[[package]]
 name = "hermit-abi"
 version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"

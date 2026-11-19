@@ -10,7 +10,7 @@ Realizzare una suite di plugin audio CLAP in Rust con DSP prioritario, senza GUI
 - Richiesto un documento `.txt` dedicato per ogni plugin e per ciascun modulo DSP condiviso.
 - Audit completato: aggiunti al catalogo il compressore multibanda configurabile (4 bande iniziali + espansione), limiter/maximizer e utility di inversione di polarità.
 - Scomposta la suite Harrison in tre plugin; separate le schede per encoder/decoder M/S, EQ/comp Manley, pitch shifter e transient shaper mono/multibanda.
-- Creati 40 documenti `docs/plugins/<id>.txt` e 11 documenti `docs/modules/<id>.txt`; verifica automatica: 40/40 ID plugin e 10/10 moduli dell'inventario hanno un documento dedicato.
+- Creati 40 documenti `docs/plugins/<id>.txt` e 12 documenti `docs/modules/<id>.txt`; verifica automatica: 40/40 ID plugin e 11/11 moduli dell'inventario hanno un documento dedicato.
 - I TXT attuali sono specifiche iniziali, non manuali finali: parametri/API, test, latenza e limiti vanno completati con l'implementazione.
 
 ## Stato dei moduli
@@ -26,7 +26,7 @@ Realizzare una suite di plugin audio CLAP in Rust con DSP prioritario, senza GUI
 - DA FARE: preamplificatore con trasformatore.
 - DA FARE: compressore multibanda con quattro bande iniziali ed espansione configurabile.
 - DA FARE: limiter/maximizer con input e limite di uscita.
-- DA FARE: EQ chirurgico a bande configurabili con filtri selezionabili e modalità a fase minima/lineare.
+- ALPHA: EQ chirurgico a otto bande configurabili con filtri selezionabili e modalità a fase minima/lineare.
 - DA FARE: exciter armonico con controllo per bande e livello di picco.
 - DA FARE: low enhancer con generazione di sub-armoniche e controllo dinamico.
 - DA FARE: distorsore multi-tecnologia con algoritmi e filtri pre/post selezionabili.
@@ -74,6 +74,15 @@ Realizzare una suite di plugin audio CLAP in Rust con DSP prioritario, senza GUI
 - Il test host offline carica il plugin e verifica latenza dichiarata 0/15/22/25 campioni a 1x/2x/4x/8x, processamento delle sinusoidi, bypass e inversione indipendente L.
 - Il controllo NIH-plug delle allocazioni e' abilitato nei build debug.
 
+## EQ chirurgico `greg-surgical-eq` (2026-11-19)
+- Aggiunto il crate CLAP con otto bande attivabili e filtri Bell, Low/High Shelf, High/Low Pass, Notch e Band Pass.
+- Il modulo `core-dsp::surgical_eq` riutilizza i biquad condivisi per la modalita' minimum-phase e implementa la modalita' linear-phase con FIR simmetrico a 257 tap.
+- Latenza dichiarata all'host: 0 campioni minimum-phase, 128 campioni linear-phase; bypass crossfade e percorso dry allineato alla latenza attiva.
+- Test DSP: boost sinusoidale min/linear-phase, simmetria della risposta impulsiva, latenza del FIR, risposta identita' e rifiuto di configurazioni non valide.
+- Host CLAP carica il plugin e verifica toni identita' in entrambe le modalita', correlazione e latenza.
+- Verifiche passate: formattazione, `cargo test --workspace` (29 test), Clippy con `-D warnings` e build release.
+- Limiti alpha: FIR diretto a 257 tap; risposta spettrale linear-phase approssimata; riconfigurazione parametri ai confini dei blocchi. Restano da misurare prestazioni e risposta in DAW.
+
 ## Limiti e verifiche aperte
 - Il plugin e' stato caricato dall'host CLAP offline; resta da validare in una DAW reale e la latenza totale di monitoraggio non e' misurata.
 - NIH-plug fornisce al plugin buffer `f32`; il core DSP generico puo' supportare `f32` e `f64`, ma il wrapper non offre elaborazione host-native `f64`.
@@ -81,7 +90,7 @@ Realizzare una suite di plugin audio CLAP in Rust con DSP prioritario, senza GUI
 
 ## Prossimi passi
 - Eseguire i test in una DAW reale.
-- Iniziare l'implementazione di `greg_surgical_eq`, riusando i filtri di `core-dsp` e aggiornando la scheda TXT.
+- Validare `greg_surgical_eq` in una DAW reale, misurando risposta, carico CPU e automazioni.
 - Proseguire con i moduli rimanenti, aggiornando `STATE.md` per i micro-step e questo file per il riepilogo cumulativo.
 
 ## Rapporto finale

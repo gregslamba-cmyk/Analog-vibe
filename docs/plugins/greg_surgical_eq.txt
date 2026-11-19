@@ -1,8 +1,14 @@
 ID: greg_surgical_eq
 Categoria: equalizzatore chirurgico
-Stato: pianificato
-Scopo: equalizzazione parametrica precisa a numero di bande configurabile.
-Filtri per banda: Bell, Low-Shelf, High-Shelf, High-Pass, Low-Pass, Notch, Band-Pass.
-Requisiti: Q stretto/largo e modalità minimum-phase o linear-phase, con latenza dichiarata.
-Riutilizzare: filtri condivisi e smoothing dei parametri.
-Da documentare all'implementazione: limiti delle bande, risposta, fase, latenza e test.
+Stato: alpha implementata; test DSP e caricamento nell'host CLAP offline passati.
+Crate: plugins/greg-surgical-eq; ID CLAP: com.greg.audio.greg-surgical-eq.
+Scopo: equalizzatore parametrico chirurgico a otto bande indipendenti, attivabili e configurabili.
+Controlli globali: Phase Mode (Minimum Phase/Linear Phase), Bypass.
+Controlli per banda: Enabled, Type, Frequency (20-20000 Hz), Gain (-24/+24 dB), Q (0.1-18).
+Filtri: Bell, Low-Shelf, High-Shelf, High-Pass, Low-Pass, Notch, Band-Pass; le implementazioni derivano dal modulo biquad condiviso.
+Minimum phase: cascata IIR biquad, latenza algoritmica dichiarata 0 campioni.
+Linear phase: FIR simmetrico a 257 tap, finestra Blackman, latenza di gruppo e CLAP dichiarata 128 campioni; coefficienti costruiti dalla risposta in ampiezza composta dei biquad.
+Allineamento bypass: il percorso dry usa il ritardo corrispondente alla modalita' corrente; crossfade bypass di 5 ms.
+Realtime: stati e buffer a dimensione fissa; nessuna allocazione nel callback. Frequenza limitata al 49% della frequenza di campionamento per restare sotto Nyquist.
+Verifiche iniziali: risposta sinusoidale min-phase, simmetria dell'impulso linear-phase, latenza 0/128, risposta identita' a guadagno nullo e rifiuto di configurazioni non valide.
+Limiti alpha: FIR diretto da 257 tap; automazioni dei parametri applicate ai confini dei blocchi NIH-plug e riconfigurano gli stati; risposta in ampiezza linear-phase approssimata dai bin FIR. Validare ulteriormente risposta, carico CPU e comportamento in una DAW.

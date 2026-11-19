@@ -1,3 +1,8 @@
 [workspace]
 resolver = "2"
-members = ["core-dsp", "plugins/greg-fet", "tools/clap-signal-host"]
+members = [
+    "core-dsp",
+    "plugins/greg-fet",
+    "plugins/greg-surgical-eq",
+    "tools/clap-signal-host",
+]
