@@ -16,6 +16,7 @@ Realizzare una suite di plugin audio CLAP in Rust con DSP prioritario, senza GUI
 ## Stato dei moduli
 - IN CORSO: compressore FET `greg-fet`; scheletro CLAP e DSP alpha implementati.
 - ALPHA: coppia di utility `greg_ms_encoder` e `greg_ms_decoder`, implementate in crate separati; mapping, bypass e latenza zero verificati nell'host CLAP offline.
+- ALPHA: utility `greg_phase` per inversione mono/stereo della polarita', con bypass e latenza zero.
 - DA FARE: compressore opto valvolare.
 - DA FARE: compressore opto a stato solido.
 - DA FARE: compressore Vari-Mu.
@@ -93,6 +94,15 @@ Realizzare una suite di plugin audio CLAP in Rust con DSP prioritario, senza GUI
 - Verifiche passate: `cargo fmt --all -- --check`, `cargo check --workspace`, `cargo test --workspace` (29 test), `cargo clippy --workspace --all-targets -- -D warnings`, `cargo build --workspace --release`.
 - Host CLAP offline: encoder L=R produce M attivo e S nullo; decoder M con S nullo produce L=R; bypass passa; latenza zero per entrambi.
 - Prossimo: testare i due plugin in DAW reale; continuare con i moduli rimanenti.
+
+## Utility di polarita' `greg_phase` (2026-11-19)
+- Aggiunto un plugin CLAP standalone mono/stereo; riusa `StereoFrame::invert_phase` da `core-dsp`.
+- Controlli: inversione indipendente L/R, comando linkato "Invert Both" e bypass crossfade di 5 ms.
+- Il plugin applica solo una moltiplicazione per -1: nessuna rotazione dipendente dalla frequenza o ritardo; latenza CLAP zero.
+- Scheda del plugin e modulo, inventario, README e test host aggiornati.
+- Verifiche passate: formattazione, `cargo check --workspace`, `cargo test --workspace` (30 test), Clippy con `-D warnings` e build release.
+- Host CLAP: inversione L, R e linkata verificata con correlazione; bypass confermato; latenza zero.
+- E' un'utility digitale, non una simulazione hardware; il vincolo di fedelta' alle macchine reali si applica ai plugin di emulazione.
 
 ## Limiti e verifiche aperte
 - Il plugin e' stato caricato dall'host CLAP offline; resta da validare in una DAW reale e la latenza totale di monitoraggio non e' misurata.

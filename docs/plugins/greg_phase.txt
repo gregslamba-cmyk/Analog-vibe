@@ -1,7 +1,24 @@
 ID: greg_phase
 Categoria: utility di inversione di polarita
-Stato: pianificato
-Scopo: invertire la polarita per canale o per coppia linkata.
-Requisiti: mono/stereo e routing dichiarati; elaborazione sample-accurate a latenza zero.
-Riutilizzare: phase_inversion e routing_matrix condivisi.
-Da documentare all'implementazione: modalita canali, comportamento mono/stereo e test d'identita.
+Nome CLAP: Greg Phase
+Stato: alpha implementato
+Scopo: invertire la polarita' per canale o per la coppia stereo linkata.
+
+Parametri CLAP
+- Invert Left Polarity: inverte il canale sinistro; in layout mono controlla il canale mono.
+- Invert Right Polarity: inverte solo il canale destro in layout stereo.
+- Invert Both (Link): inverte entrambi i canali stereo indipendentemente dagli interruttori L/R.
+- Bypass: crossfade lineare di 5 ms tra segnale diretto e segnale con polarita' invertita.
+
+Comportamento e latenza
+- Supporta layout mono e stereo, con processing in-place senza allocazioni.
+- Latenza dichiarata: 0 campioni a ogni sample rate.
+- L'inversione e' moltiplicazione per -1; non applica ritardo o rotazione di fase dipendente dalla frequenza.
+- I campioni non finiti sono sostituiti con zero.
+- Parametri L/R possono operare indipendentemente; `Invert Both (Link)` e' il comando comune per la coppia stereo.
+
+Riutilizzo e test
+Usa `StereoFrame::invert_phase` in `core-dsp::routing_matrix`. I test unitari del core verificano inversione indipendente e doppia inversione come identita'. `clap-signal-host` verifica L, R, entrambi, bypass e latenza CLAP zero.
+
+Limiti alpha
+Nessuna GUI custom; controlli esposti via CLAP. Il cambio di polarita' e' immediato; il bypass e' crossfaded.

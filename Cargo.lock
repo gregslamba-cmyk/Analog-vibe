@@ -230,6 +230,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "greg-phase"
+version = "0.1.0"
+dependencies = [
+ "core-dsp",
+ "nih_plug",
+]
+
+[[package]]
 name = "greg-surgical-eq"
 version = "0.1.0"
 dependencies = [

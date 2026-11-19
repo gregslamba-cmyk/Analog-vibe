@@ -6,5 +6,6 @@ members = [
     "plugins/greg-surgical-eq",
     "plugins/greg-ms-encoder",
     "plugins/greg-ms-decoder",
+    "plugins/greg-phase",
     "tools/clap-signal-host",
 ]

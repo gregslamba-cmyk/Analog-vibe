@@ -1,5 +1,12 @@
 # Stato del progetto
 
+## Obiettivo attivo: utility di polarita'
+- [COMPLETATO] Implementare `greg_phase` come plugin CLAP standalone mono/stereo.
+- [COMPLETATO] Riutilizzare `StereoFrame::invert_phase` per inversione L/R e inversione linkata.
+- [COMPLETATO] Aggiungere bypass click-free e dichiarare latenza zero.
+- [COMPLETATO] Verificare inversione indipendente, inversione linkata e bypass nell'host CLAP.
+- [COMPLETATO] Aggiornare scheda plugin, modulo DSP, inventario e README.
+
 ## Ultimo modulo: utility Mid/Side
 - [COMPLETATO] Implementare `greg_ms_encoder` e `greg_ms_decoder` come plugin CLAP distinti.
 - [COMPLETATO] Riutilizzare la matrice M/S condivisa, documentare la scala ortonormale e il comportamento mono.
@@ -21,6 +28,7 @@ Creare una suite di plugin audio CLAP in Rust, con DSP senza interfaccia grafica
 - [COMPLETATO] Verificare in host CLAP i fattori oversampling, latenza dichiarata, bypass e inversione L/R del FET.
 - [COMPLETATO] Implementare `greg_surgical_eq` alpha con dieci bande, filtri selezionabili e modalita' min/linear phase.
 - [COMPLETATO] Implementare `greg_ms_encoder` e `greg_ms_decoder` CLAP con trim, balance, polarita', bypass e latenza zero.
+- [COMPLETATO] Implementare `greg_phase` come utility CLAP per inversione indipendente e linkata della polarita'.
 - [COMPLETATO] Aggiungere alla libreria DSP condivisa FIR linear-phase, latenza fissa e test numerici.
 - [COMPLETATO] Caricare FET ed EQ nell'host CLAP offline e verificare processing e latenze dichiarate.
 - [DA FARE] Ampliare le schede da specifiche iniziali a manuali/API completi durante l'implementazione di ciascun componente.
@@ -66,6 +74,7 @@ Host offline: `clap-signal-host` carica realmente `target/release/libgreg_fet.so
 `greg-surgical-eq` aggiunto al workspace: 10 bande con sette tipi di filtro, DSP minimum-phase biquad e linear-phase FIR simmetrico a 257 tap; latenza CLAP 0/128 campioni. Test core verificano boost min/linear-phase, simmetria FIR, identita' con ritardo dichiarato e input invalidi. Host CLAP conferma caricamento, sinusoidi d'identita', correlazione e latenza in entrambi i modi.
 
 Utility M/S: `greg_ms_encoder` e `greg_ms_decoder` sono crate CLAP separati e riusano `StereoFrame::route(MidSide)` e `from_mid_side()` con scala ortonormale. Entrambi espongono trim Mid/Side (-24..+24 dB), Balance L/R (-1..+1), inversione selettiva, bypass crossfade 5 ms e latenza zero. Layout mono: pass-through con inversione L opzionale. `cargo test --workspace` (29 test), Clippy e build release passano; host offline verifica M attivo/S nullo nell'encoder, L=R nel decoder, bypass e output finito.
+Utility `greg_phase`: crate CLAP autonomo con inversione indipendente Left/Right e comando linkato "Invert Both", layout mono/stereo, bypass crossfade 5 ms e latenza dichiarata zero. Usa `StereoFrame::invert_phase`; test core verificano L/R e doppia inversione come identita'. Host CLAP conferma correlazione negativa solo sul canale selezionato, su entrambi in modalita' linkata, e pass-through in bypass. Formattazione, check, 30 test workspace, Clippy e build release passano.
 
 ## Vincoli
 - `nih_plug::Buffer` espone campioni `f32`: un core DSP generico può supportare `f32` e `f64`, ma il wrapper NIH-plug non fornisce processing host-native `f64`.

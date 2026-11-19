@@ -36,6 +36,7 @@ static HOST_VERSION: &CStr = c"0.1.0";
 static SURGICAL_EQ_CLAP_ID: &CStr = c"com.greg.audio.greg-surgical-eq";
 static MS_ENCODER_CLAP_ID: &CStr = c"com.greg.audio.greg-ms-encoder";
 static MS_DECODER_CLAP_ID: &CStr = c"com.greg.audio.greg-ms-decoder";
+static PHASE_CLAP_ID: &CStr = c"com.greg.audio.greg-phase";
 
 static HOST_THREAD_CHECK: clap_host_thread_check = clap_host_thread_check {
     is_main_thread: Some(host_is_thread),
@@ -198,6 +199,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let is_surgical_eq = plugin_id == SURGICAL_EQ_CLAP_ID;
     let is_ms_encoder = plugin_id == MS_ENCODER_CLAP_ID;
     let is_ms_decoder = plugin_id == MS_DECODER_CLAP_ID;
+    let is_phase = plugin_id == PHASE_CLAP_ID;
     let cases = if is_surgical_eq {
         vec![
             TestCase {
@@ -251,6 +253,45 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 boost_first_eq_band: false,
                 frequency: 1_000.0,
                 amplitude: 0.25,
+            },
+        ]
+    } else if is_phase {
+        vec![
+            TestCase {
+                name: "phase utility left-only inversion",
+                mode_index: 0.0,
+                bypass: false,
+                invert_left: true,
+                boost_first_eq_band: false,
+                frequency: 1_000.0,
+                amplitude: 0.5,
+            },
+            TestCase {
+                name: "phase utility right-only inversion",
+                mode_index: 1.0,
+                bypass: false,
+                invert_left: false,
+                boost_first_eq_band: false,
+                frequency: 1_000.0,
+                amplitude: 0.5,
+            },
+            TestCase {
+                name: "phase utility linked inversion",
+                mode_index: 2.0,
+                bypass: false,
+                invert_left: false,
+                boost_first_eq_band: false,
+                frequency: 1_000.0,
+                amplitude: 0.5,
+            },
+            TestCase {
+                name: "phase utility bypass",
+                mode_index: 0.0,
+                bypass: true,
+                invert_left: false,
+                boost_first_eq_band: false,
+                frequency: 1_000.0,
+                amplitude: 0.5,
             },
         ]
     } else {
@@ -312,6 +353,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         vec![0, 128, 0]
     } else if is_ms_encoder || is_ms_decoder {
         vec![0, 0]
+    } else if is_phase {
+        vec![0, 0, 0, 0]
     } else {
         vec![0, 15, 22, 25, 25]
     };
@@ -374,6 +417,25 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
         if bypass.left_correlation < 0.98 || bypass.right_correlation < 0.98 {
             return Err("M/S decoder bypass did not preserve M/S input".into());
+        }
+    } else if is_phase {
+        let left_only = &results[0];
+        let right_only = &results[1];
+        let linked = &results[2];
+        let bypass = &results[3];
+        if left_only.left_correlation > -0.98 || left_only.right_correlation < 0.98 {
+            return Err("left-only polarity inversion did not affect only the left channel".into());
+        }
+        if right_only.left_correlation < 0.98 || right_only.right_correlation > -0.98 {
+            return Err(
+                "right-only polarity inversion did not affect only the right channel".into(),
+            );
+        }
+        if linked.left_correlation > -0.98 || linked.right_correlation > -0.98 {
+            return Err("linked polarity inversion did not invert both channels".into());
+        }
+        if bypass.left_correlation < 0.98 || bypass.right_correlation < 0.98 {
+            return Err("phase utility bypass did not preserve both channels".into());
         }
     } else {
         let dry = &results[4];
@@ -496,6 +558,25 @@ fn run_case(
         set_parameter(plugin, params, "Mid Trim", 0.5)?;
         set_parameter(plugin, params, "Side Trim", 0.5)?;
         set_parameter(plugin, params, "Balance", 0.5)?;
+    } else if plugin_id == PHASE_CLAP_ID {
+        set_parameter(
+            plugin,
+            params,
+            "Invert Left Polarity",
+            f64::from(case.invert_left),
+        )?;
+        set_parameter(
+            plugin,
+            params,
+            "Invert Right Polarity",
+            f64::from(case.mode_index == 1.0),
+        )?;
+        set_parameter(
+            plugin,
+            params,
+            "Invert Both (Link)",
+            f64::from(case.mode_index == 2.0),
+        )?;
     } else {
         set_parameter(plugin, params, "Oversampling", case.mode_index)?;
         set_parameter(
