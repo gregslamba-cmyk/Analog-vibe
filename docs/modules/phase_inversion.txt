@@ -1,0 +1,6 @@
+ID: phase_inversion
+File sorgente: funzione invert_phase in core-dsp/src/core_dsp_modules/routing_matrix.rs
+Stato: implementazione alpha come funzione condivisa; plugin standalone greg_phase pianificato.
+Responsabilita: invertire la polarita per canale senza stato, allocazioni o latenza.
+Test richiesti: inversione doppia d'identita, mono, stereo e selezione indipendente dei canali.
+Nota: la funzione implementa inversione di polarita statica, non uno spostamento temporale di fase.

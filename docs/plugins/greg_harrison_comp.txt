@@ -1,0 +1,7 @@
+ID: greg_harrison_comp
+Categoria: compressore di canale
+Stato: pianificato
+Scopo: compressione morbida per canale con controllo musicale della dinamica.
+Requisiti: threshold, ratio, attack, release, makeup e detector sidechain interno.
+Riutilizzare: envelope follower, sidechain_processor e smoothing.
+Da documentare all'implementazione: curva, parametri, latenza e test.

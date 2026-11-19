@@ -1,0 +1,6 @@
+ID: realtime_controls
+File sorgente: core-dsp/src/core_dsp_modules/realtime_controls.rs
+Stato: primitive alpha implementate.
+Componenti: envelope follower con coefficienti sample-rate-aware, linear smoother a campioni, bypass crossfade e delay a memoria fissa per compensazione della latenza.
+Vincoli: inizializzare/ricalcolare parametri fuori dal ciclo sample quando possibile; target non finiti vengono ignorati.
+Test: sample rate/precisione, durata esatta smoothing, transizione bypass e ritardo intero esatto.

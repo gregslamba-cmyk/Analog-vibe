@@ -1,0 +1,7 @@
+ID: greg_low_enhancer
+Categoria: enhancer/sintetizzatore subarmonico
+Stato: pianificato
+Scopo: generare subarmoniche musicali agganciate al segnale d'ingresso.
+Requisiti: ottava inferiore e sub-ottava opzionale, filtro low-pass, mix, dinamica e protezione DC.
+Riutilizzare: filtri, envelope follower e smoothing.
+Da documentare all'implementazione: metodo di sintesi, tracking, limiti e test.

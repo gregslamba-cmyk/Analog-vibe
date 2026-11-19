@@ -1,0 +1,8 @@
+ID: greg_surgical_eq
+Categoria: equalizzatore chirurgico
+Stato: pianificato
+Scopo: equalizzazione parametrica precisa a numero di bande configurabile.
+Filtri per banda: Bell, Low-Shelf, High-Shelf, High-Pass, Low-Pass, Notch, Band-Pass.
+Requisiti: Q stretto/largo e modalità minimum-phase o linear-phase, con latenza dichiarata.
+Riutilizzare: filtri condivisi e smoothing dei parametri.
+Da documentare all'implementazione: limiti delle bande, risposta, fase, latenza e test.

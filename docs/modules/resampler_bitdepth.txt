@@ -1,0 +1,7 @@
+ID: resampler_bitdepth
+File sorgente: core-dsp/src/core_dsp_modules/resampler_bitdepth.rs
+Stato: FIR polyphase/half-band alpha; dithering TPDF deterministico disponibile.
+Oversampling integrato: fattori 1x, 2x, 4x e 8x in tre stadi FIR half-band da 31 tap.
+Latenza di gruppo misurata: 0, 14.5, 21.75 e 25.375 campioni; latenza CLAP intera dichiarata: 0, 15, 22 e 25 campioni.
+Test: ritardo impulsivo arrotondato e riduzione di una componente alias misurata nel test sintetico.
+Limiti: verificare risposta, stopband e residui d'alias su sweep/tonalita, host reale e ogni plugin; il dithering e' opzionale e non va applicato automaticamente ai normali segnali floating-point.

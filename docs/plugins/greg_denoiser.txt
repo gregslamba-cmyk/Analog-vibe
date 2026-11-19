@@ -1,0 +1,7 @@
+ID: greg_denoiser
+Categoria: riduzione rumore
+Stato: pianificato
+Scopo: ridurre hiss/rumore broadband limitando artefatti musical-noise.
+Requisiti: modalità adattiva/di riferimento, riduzione controllata e gestione delle transizioni.
+Vincoli: documentare latenza, memoria e analisi fuori dal thread audio.
+Da documentare all'implementazione: algoritmo, controlli, artefatti e test d'ascolto.

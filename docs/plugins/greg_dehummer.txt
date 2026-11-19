@@ -1,0 +1,7 @@
+ID: greg_dehummer
+Categoria: rimozione ronzio
+Stato: pianificato
+Scopo: attenuare fondamentale 50/60 Hz e armoniche selezionate.
+Requisiti: frequenza di rete selezionabile, notch ad alto Q e tracking solo se stabile.
+Riutilizzare: filtri notch condivisi.
+Da documentare all'implementazione: range, adattamento, fase e test.

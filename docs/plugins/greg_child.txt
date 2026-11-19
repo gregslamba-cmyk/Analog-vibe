@@ -1,0 +1,7 @@
+ID: greg_child
+Categoria: compressore Vari-Mu
+Stato: pianificato
+Scopo: compressione valvolare con ratio crescente in funzione della gain reduction.
+Requisiti: sei costanti di tempo selezionabili; opzioni estese separate dalla modalità circuitale di base.
+Riutilizzare: envelope follower, saturazione valvolare, PSU sag e sidechain.
+Da documentare all'implementazione: mappa ratio, tempi, parametri/API, latenza e test.

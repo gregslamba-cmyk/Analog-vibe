@@ -1,0 +1,7 @@
+ID: greg_harrison_eq
+Categoria: equalizzatore di canale
+Stato: pianificato
+Scopo: EQ musicale con filtri proporzionali e risposta utile su canali.
+Requisiti: bande e filtri selezionabili con coefficienti derivati dal sample rate.
+Riutilizzare: filtri condivisi e smoothing.
+Da documentare all'implementazione: curve, controlli, fase e test.

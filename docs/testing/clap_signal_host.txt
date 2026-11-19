@@ -1,0 +1,10 @@
+ID: clap_signal_host
+Tipo: host CLAP offline per test d'integrazione (non e' un modulo DSP riutilizzabile)
+Sorgente: tools/clap-signal-host/src/main.rs
+Uso: cargo run --release -p clap-signal-host -- [percorso-al-plugin]
+Percorso predefinito: target/release/libgreg_fet.so
+Funzioni: carica un modulo CLAP, crea l'istanza stereo, invia blocchi audio sintetici e verifica output finito, livelli RMS, parametri, bypass, inversione di polarita e latenza dichiarata.
+Segnali attuali: sinusoide a 440 Hz per oversampling 1x/2x/4x/8x; sinusoide a 1 kHz con bypass e inversione L indipendente.
+Controlli di latenza: confronta i valori dichiarati con 0/15/22/25 campioni per 1x/2x/4x/8x; verifica la correlazione del segnale bypassato compensato.
+Limiti: harness minimale senza GUI, clock hardware, MIDI, trasporto o misure del round-trip ADC/DAC; non sostituisce i test in DAW e i test DSP numerici.
+Dipendenze: crate clap-sys per ABI CLAP e libc per il caricamento dinamico su sistemi Unix.

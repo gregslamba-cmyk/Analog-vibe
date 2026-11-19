@@ -1,0 +1,12 @@
+[package]
+name = "clap-signal-host"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "clap-signal-host"
+path = "src/main.rs"
+
+[dependencies]
+clap-sys = { git = "https://github.com/micahrj/clap-sys.git", rev = "25d7f53fdb6363ad63fbd80049cb7a42a97ac156" }
+libc = "0.2"

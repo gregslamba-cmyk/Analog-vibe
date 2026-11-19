@@ -1,0 +1,7 @@
+ID: greg_ir_reverb
+Categoria: riverbero a convoluzione
+Stato: pianificato
+Scopo: convoluzione con risposta all'impulso caricabile dall'utente.
+Requisiti: identificare i formati realmente supportati; conversione/preparazione IR fuori dal thread audio; pre-delay, envelope, EQ e wet/dry.
+Vincoli: dichiarare latenza e memoria; scambio IR senza lock o allocazioni nel callback.
+Da documentare all'implementazione: parser, formati, partizionamento e test.

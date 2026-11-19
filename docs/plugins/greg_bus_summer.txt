@@ -1,0 +1,7 @@
+ID: greg_bus_summer
+Categoria: sommatore non lineare di bus
+Stato: pianificato per fase successiva
+Scopo: aggiungere colorazione non lineare al percorso bus della DAW.
+Requisiti: profili originali selezionabili, gain staging, oversampling e bypass.
+Riutilizzare: nonlinear_stages, transformer_hysteresis, psu_sag e analog_variance.
+Da documentare all'implementazione: modelli originali, livelli, latenza e test.

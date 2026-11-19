@@ -1,0 +1,7 @@
+ID: greg_bus_comp
+Categoria: compressore VCA da bus
+Stato: pianificato
+Scopo: compressione di bus con knee deciso e controllo della dinamica.
+Requisiti: threshold, ratio, attack, release, makeup, sidechain filtrabile e detector linkabile.
+Riutilizzare: filtri, sidechain_processor, envelope follower e smoothing.
+Da documentare all'implementazione: parametri/API, linking stereo, latenza e test.

@@ -1,0 +1,7 @@
+ID: greg_neve_eq
+Categoria: equalizzatore a induttori
+Stato: pianificato
+Scopo: EQ con curve d'induttore e colorazione armonica controllata.
+Requisiti: bande a frequenze selezionabili, filtro passa-alto e comportamento stereo coerente.
+Riutilizzare: filtri, nonlinear_stages, transformer_hysteresis e analog_variance.
+Da documentare all'implementazione: curve, controlli, risposta di fase e test.

@@ -1,0 +1,7 @@
+ID: greg_phase
+Categoria: utility di inversione di polarita
+Stato: pianificato
+Scopo: invertire la polarita per canale o per coppia linkata.
+Requisiti: mono/stereo e routing dichiarati; elaborazione sample-accurate a latenza zero.
+Riutilizzare: phase_inversion e routing_matrix condivisi.
+Da documentare all'implementazione: modalita canali, comportamento mono/stereo e test d'identita.

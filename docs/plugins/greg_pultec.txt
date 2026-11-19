@@ -1,0 +1,7 @@
+ID: greg_pultec
+Categoria: equalizzatore passivo valvolare
+Stato: pianificato
+Scopo: modellare l'interazione tra boost e attenuazione della banda bassa sul nodo condiviso.
+Requisiti: curve accoppiate low boost/attenuation, bande alte e stadio makeup non lineare.
+Riutilizzare: biquad/filtri, saturazione e trasformatori condivisi.
+Da documentare all'implementazione: topologia DSP originale, frequenze, controlli, fase e test.

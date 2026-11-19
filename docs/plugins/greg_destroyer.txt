@@ -1,0 +1,8 @@
+ID: greg_destroyer
+Categoria: distorsore multi-tecnologia
+Stato: pianificato
+Scopo: distorsione creativa aggressiva con algoritmi selezionabili o concatenabili.
+Modalita: wavefold, bit reduction, clipping simmetrico/asimmetrico, saturazione valvolare/FET/solid-state e rettificazione.
+Requisiti: filtri pre/post, dry/wet, output e oversampling configurabile.
+Riutilizzare: filtri, nonlinear_stages, oversampler e bypass crossfade.
+Da documentare all'implementazione: modalita, aliasing, latenza e test.

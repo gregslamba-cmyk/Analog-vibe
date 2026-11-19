@@ -1,0 +1,7 @@
+ID: greg_trans_mono
+Categoria: transient shaper mono-banda
+Stato: pianificato
+Scopo: regolare attack e sustain del segnale a banda intera.
+Requisiti: detector stabile, controlli senza click e protezione da gain eccessivo.
+Riutilizzare: envelope follower e smoothing.
+Da documentare all'implementazione: detector, parametri e test sui transienti.

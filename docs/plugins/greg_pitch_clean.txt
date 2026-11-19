@@ -1,0 +1,7 @@
+ID: greg_pitch_clean
+Categoria: pitch shifter trasparente
+Stato: pianificato
+Scopo: trasposizione pulita per correzione e armonizzazione.
+Requisiti: range pitch, latenza, qualità/transienti e modalità di processamento documentati.
+Vincoli: memoria e FFT/finestre allocate fuori dal thread audio.
+Da documentare all'implementazione: algoritmo originale, controlli, latenza e artefatti noti.

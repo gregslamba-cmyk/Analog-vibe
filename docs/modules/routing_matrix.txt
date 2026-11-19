@@ -1,0 +1,6 @@
+ID: routing_matrix
+File sorgente: core-dsp/src/core_dsp_modules/routing_matrix.rs
+Stato: implementazione alpha.
+Responsabilita: routing mono, stereo, dual-mono e codifica/decodifica M/S con scala normalizzata; inversione di polarita per canale.
+Limite: l'API di slice tratta coppie stereo; routing multicanale generale e policy layout host non sono ancora completati.
+Test: round-trip M/S e comportamento mono.

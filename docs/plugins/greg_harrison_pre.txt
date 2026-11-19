@@ -1,0 +1,7 @@
+ID: greg_harrison_pre
+Categoria: preamplificatore di canale
+Stato: pianificato
+Scopo: preamplificatore con carattere di console e saturazione controllabile.
+Requisiti: input gain/drive, output trim e comportamento stabile su segnali elevati.
+Riutilizzare: nonlinear_stages, psu_sag e filtri.
+Da documentare all'implementazione: controlli, modello e test.

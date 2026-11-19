@@ -1,0 +1,7 @@
+ID: greg_a3a
+Categoria: compressore opto a stato solido
+Stato: pianificato
+Scopo: compressione ottica con transitori piu definiti e trasparenti.
+Requisiti: risposta foto-ottica distinta da greg_a2a, detector e release dipendenti dal programma, uscita stabile.
+Riutilizzare: envelope follower, filtri, smoothing e sidechain.
+Da documentare all'implementazione: parametri/API, curva dinamica, latenza e test.

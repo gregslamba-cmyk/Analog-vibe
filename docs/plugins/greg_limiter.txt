@@ -1,0 +1,8 @@
+ID: greg_limiter
+Categoria: limiter/maximizer
+Stato: pianificato
+Scopo: aumentare il livello d'ingresso e contenere i picchi a un ceiling selezionato.
+Requisiti: Input/Drive e Limit/Ceiling; specificare true-peak, release, lookahead e oversampling.
+Vincoli: dichiarare con precisione la latenza del lookahead e non presentare clipping non rilevato come limitazione riuscita.
+Riutilizzare: envelope follower, oversampler, smoothing e nonlinear_stages.
+Da documentare all'implementazione: algoritmo, parametri, latenza, true-peak policy e test.

@@ -1,0 +1,8 @@
+ID: greg_multiband_comp
+Categoria: compressore multibanda espandibile
+Stato: pianificato
+Scopo: compressione dinamica su almeno quattro bande, espandibili dall'utente.
+Requisiti: crossover configurabile, threshold/ratio/tempi per banda, linking interbanda e numero massimo documentato.
+Vincoli: allocare filtri e buffer fuori dal thread audio; dichiarare fase e latenza del crossover.
+Riutilizzare: filtri, envelope follower, sidechain_processor e smoothing.
+Da documentare all'implementazione: schema bande, controlli, latenza e test di ricombinazione.

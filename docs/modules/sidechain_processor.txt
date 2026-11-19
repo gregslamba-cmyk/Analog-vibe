@@ -1,0 +1,6 @@
+ID: sidechain_processor
+File sorgente: core-dsp/src/core_dsp_modules/sidechain_processor.rs
+Stato: alpha implementato con biquad e listen.
+Responsabilita: filtrare il segnale detector e selezionare ascolto del segnale filtrato oppure livello rettificato.
+Tipi filtro disponibili: Bell, Low/High-Shelf, Low/High-Pass, Notch e BandPass tramite modulo filters.
+Da fare: routing della sidechain esterna dall'host, controlli automabili e test del comportamento di listen.

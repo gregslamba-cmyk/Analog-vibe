@@ -1,0 +1,3 @@
+[workspace]
+resolver = "2"
+members = ["core-dsp", "plugins/greg-fet", "tools/clap-signal-host"]

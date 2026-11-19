@@ -1,0 +1,7 @@
+ID: greg_gate
+Categoria: noise gate
+Stato: pianificato
+Scopo: attenuare il segnale sotto soglia con transizioni senza click.
+Requisiti: threshold, range, attack, hold, release, isteresi e sidechain interno/esterno filtrabile.
+Riutilizzare: sidechain_processor, filtri, envelope follower e bypass crossfade.
+Da documentare all'implementazione: detector, filtri, routing, latenza e test.

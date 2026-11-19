@@ -1,0 +1,7 @@
+ID: greg_a2a
+Categoria: compressore opto valvolare
+Stato: pianificato
+Scopo: compressione foto-ottica con attacco dipendente dal programma e rilascio lento a doppio stadio.
+Requisiti: detector ottico con memoria; stadio valvolare configurabile; controlli di riduzione e makeup; coefficienti derivati dal sample rate.
+Riutilizzare: envelope follower, stadi non lineari e filtri condivisi.
+Da documentare all'implementazione: parametri/API, curva del detector, tempi effettivi, latenza e test.

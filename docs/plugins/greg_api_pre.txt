@@ -1,0 +1,7 @@
+ID: greg_api_pre
+Categoria: preamplificatore discreto
+Stato: pianificato
+Scopo: stadio di preamplificazione veloce con saturazione prevalentemente simmetrica.
+Requisiti: gain/drive, livello d'uscita e opzione di oversampling per il ramo non lineare.
+Riutilizzare: nonlinear_stages, psu_sag e oversampler.
+Da documentare all'implementazione: curva d'ampiezza, armoniche, controlli e test.

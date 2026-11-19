@@ -1,0 +1,6 @@
+ID: greg_declipper
+Categoria: ripristino clipping
+Stato: pianificato
+Scopo: ricostruire campioni e transienti tosati senza affermare di recuperare informazione non presente.
+Requisiti: soglia/rilevamento, finestra e latenza dichiarata.
+Da documentare all'implementazione: limiti di ricostruzione, controlli e test.

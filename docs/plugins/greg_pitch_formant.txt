@@ -1,0 +1,7 @@
+ID: greg_pitch_formant
+Categoria: pitch shifter creativo con formanti
+Stato: pianificato
+Scopo: controllo indipendente di fondamentale/pitch e inviluppo delle formanti.
+Requisiti: modalità creativa, range, mix e latenza dichiarata.
+Vincoli: memoria e finestre allocate fuori dal thread audio.
+Da documentare all'implementazione: separazione pitch/formanti, controlli e artefatti noti.

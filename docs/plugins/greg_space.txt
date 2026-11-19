@@ -1,0 +1,7 @@
+ID: greg_space
+Categoria: processore di spaziatura audio
+Stato: pianificato
+Scopo: controllare larghezza stereo e posizione spaziale senza compromettere la compatibilita mono.
+Requisiti: width dipendente dalla frequenza, pan/depth e misura correlazione; evitare effetti comb non dichiarati.
+Riutilizzare: routing_matrix, filtri e phase_inversion.
+Da documentare all'implementazione: routing, fase, controlli e test mono-compatibility.

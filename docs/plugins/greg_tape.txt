@@ -1,0 +1,7 @@
+ID: greg_tape
+Categoria: simulatore di nastro magnetico
+Stato: pianificato
+Scopo: simulare saturazione magnetica, compressione naturale e risposta del nastro.
+Requisiti: bias, velocita, head bump e wow/flutter controllabili; prevenzione DC e aliasing.
+Riutilizzare: transformer_hysteresis, nonlinear_stages, psu_sag e oversampler.
+Da documentare all'implementazione: modello, controlli, latenza e test.

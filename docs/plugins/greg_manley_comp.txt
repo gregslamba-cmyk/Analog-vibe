@@ -1,0 +1,7 @@
+ID: greg_manley_comp
+Categoria: compressore Vari-Mu da mastering
+Stato: pianificato
+Scopo: compressione Vari-Mu con rapporto dipendente dalla riduzione di guadagno.
+Requisiti: detector lento, controlli di dinamica, stadio valvolare e gestione stereo.
+Riutilizzare: envelope follower, nonlinear_stages, psu_sag e sidechain.
+Da documentare all'implementazione: legge ratio, tempi, parametri e test.

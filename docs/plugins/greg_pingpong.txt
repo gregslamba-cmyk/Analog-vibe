@@ -1,0 +1,8 @@
+ID: greg_pingpong
+Categoria: delay stereo ping-pong
+Stato: pianificato
+Scopo: delay sincronizzabile al tempo host e con piu configurazioni di tap/routing.
+Requisiti: note, terzine e puntate; feedback filtrato, modulazione, mix e tempo libero.
+Vincoli: delay line dimensionate fuori dal thread audio; chiarire latenza dry/wet.
+Riutilizzare: filtri, smoothing e routing_matrix.
+Da documentare all'implementazione: divisioni tempo, tap, feedback, memoria e test.

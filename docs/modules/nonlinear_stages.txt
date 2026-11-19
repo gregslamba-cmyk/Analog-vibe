@@ -1,0 +1,6 @@
+ID: nonlinear_stages
+File sorgente: core-dsp/src/core_dsp_modules/nonlinear_stages.rs
+Stato: primitive alpha implementate.
+Modalita: soft clip, hard clip, asimmetrica, wavefold e rettificazione full-wave.
+Requisiti: validare livelli, continuita, spettro, DC e comportamento sotto oversampling; i nomi descrivono famiglie DSP, non una simulazione circuitale validata.
+Test attuali: finitezza e limite hard-clip.

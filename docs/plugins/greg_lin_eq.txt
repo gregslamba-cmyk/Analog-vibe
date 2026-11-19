@@ -1,0 +1,7 @@
+ID: greg_lin_eq
+Categoria: EQ multibanda a fase lineare
+Stato: pianificato
+Scopo: equalizzazione multibanda con fase lineare e ricombinazione coerente.
+Requisiti: Bell, shelf, HPF/LPF ove realizzabili; dichiarare latenza e pre-ringing.
+Riutilizzare: FIR e smoothing.
+Da documentare all'implementazione: finestre, risposta, latenza e test.

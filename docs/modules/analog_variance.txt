@@ -1,0 +1,6 @@
+ID: analog_variance
+File sorgente: core-dsp/src/core_dsp_modules/analog_variance.rs
+Stato: generatore deterministico alpha.
+Responsabilita: ricavare variazioni di gain, costante di tempo e crosstalk da un seed.
+Limite: la persistenza dell'instance_id nello stato salvato della DAW non e' ancora implementata; non collegare il seed a dati non persistenti.
+Test attuale: ripetibilita' a seed identico.

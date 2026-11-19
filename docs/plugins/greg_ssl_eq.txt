@@ -1,0 +1,7 @@
+ID: greg_ssl_eq
+Categoria: equalizzatore parametrico a quattro bande
+Stato: pianificato
+Scopo: EQ di canale a quattro bande con larghezza dipendente dal guadagno.
+Requisiti: HPF e LPF indipendenti; profili di curva commutabili; filtri stereo coerenti.
+Riutilizzare: Biquad e filtri condivisi.
+Da documentare all'implementazione: parametri/API, risposta in frequenza e fase, test.

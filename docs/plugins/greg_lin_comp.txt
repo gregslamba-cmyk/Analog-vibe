@@ -1,0 +1,7 @@
+ID: greg_lin_comp
+Categoria: compressore multibanda a fase lineare
+Stato: pianificato
+Scopo: controllare dinamica indipendentemente per bande con crossover a fase lineare.
+Requisiti: detector per banda, collegamento bande e latenza comunicata.
+Riutilizzare: FIR, envelope follower e sidechain_processor.
+Da documentare all'implementazione: crossover, parametri, latenza e test di ricombinazione.

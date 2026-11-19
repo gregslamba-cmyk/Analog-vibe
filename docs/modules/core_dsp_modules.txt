@@ -1,0 +1,6 @@
+ID: core_dsp_modules
+File sorgente: core-dsp/src/core_dsp_modules.rs
+Stato: crate condiviso creato; contenuti alpha, non tutti ancora integrati nei plugin.
+Responsabilita: esportare API DSP riusabili e senza allocazioni nel callback audio.
+Moduli con documento individuale: routing_matrix, phase_inversion, filters, sidechain_processor, resampler_bitdepth, nonlinear_stages, transformer_hysteresis, psu_sag, analog_variance e realtime_controls.
+Regola: aggiornare questa scheda e la scheda del sottomodulo insieme alle modifiche API; registrare test e limiti misurati.

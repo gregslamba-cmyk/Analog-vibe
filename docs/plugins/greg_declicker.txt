@@ -1,0 +1,7 @@
+ID: greg_declicker
+Categoria: riparazione click/pop
+Stato: pianificato
+Scopo: rilevare e riparare transitori impulsivi preservando transienti musicali.
+Requisiti: soglia, finestra, interpolazione e latenza dichiarata.
+Vincoli: preallocare buffer e mantenere il callback audio real-time safe.
+Da documentare all'implementazione: detection, limiti e test su segnali sintetici/reali.

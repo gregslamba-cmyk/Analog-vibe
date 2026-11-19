@@ -1,0 +1,7 @@
+ID: greg_ms_decoder
+Categoria: decodificatore Mid/Side
+Stato: pianificato
+Scopo: trasformare coppie Mid/Side in Left/Right usando la convenzione del codificatore.
+Requisiti: trim M/S, inversione selettiva e comportamento a latenza zero.
+Riutilizzare: routing_matrix e phase_inversion.
+Da documentare all'implementazione: matrice, normalizzazione, fase e test round-trip.

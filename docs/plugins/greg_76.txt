@@ -1,0 +1,14 @@
+ID: greg_76
+Nome: Greg 76
+Categoria: compressore FET
+Stato: alpha in sviluppo
+Scopo: compressione FET veloce, controllabile, con stadio non lineare d'uscita.
+Parametri: Input, Attack, Release, Ratio (4:1/8:1/12:1/20:1), Threshold, Knee, All Buttons In, Oversampling (1x/2x/4x/8x), Bypass, Invert Left Polarity, Invert Right Polarity, Output.
+Requisiti: detector per canale; oversampling selezionabile sulla saturazione; bypass crossfade e percorso dry allineato alla latenza dichiarata.
+Latenza oversampling attuale: 0/15/22/25 campioni a 1x/2x/4x/8x.
+API e DSP: vedere plugins/greg-fet/src/lib.rs e plugins/greg-fet/src/dsp.rs.
+Inversione di polarita: elaborata prima del ramo dry/wet, applicabile separatamente ai primi due canali.
+Bypass: rampa lineare di 5 ms, ricalcolata dal sample rate; il percorso dry usa un delay fisso allocato e configurato prima del processing.
+Verifica host: caricato e processato dal test host offline con sinusoidi 440 Hz a 1x/2x/4x/8x; bypass a 8x e inversione L verificati con sinusoide 1 kHz.
+Test host: `cargo run --release -p clap-signal-host -- target/release/libgreg_fet.so`.
+Da fare: test in DAW reale, misure audio approfondite, specifica circuitale e valutazione dell'allineamento fine della latenza fra dry e wet.

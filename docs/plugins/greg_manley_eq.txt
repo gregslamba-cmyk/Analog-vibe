@@ -1,0 +1,7 @@
+ID: greg_manley_eq
+Categoria: equalizzatore passivo da mastering
+Stato: pianificato
+Scopo: equalizzazione passiva multi-banda con interazione delle bande e makeup non lineare.
+Requisiti: controlli per banda, comportamento di fase e livello d'uscita.
+Riutilizzare: filtri, nonlinear_stages e transformer_hysteresis.
+Da documentare all'implementazione: modello d'interazione, parametri e test.

@@ -1,0 +1,7 @@
+ID: greg_trans_multi
+Categoria: transient shaper multibanda
+Stato: pianificato
+Scopo: regolare attack/sustain indipendentemente su bande multiple.
+Requisiti: crossover a fase lineare, ricombinazione corretta e latenza comunicata all'host.
+Riutilizzare: filtri FIR, envelope follower e smoothing.
+Da documentare all'implementazione: crossover, fase, latenza e test di ricostruzione.

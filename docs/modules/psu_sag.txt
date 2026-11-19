@@ -1,0 +1,5 @@
+ID: psu_sag
+File sorgente: core-dsp/src/core_dsp_modules/psu_sag.rs
+Stato: prototipo envelope-following per gain sag.
+Responsabilita: calo dinamico del gain normalizzato in funzione del carico, con coefficiente derivato dal sample rate.
+Da fare: modello e unità dei controlli, ripple opzionale, test di step/transiente e verifica di assenza DC/instabilita.

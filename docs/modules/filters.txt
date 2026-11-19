@@ -1,0 +1,7 @@
+ID: filters
+File sorgente: core-dsp/src/core_dsp_modules/filters.rs
+Stato: biquad alpha implementato.
+Tipi: HighPass, LowPass, Bell, LowShelf, HighShelf, Notch, BandPass.
+Vincoli: configurare coefficienti in initialize o quando cambia il parametro, non nel thread audio; verificare stabilita e risposta vicino a Nyquist.
+Test attuali: configurazione dei tipi e rifiuto di cutoff invalido.
+Da fare: test di risposta in frequenza, precisione, stabilita e smoothing dei coefficienti.
