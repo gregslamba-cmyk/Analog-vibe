@@ -2,6 +2,7 @@
 name = "greg-limiter"
 version = "0.1.0"
 edition = "2024"
+license = "GPL-3.0-or-later"
 
 [lib]
 crate-type = ["cdylib"]
@@ -9,4 +10,4 @@ crate-type = ["cdylib"]
 [dependencies]
 core-dsp = { path = "../../core-dsp" }
 plugin-support = { path = "../../plugin-support" }
-nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", default-features = false, features = ["assert_process_allocs"] }
+nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", default-features = false, features = ["assert_process_allocs", "vst3"] }

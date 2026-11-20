@@ -1,3 +1,5 @@
 al/target/
 /plugins/greg-fet/.git/
 /target
+/dist
+/.cache

@@ -1,3 +1,5 @@
+#![allow(unknown_lints, semicolon_in_expressions_from_non_local_macros)]
+
 use std::sync::Arc;
 
 use core_dsp::core_dsp_modules::{
@@ -86,9 +88,9 @@ impl Default for GregMsDecoder {
 
 impl Plugin for GregMsDecoder {
     const NAME: &'static str = "Greg M/S Decoder";
-    const VENDOR: &'static str = "Greg Audio";
-    const URL: &'static str = "https://example.invalid";
-    const EMAIL: &'static str = "support@example.invalid";
+    const VENDOR: &'static str = core_dsp::core_dsp_modules::plugin_export::VENDOR;
+    const URL: &'static str = core_dsp::core_dsp_modules::plugin_export::URL;
+    const EMAIL: &'static str = core_dsp::core_dsp_modules::plugin_export::EMAIL;
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
     const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &plugin_support::SURROUND_IO_LAYOUTS;
@@ -200,20 +202,6 @@ impl Plugin for GregMsDecoder {
     }
 }
 
-impl ClapPlugin for GregMsDecoder {
-    const CLAP_ID: &'static str = "com.greg.audio.greg-ms-decoder";
-    const CLAP_DESCRIPTION: Option<&'static str> =
-        Some("Zero-latency M/S to L/R decoder with orthonormal scaling");
-    const CLAP_MANUAL_URL: Option<&'static str> = None;
-    const CLAP_SUPPORT_URL: Option<&'static str> = None;
-    const CLAP_FEATURES: &'static [ClapFeature] = &[
-        ClapFeature::AudioEffect,
-        ClapFeature::Utility,
-        ClapFeature::Mono,
-        ClapFeature::Stereo,
-    ];
-}
-
 fn silence_buffer(buffer: &mut Buffer) {
     for mut samples in buffer.iter_samples() {
         for sample in samples.iter_mut() {
@@ -241,4 +229,9 @@ fn finite(sample: f32) -> f32 {
     if sample.is_finite() { sample } else { 0.0 }
 }
 
-nih_export_clap!(GregMsDecoder);
+core_dsp::export_greg_plugin!(
+    GregMsDecoder,
+    "com.greg.audio.greg-ms-decoder",
+    "Zero-latency M/S to L/R decoder with orthonormal scaling",
+    utility
+);

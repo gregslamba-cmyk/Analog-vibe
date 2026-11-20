@@ -1,3 +1,13 @@
+## Obiettivo completato: Doppia Licenza (GPLv3 + Commerciale) e Compatibilità Multi-Formato (CLAP, VST3, LV2, AU)
+- [COMPLETATO] `LICENSE`: creato file di licenza root con intestazione chiara di Dual Licensing (GPLv3 per derivati open-source e licenza commerciale a basso costo per prodotti commerciali/chiusi) e testo integrale GNU GPLv3.
+- [COMPLETATO] `README.md`: aggiunta sezione "License & Commercial Use".
+- [COMPLETATO] `Cargo.toml`: configurato `license = "GPL-3.0-or-later"` a livello di workspace e in tutti i crate individuali; abilitata la feature `vst3` in `nih_plug`.
+- [COMPLETATO] `plugin_export`: creato modulo condiviso in `core-dsp` (e symlink `crates/core_dsp_modules/src/plugin_export.rs`) con metadati ufficiali (Vendor "Greg Audio", URL `https://github.com/gregslamba-cmyk/Analog-vibe`, categorie standard CLAP/VST3, calcolo deterministico VST3 Class ID).
+- [COMPLETATO] `export_greg_plugin!`: macro helper per esportare nativamente sia `ClapPlugin` che `Vst3Plugin` in 3 righe di codice, applicata a tutti i 10 plugin della suite.
+- [COMPLETATO] `scripts/package_all_formats.sh` e `docs/PACKAGING.md`: script bash eseguibile e guida esaustiva per impacchettare CLAP, VST3 nativi, LV2 (`.lv2` per Linux/Ardour/Mixbus) e Audio Unit (`.component` per macOS/Logic Pro) secondo le specifiche di `clap-wrapper` (licenza MIT).
+- [COMPLETATO] `.clinerules`: inserita regola vincolante per l'uso obbligatorio di `export_greg_plugin!` (CLAP + VST3) e dual licensing su ogni plugin futuro.
+- [COMPLETATO] Verifiche completate: `cargo check --workspace` e `cargo test --workspace` (55 test in `core-dsp`, unit test di tutti i plugin) superati con 0 errori e 0 warning.
+
 ## Obiettivo completato: moduli DSP di carattere analogico puro (`core-dsp`)
 - [COMPLETATO] `zdf_filters`: filtri TPT State Variable Filter (ZDF) con integrazione di saturazione `tanh` nel loop di feedback risolta via iterazioni Newton-Raphson (1-2 iterazioni).
 - [COMPLETATO] `transformer_hysteresis` e `nonlinear_stages`: modello fisico di isteresi magnetica, saturazione dipendente dalla frequenza, pre/de-enfasi dinamica speculare, slew-rate limiting, AC coupling con micro-shift di bias DC, e curve di saturazione estese (valvola triodo/pentodo, stato solido Classe A, FET, Op-Amp discreto, soft/hard clip, wavefolding).

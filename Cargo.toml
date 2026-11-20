@@ -15,3 +15,6 @@ members = [
     "plugins/greg-phase",
     "tools/clap-signal-host",
 ]
+
+[workspace.package]
+license = "GPL-3.0-or-later"

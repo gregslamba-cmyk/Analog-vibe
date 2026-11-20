@@ -1,3 +1,5 @@
+#![allow(unknown_lints, semicolon_in_expressions_from_non_local_macros)]
+
 use std::{array, sync::Arc};
 
 use core_dsp::core_dsp_modules::{
@@ -354,9 +356,9 @@ impl GregLimiter {
 
 impl Plugin for GregLimiter {
     const NAME: &'static str = "Greg Limiter";
-    const VENDOR: &'static str = "Greg Audio";
-    const URL: &'static str = "https://example.invalid";
-    const EMAIL: &'static str = "support@example.invalid";
+    const VENDOR: &'static str = core_dsp::core_dsp_modules::plugin_export::VENDOR;
+    const URL: &'static str = core_dsp::core_dsp_modules::plugin_export::URL;
+    const EMAIL: &'static str = core_dsp::core_dsp_modules::plugin_export::EMAIL;
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
     const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &plugin_support::DYNAMICS_IO_LAYOUTS;
@@ -604,20 +606,6 @@ impl Plugin for GregLimiter {
     }
 }
 
-impl ClapPlugin for GregLimiter {
-    const CLAP_ID: &'static str = "com.greg.audio.greg-limiter";
-    const CLAP_DESCRIPTION: Option<&'static str> =
-        Some("Stereo and mono lookahead peak limiter with filtered sidechain");
-    const CLAP_MANUAL_URL: Option<&'static str> = None;
-    const CLAP_SUPPORT_URL: Option<&'static str> = None;
-    const CLAP_FEATURES: &'static [ClapFeature] = &[
-        ClapFeature::AudioEffect,
-        ClapFeature::Limiter,
-        ClapFeature::Mono,
-        ClapFeature::Stereo,
-    ];
-}
-
 fn finite(sample: f32) -> f32 {
     if sample.is_finite() { sample } else { 0.0 }
 }
@@ -658,4 +646,9 @@ mod tests {
     }
 }
 
-nih_export_clap!(GregLimiter);
+core_dsp::export_greg_plugin!(
+    GregLimiter,
+    "com.greg.audio.greg-limiter",
+    "Stereo and mono lookahead peak limiter with filtered sidechain",
+    limiter
+);

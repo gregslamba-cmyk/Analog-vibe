@@ -141,3 +141,44 @@ impl AnalogVariance {
     pub fn from_seed(seed: u64, tolerance: f64, crosstalk_max: f64, analog_drift: f64) -> Self;
 }
 ```
+
+### 6. `plugin_export` (`plugin_export.rs`)
+Unified metadata constants, categories, deterministic VST3 Class ID calculation (UUID RFC 4122 v4), and the `export_greg_plugin!` macro exporting natively both CLAP and VST3.
+
+```rust
+pub const VENDOR: &str = "Greg Audio";
+pub const URL: &str = "https://github.com/gregslamba-cmyk/Analog-vibe";
+pub const SUPPORT_URL: Option<&str> = Some("https://github.com/gregslamba-cmyk/Analog-vibe/issues");
+pub const MANUAL_URL: Option<&str> = Some("https://github.com/gregslamba-cmyk/Analog-vibe");
+pub const EMAIL: &str = "support@example.invalid";
+
+pub mod categories {
+    pub const DYNAMICS_COMPRESSOR_CLAP: &[ClapFeature];
+    pub const DYNAMICS_COMPRESSOR_VST3: &[Vst3SubCategory];
+    pub const DYNAMICS_LIMITER_CLAP: &[ClapFeature];
+    pub const DYNAMICS_LIMITER_VST3: &[Vst3SubCategory];
+    pub const EQUALIZER_CLAP: &[ClapFeature];
+    pub const EQUALIZER_VST3: &[Vst3SubCategory];
+    pub const UTILITY_CLAP: &[ClapFeature];
+    pub const UTILITY_VST3: &[Vst3SubCategory];
+}
+
+pub const fn make_vst3_cid(id: &str) -> [u8; 16];
+
+#[macro_export]
+macro_rules! export_greg_plugin {
+    // ($plugin_ty, $clap_id, $description)
+    // ($plugin_ty, $clap_id, $description, compressor | limiter | equalizer | utility)
+    // ($plugin_ty, $clap_id, $description, $clap_features, $vst3_subcategories)
+    // ($plugin_ty, $clap_id, $description, $clap_features, $vst3_subcategories, $vst3_cid)
+}
+```
+
+---
+
+## Multi-Format Pipeline (CLAP, VST3, LV2, AUv2)
+
+- **CLAP & VST3**: Dual-exported natively from the same compiled `cdylib` binary using `export_greg_plugin!`, exporting `clap_entry` alongside `GetPluginFactory` / `ModuleEntry`.
+- **LV2 & AUv2**: Packaged via `scripts/package_all_formats.sh` conforming to `clap-wrapper` (MIT) specifications into standard `.lv2` (Linux) and `.component` (macOS) bundles.
+- **Licensing**: Dual-licensed under GNU GPLv3 or later (open-source) and low-cost proprietary commercial license on request.
+

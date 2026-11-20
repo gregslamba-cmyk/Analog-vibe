@@ -49,4 +49,15 @@ Il test host carica i moduli CLAP, processa sinusoidi e controlla i fattori di o
 - `docs/specs/`: specifiche API e ricerca dei riferimenti hardware analogici
 - Channel strip analogici completi e strip software Mixbus sono catalogati separatamente dai plugin pre/EQ/comp di sezione.
 - `docs/testing/`: documentazione degli strumenti di test
+- `docs/PACKAGING.md`: guida al packaging multi-formato (CLAP, VST3, LV2, AUv2)
 - `STATE.md` e `AGGIORNAMENTO.md`: avanzamento e verifiche
+
+## License & Commercial Use
+
+Il progetto adotta un modello a **Doppia Licenza (Dual Licensing)**:
+
+1. **Open-Source (GNU GPLv3 o successiva):**
+   L'uso, la modifica, la creazione di fork e la ridistribuzione sono completamente liberi e gratuiti, a condizione che qualsiasi codice derivato o software redistribuito rimanga anch'esso interamente open-source sotto licenza **GNU GPLv3** (o qualsiasi versione successiva). Consulta il file [`LICENSE`](LICENSE) per il testo integrale.
+2. **Licenza Commerciale Proprietaria:**
+   Per aziende, sviluppatori o produttori hardware che desiderano incorporare questi algoritmi DSP o plugin all'interno di prodotti commerciali proprietari/a codice chiuso (dove non sia possibile o desiderabile rispettare i vincoli copyleft della GPLv3), è disponibile una **licenza commerciale a basso costo** su richiesta diretta all'autore.
+   Per informazioni o richieste di licenza personalizzata: [GitHub Repository / Issues](https://github.com/gregslamba-cmyk/Analog-vibe).

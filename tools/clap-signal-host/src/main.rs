@@ -1533,8 +1533,7 @@ fn run_case(
                     sample
                 };
             }
-#[allow(clippy::needless_range_loop)]
-
+            #[allow(clippy::needless_range_loop)]
             for channel in 2..channel_count {
                 let channel_frequency = case.frequency * (1.0 + channel as f64 * 0.11);
                 input_channels[channel][offset] =

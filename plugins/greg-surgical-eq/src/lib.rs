@@ -1,3 +1,5 @@
+#![allow(unknown_lints, semicolon_in_expressions_from_non_local_macros)]
+
 use std::{array, sync::Arc};
 
 use core_dsp::core_dsp_modules::{
@@ -212,9 +214,9 @@ impl GregSurgicalEq {
 
 impl Plugin for GregSurgicalEq {
     const NAME: &'static str = "Greg Surgical EQ";
-    const VENDOR: &'static str = "Greg Audio";
-    const URL: &'static str = "https://example.invalid";
-    const EMAIL: &'static str = "support@example.invalid";
+    const VENDOR: &'static str = core_dsp::core_dsp_modules::plugin_export::VENDOR;
+    const URL: &'static str = core_dsp::core_dsp_modules::plugin_export::URL;
+    const EMAIL: &'static str = core_dsp::core_dsp_modules::plugin_export::EMAIL;
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
     const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &plugin_support::SURROUND_IO_LAYOUTS;
@@ -345,20 +347,6 @@ impl Plugin for GregSurgicalEq {
     }
 }
 
-impl ClapPlugin for GregSurgicalEq {
-    const CLAP_ID: &'static str = "com.greg.audio.greg-surgical-eq";
-    const CLAP_DESCRIPTION: Option<&'static str> =
-        Some("Ten-band precision equalizer with minimum and linear phase modes");
-    const CLAP_MANUAL_URL: Option<&'static str> = None;
-    const CLAP_SUPPORT_URL: Option<&'static str> = None;
-    const CLAP_FEATURES: &'static [ClapFeature] = &[
-        ClapFeature::AudioEffect,
-        ClapFeature::Equalizer,
-        ClapFeature::Mono,
-        ClapFeature::Stereo,
-    ];
-}
-
 fn silence_buffer(buffer: &mut Buffer) {
     for mut samples in buffer.iter_samples() {
         for sample in samples.iter_mut() {
@@ -367,4 +355,9 @@ fn silence_buffer(buffer: &mut Buffer) {
     }
 }
 
-nih_export_clap!(GregSurgicalEq);
+core_dsp::export_greg_plugin!(
+    GregSurgicalEq,
+    "com.greg.audio.greg-surgical-eq",
+    "Ten-band precision equalizer with minimum and linear phase modes",
+    equalizer
+);

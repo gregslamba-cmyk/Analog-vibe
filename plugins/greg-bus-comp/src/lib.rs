@@ -1,3 +1,5 @@
+#![allow(unknown_lints, semicolon_in_expressions_from_non_local_macros)]
+
 use std::{array, sync::Arc};
 
 use core_dsp::core_dsp_modules::{
@@ -345,12 +347,11 @@ impl GregBusComp {
     }
 }
 
-
 impl Plugin for GregBusComp {
     const NAME: &'static str = "Greg Bus Comp";
-    const VENDOR: &'static str = "Greg Audio";
-    const URL: &'static str = "https://example.invalid";
-    const EMAIL: &'static str = "support@example.invalid";
+    const VENDOR: &'static str = core_dsp::core_dsp_modules::plugin_export::VENDOR;
+    const URL: &'static str = core_dsp::core_dsp_modules::plugin_export::URL;
+    const EMAIL: &'static str = core_dsp::core_dsp_modules::plugin_export::EMAIL;
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
     const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &plugin_support::DYNAMICS_IO_LAYOUTS;
@@ -400,8 +401,7 @@ impl Plugin for GregBusComp {
             .dry_delays
             .iter_mut()
             .all(|delay| delay.set_delay_samples(latency as usize));
-        let initialized =
-            envelopes_initialized && sidechains_initialized && delays_initialized;
+        let initialized = envelopes_initialized && sidechains_initialized && delays_initialized;
         if initialized {
             self.last_ratio = self.params.ratio.value();
             self.last_oversampling = oversampling;
@@ -583,22 +583,6 @@ impl Plugin for GregBusComp {
     }
 }
 
-impl ClapPlugin for GregBusComp {
-    const CLAP_ID: &'static str = "com.greg.audio.greg-bus-comp";
-    const CLAP_DESCRIPTION: Option<&'static str> = Some(
-        "Stereo bus VCA compressor with filtered sidechain, stereo-link or dual-mono detection, \
-         and optional oversampling",
-    );
-    const CLAP_MANUAL_URL: Option<&'static str> = None;
-    const CLAP_SUPPORT_URL: Option<&'static str> = None;
-    const CLAP_FEATURES: &'static [ClapFeature] = &[
-        ClapFeature::AudioEffect,
-        ClapFeature::Compressor,
-        ClapFeature::Mono,
-        ClapFeature::Stereo,
-    ];
-}
-
 #[inline]
 fn db_to_gain(db: f32) -> f32 {
     if db.is_finite() {
@@ -610,11 +594,7 @@ fn db_to_gain(db: f32) -> f32 {
 
 #[inline]
 fn finite(sample: f32) -> f32 {
-    if sample.is_finite() {
-        sample
-    } else {
-        0.0
-    }
+    if sample.is_finite() { sample } else { 0.0 }
 }
 
 #[inline]
@@ -631,7 +611,12 @@ fn silence_buffer(buffer: &mut Buffer) {
     }
 }
 
-nih_export_clap!(GregBusComp);
+core_dsp::export_greg_plugin!(
+    GregBusComp,
+    "com.greg.audio.greg-bus-comp",
+    "Stereo bus VCA compressor with filtered sidechain, stereo-link or dual-mono detection, and optional oversampling",
+    compressor
+);
 
 #[cfg(test)]
 mod tests {

@@ -1,3 +1,5 @@
+#![allow(unknown_lints, semicolon_in_expressions_from_non_local_macros)]
+
 use std::{array, sync::Arc};
 
 use core_dsp::core_dsp_modules::{
@@ -217,10 +219,7 @@ impl Default for GregA2aParams {
             analog_drift: FloatParam::new(
                 "Analog Drift",
                 0.2,
-                FloatRange::Linear {
-                    min: 0.0,
-                    max: 1.0,
-                },
+                FloatRange::Linear { min: 0.0, max: 1.0 },
             ),
         }
     }
@@ -286,9 +285,9 @@ impl GregA2a {
 
 impl Plugin for GregA2a {
     const NAME: &'static str = "Greg A2A";
-    const VENDOR: &'static str = "Greg Audio";
-    const URL: &'static str = "https://example.invalid";
-    const EMAIL: &'static str = "support@example.invalid";
+    const VENDOR: &'static str = core_dsp::core_dsp_modules::plugin_export::VENDOR;
+    const URL: &'static str = core_dsp::core_dsp_modules::plugin_export::URL;
+    const EMAIL: &'static str = core_dsp::core_dsp_modules::plugin_export::EMAIL;
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
     const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &plugin_support::DYNAMICS_IO_LAYOUTS;
@@ -339,12 +338,8 @@ impl Plugin for GregA2a {
             .iter_mut()
             .all(|delay| delay.set_delay_samples(latency_samples as usize));
 
-        let variance = AnalogVariance::from_seed(
-            13579,
-            0.03,
-            0.01,
-            self.params.analog_drift.value() as f64,
-        );
+        let variance =
+            AnalogVariance::from_seed(13579, 0.03, 0.01, self.params.analog_drift.value() as f64);
         self.analog_variance = variance;
         for sag in &mut self.power_sags {
             sag.initialize(self.sample_rate, 0.1, 0.3);
@@ -506,19 +501,19 @@ impl Plugin for GregA2a {
                         self.analog_variance.right_gain
                     };
                     let sag_gain = self.power_sags[channel].gain(compressed);
-                    let pre_emph = self.pre_emphases[channel].pre_emphasis((compressed as f64) * drift * (sag_gain as f64), 0.3);
+                    let pre_emph = self.pre_emphases[channel]
+                        .pre_emphasis((compressed as f64) * drift * (sag_gain as f64), 0.3);
                     let oversampler = &mut self.oversamplers[channel];
                     let saturated = oversampler.process(pre_emph as f32, factor, |value| {
                         tube_saturate(value, tube_drive)
                     });
                     let de_emph = self.pre_emphases[channel].de_emphasis(saturated as f64, 0.3);
                     let ac_coupled = self.ac_couplings[channel].process(de_emph);
-                    let transformer_out = self.transformers[channel].process(ac_coupled, 1.0, 0.5, 0.2);
-                    *sample =
-                        finite(self.bypass_crossfades[channel].process(
-                            dry,
-                            transformer_out as f32,
-                        ));
+                    let transformer_out =
+                        self.transformers[channel].process(ac_coupled, 1.0, 0.5, 0.2);
+                    *sample = finite(
+                        self.bypass_crossfades[channel].process(dry, transformer_out as f32),
+                    );
                     self.metering.record_sample(input, *sample, reduction_db);
                 }
                 frame_index += 1;
@@ -534,20 +529,6 @@ impl Plugin for GregA2a {
     }
 }
 
-impl ClapPlugin for GregA2a {
-    const CLAP_ID: &'static str = "com.greg.audio.greg-a2a";
-    const CLAP_DESCRIPTION: Option<&'static str> =
-        Some("Program-dependent opto compressor with an asymmetric tube output stage");
-    const CLAP_MANUAL_URL: Option<&'static str> = None;
-    const CLAP_SUPPORT_URL: Option<&'static str> = None;
-    const CLAP_FEATURES: &'static [ClapFeature] = &[
-        ClapFeature::AudioEffect,
-        ClapFeature::Compressor,
-        ClapFeature::Mono,
-        ClapFeature::Stereo,
-    ];
-}
-
 fn finite(sample: f32) -> f32 {
     if sample.is_finite() { sample } else { 0.0 }
 }
@@ -560,4 +541,9 @@ fn silence_buffer(buffer: &mut Buffer) {
     }
 }
 
-nih_export_clap!(GregA2a);
+core_dsp::export_greg_plugin!(
+    GregA2a,
+    "com.greg.audio.greg-a2a",
+    "Program-dependent opto compressor with an asymmetric tube output stage",
+    compressor
+);
