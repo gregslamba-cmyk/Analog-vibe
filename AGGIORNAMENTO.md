@@ -160,6 +160,19 @@ Realizzare una suite di plugin audio CLAP in Rust con DSP prioritario, senza GUI
 - Host CLAP: inversione L, R e linkata verificata con correlazione; bypass confermato; latenza zero.
 - E' un'utility digitale, non una simulazione hardware; il vincolo di fedelta' alle macchine reali si applica ai plugin di emulazione.
 
+## Compressore VCA da bus `greg-bus-comp` (2026-11-20)
+
+- Aggiunto il crate CLAP `greg-bus-comp`, compressore stereo VCA da bus con riferimento SSL 4000 G.
+- Controlli: Input, Threshold, Ratio (1.5/2/4/10/∞:1), Attack, Release, Makeup, Stereo Link, Oversampling (1x/2x/4x/8x), VCA Drive, Bypass, inversione L/R, sidechain esterna opzionale con filtri (HP/LP/Bell/LowShelf/HighShelf) e Sidechain Listen.
+- VCA: riduzione in dB calcolata dal livello rispetto alla soglia con rapporto selezionato; soft knee di 2 dB attorno alla soglia.
+- Stereo Link condivide il detector L/R; disattivato si hanno detector e gain reduction indipendenti dual mono.
+- Latenza dichiarata: 0/15/22/25 campioni a 1x/2x/4x/8x; bypass compensato con crossfade 5 ms e percorso dry allineato.
+- Riutilizza `EnvelopeFollower`, `SidechainProcessor`, `Metering`, `Oversampler`, `BypassCrossfade`, `LatencyDelay`, `PanicProtection` da `core-dsp`.
+- Test DSP: target reduction sotto soglia zero, scalamento con ratio, tracking attack/release dell'envelope follower, valori ratio positivi.
+- Verifiche passate: `cargo fmt --all -- --check`, `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo build --workspace --release`.
+- Fedeltà: modello alpha hardware-inspired; la curva VCA, i tempi e il comportamento del bus compressor devono essere confrontati con manuale di servizio e misure A/B su unità originale prima di dichiarare replica fedele.
+- Prossimo: validare in host CLAP offline e in DAW reale.
+
 ## Limiti e verifiche aperte
 - Il plugin e' stato caricato dall'host CLAP offline; resta da validare in una DAW reale e la latenza totale di monitoraggio non e' misurata.
 - NIH-plug fornisce al plugin buffer `f32`; il core DSP generico puo' supportare `f32` e `f64`, ma il wrapper non offre elaborazione host-native `f64`.

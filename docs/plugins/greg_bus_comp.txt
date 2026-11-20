@@ -1,7 +1,22 @@
 ID: greg_bus_comp
 Categoria: compressore VCA da bus
-Stato: pianificato
-Scopo: compressione di bus con knee deciso e controllo della dinamica.
-Requisiti: threshold, ratio, attack, release, makeup, sidechain filtrabile e detector linkabile.
-Riutilizzare: filtri, sidechain_processor, envelope follower e smoothing.
-Da documentare all'implementazione: parametri/API, linking stereo, latenza e test.
+Nome: Greg Bus Comp
+Nome CLAP: Greg Bus Comp
+Stato: alpha implementata, non calibrata contro hardware reale
+Scopo: compressione di bus con knee morbido e controllo della dinamica, riferimento SSL 4000 G bus compressor.
+Controlli: Input, Threshold, Ratio (1.5/2/4/10/∞:1), Attack, Release, Makeup, Stereo Link, Oversampling (1x/2x/4x/8x), VCA Drive, Bypass, inversione L/R, sidechain esterna opzionale con filtri e Listen.
+VCA: riduzione in dB calcolata da livello rispetto alla soglia con rapporto selezionato; soft knee di 2 dB attorno alla soglia.
+Dual mono: `Stereo Link` attivo per detector condiviso e immagine stabile; disattivato per detector e gain reduction L/R indipendenti. Controlli comuni ai due canali.
+Latenza: 0/15/22/25 campioni a 1x/2x/4x/8x; bypass compensato con crossfade 5 ms.
+Condivisi: `EnvelopeFollower`, `SidechainProcessor`, `Metering`, `Oversampler`, `BypassCrossfade`, `LatencyDelay`, `PanicProtection`.
+Fedeltà: modello alpha hardware-inspired; la curva VCA, i tempi e il comportamento del bus compressor devono essere confrontati con manuale di servizio e misure A/B su unità originale prima di dichiarare replica fedele.
+CLAP ID: com.greg.audio.greg-bus-comp
+
+## Verifica CLAP signal host
+
+Questa sezione viene rigenerata dal host offline. Non è una misura A/B su hardware reale: confronta il segnale d'ingresso sintetico con l'uscita del modello software.
+
+| Test | Latenza | Peak IN L/R | Peak OUT L/R | RMS IN L/R | RMS OUT L/R | Delta peak dB L/R | Delta RMS dB L/R | Stereo corr IN/OUT | Phase diff | THD IN/OUT % | Timbre centroid IN/OUT Hz | Est. gain reduction dB |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+
+Verifiche: `cargo fmt --all -- --check`, `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo build --workspace --release`.

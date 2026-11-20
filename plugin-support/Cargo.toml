@@ -1,0 +1,7 @@
+[package]
+name = "plugin-support"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", default-features = false, features = ["assert_process_allocs"] }

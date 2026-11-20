@@ -1,4 +1,4 @@
-use std::{array, num::NonZeroU32, sync::Arc};
+use std::{array, sync::Arc};
 
 use nih_plug::prelude::*;
 
@@ -9,8 +9,6 @@ use core_dsp::core_dsp_modules::{
 };
 
 mod dsp;
-
-const SIDECHAIN_PORTS: [NonZeroU32; 1] = [new_nonzero_u32(2)];
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
 enum ScFilter {
@@ -95,11 +93,12 @@ enum FetRevision {
 
 struct GregFet {
     params: Arc<GregFetParams>,
-    envelopes: [dsp::EnvelopeFollower<f32>; 2],
-    oversamplers: [dsp::Oversampler<f32>; 2],
-    bypass_crossfades: [dsp::BypassCrossfade<f32>; 2],
-    dry_delays: [dsp::LatencyDelay<f32, 32>; 2],
-    sidechains: [SidechainProcessor<f32>; 2],
+    routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix,
+    envelopes: [dsp::EnvelopeFollower<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    oversamplers: [dsp::Oversampler<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    bypass_crossfades: [dsp::BypassCrossfade<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    dry_delays: [dsp::LatencyDelay<f32, 32>; plugin_support::MAX_AUDIO_CHANNELS],
+    sidechains: [SidechainProcessor<f32>; plugin_support::MAX_AUDIO_CHANNELS],
     last_sidechain_settings: SidechainSettings,
     sample_rate: f32,
     last_attack_seconds: f32,
@@ -159,10 +158,12 @@ impl Default for GregFet {
     fn default() -> Self {
         Self {
             params: Arc::new(GregFetParams::default()),
-            envelopes: [dsp::EnvelopeFollower::default(); 2],
-            oversamplers: [dsp::Oversampler::default(); 2],
-            bypass_crossfades: [dsp::BypassCrossfade::default(); 2],
-            dry_delays: [dsp::LatencyDelay::default(); 2],
+            routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix::default(),
+            envelopes: [dsp::EnvelopeFollower::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            oversamplers: [dsp::Oversampler::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            bypass_crossfades: [dsp::BypassCrossfade::default();
+                plugin_support::MAX_AUDIO_CHANNELS],
+            dry_delays: [dsp::LatencyDelay::default(); plugin_support::MAX_AUDIO_CHANNELS],
             sidechains: array::from_fn(|_| SidechainProcessor::default()),
             last_sidechain_settings: SidechainSettings {
                 filter: ScFilter::HighPass,
@@ -291,28 +292,7 @@ impl Plugin for GregFet {
     const EMAIL: &'static str = "support@example.invalid";
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
-    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[
-        AudioIOLayout {
-            main_input_channels: NonZeroU32::new(2),
-            main_output_channels: NonZeroU32::new(2),
-            aux_input_ports: &SIDECHAIN_PORTS,
-            names: PortNames {
-                aux_inputs: &["Sidechain"],
-                ..PortNames::const_default()
-            },
-            ..AudioIOLayout::const_default()
-        },
-        AudioIOLayout {
-            main_input_channels: NonZeroU32::new(1),
-            main_output_channels: NonZeroU32::new(1),
-            aux_input_ports: &SIDECHAIN_PORTS,
-            names: PortNames {
-                aux_inputs: &["Sidechain"],
-                ..PortNames::const_default()
-            },
-            ..AudioIOLayout::const_default()
-        },
-    ];
+    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &plugin_support::DYNAMICS_IO_LAYOUTS;
 
     const MIDI_INPUT: MidiConfig = MidiConfig::None;
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
@@ -326,10 +306,22 @@ impl Plugin for GregFet {
 
     fn initialize(
         &mut self,
-        _audio_io_layout: &AudioIOLayout,
+        audio_io_layout: &AudioIOLayout,
         buffer_config: &BufferConfig,
         context: &mut impl InitContext<Self>,
     ) -> bool {
+        let Some(channel_count) = audio_io_layout
+            .main_input_channels
+            .map(|channels| channels.get() as usize)
+        else {
+            return false;
+        };
+        if !self.routing_matrix.configure(
+            channel_count,
+            core_dsp::core_dsp_modules::routing_matrix::RoutingMode::DualMono,
+        ) {
+            return false;
+        }
         self.last_attack_seconds = self.params.attack.value() * 0.001;
         self.last_release_seconds = self.params.release.value() * 0.001;
         self.sample_rate = buffer_config.sample_rate;
@@ -491,9 +483,9 @@ impl Plugin for GregFet {
                     let dry = self.dry_delays[channel].process(phase_input);
                     let driven_sample = phase_input * input_gain;
                     let external_key = external_sidechain.as_ref().and_then(|channels| {
-                        channels
-                            .get(channel)
-                            .or_else(|| channels.first())
+                        self.routing_matrix
+                            .sidechain_channel(channel, channels.len())
+                            .and_then(|sidechain_channel| channels.get(sidechain_channel))
                             .and_then(|samples| samples.get(frame_index))
                             .copied()
                             .filter(|value| value.is_finite())

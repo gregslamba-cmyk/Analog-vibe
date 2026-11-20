@@ -1,4 +1,4 @@
-use std::{array, num::NonZeroU32, sync::Arc};
+use std::{array, sync::Arc};
 
 use core_dsp::core_dsp_modules::{
     filters::FilterType,
@@ -121,9 +121,10 @@ impl Default for GregSurgicalEqParams {
 
 struct GregSurgicalEq {
     params: Arc<GregSurgicalEqParams>,
-    filters: [SurgicalEq<BAND_COUNT, LINEAR_PHASE_TAPS, f32>; 2],
-    bypass_crossfades: [BypassCrossfade<f32>; 2],
-    dry_delays: [LatencyDelay<f32, MAX_DRY_DELAY>; 2],
+    routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix,
+    filters: [SurgicalEq<BAND_COUNT, LINEAR_PHASE_TAPS, f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    bypass_crossfades: [BypassCrossfade<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    dry_delays: [LatencyDelay<f32, MAX_DRY_DELAY>; plugin_support::MAX_AUDIO_CHANNELS],
     last_bands: [EqBand<f32>; BAND_COUNT],
     last_phase_mode: PhaseMode,
     last_bypassed: bool,
@@ -138,6 +139,7 @@ impl Default for GregSurgicalEq {
     fn default() -> Self {
         Self {
             params: Arc::new(GregSurgicalEqParams::default()),
+            routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix::default(),
             filters: array::from_fn(|_| SurgicalEq::default()),
             bypass_crossfades: array::from_fn(|_| BypassCrossfade::default()),
             dry_delays: array::from_fn(|_| LatencyDelay::default()),
@@ -215,18 +217,7 @@ impl Plugin for GregSurgicalEq {
     const EMAIL: &'static str = "support@example.invalid";
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
-    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[
-        AudioIOLayout {
-            main_input_channels: NonZeroU32::new(2),
-            main_output_channels: NonZeroU32::new(2),
-            ..AudioIOLayout::const_default()
-        },
-        AudioIOLayout {
-            main_input_channels: NonZeroU32::new(1),
-            main_output_channels: NonZeroU32::new(1),
-            ..AudioIOLayout::const_default()
-        },
-    ];
+    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &plugin_support::SURROUND_IO_LAYOUTS;
 
     const MIDI_INPUT: MidiConfig = MidiConfig::None;
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
@@ -240,10 +231,22 @@ impl Plugin for GregSurgicalEq {
 
     fn initialize(
         &mut self,
-        _audio_io_layout: &AudioIOLayout,
+        audio_io_layout: &AudioIOLayout,
         buffer_config: &BufferConfig,
         context: &mut impl InitContext<Self>,
     ) -> bool {
+        let Some(channel_count) = audio_io_layout
+            .main_input_channels
+            .map(|channels| channels.get() as usize)
+        else {
+            return false;
+        };
+        if !self.routing_matrix.configure(
+            channel_count,
+            core_dsp::core_dsp_modules::routing_matrix::RoutingMode::Multichannel,
+        ) {
+            return false;
+        }
         self.sample_rate = buffer_config.sample_rate;
         let bands = self.band_settings();
         let phase_mode = self.params.phase_mode.value();

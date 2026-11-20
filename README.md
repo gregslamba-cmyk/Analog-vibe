@@ -4,7 +4,7 @@ Suite in sviluppo di plugin audio CLAP in Rust, con DSP condiviso e documentazio
 
 ## Stato
 
-Il workspace contiene la libreria `core-dsp`, i compressori `greg-fet`, `greg-a2a`, `greg-a3a`, `greg-child` e `greg-limiter`, l'EQ chirurgico `greg-surgical-eq`, le utility `greg-ms-encoder`, `greg-ms-decoder` e `greg-phase`, e un host CLAP offline per test con segnali sintetici. Gli altri processori presenti nei cataloghi e in `docs/plugins/` sono requisiti e specifiche di progetto, non plugin gia' implementati.
+Il workspace contiene la libreria `core-dsp`, i compressori `greg-fet`, `greg-a2a`, `greg-a3a`, `greg-child`, `greg-bus-comp` e `greg-limiter`, l'EQ chirurgico `greg-surgical-eq`, le utility `greg-ms-encoder`, `greg-ms-decoder` e `greg-phase`, e un host CLAP offline per test con segnali sintetici. Gli altri processori presenti nei cataloghi e in `docs/plugins/` sono requisiti e specifiche di progetto, non plugin gia' implementati.
 
 ## Requisiti
 
@@ -31,6 +31,7 @@ cargo run --release -p clap-signal-host -- target/release/libgreg_fet.so
 cargo run --release -p clap-signal-host -- target/release/libgreg_a2a.so
 cargo run --release -p clap-signal-host -- target/release/libgreg_a3a.so
 cargo run --release -p clap-signal-host -- target/release/libgreg_child.so
+cargo run --release -p clap-signal-host -- target/release/libgreg_bus_comp.so
 cargo run --release -p clap-signal-host -- target/release/libgreg_limiter.so
 cargo run --release -p clap-signal-host -- target/release/libgreg_surgical_eq.so
 cargo run --release -p clap-signal-host -- target/release/libgreg_ms_encoder.so

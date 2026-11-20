@@ -210,6 +210,7 @@ version = "0.1.0"
 dependencies = [
  "core-dsp",
  "nih_plug",
+ "plugin-support",
 ]
 
 [[package]]
@@ -218,6 +219,16 @@ version = "0.1.0"
 dependencies = [
  "core-dsp",
  "nih_plug",
+ "plugin-support",
+]
+
+[[package]]
+name = "greg-bus-comp"
+version = "0.1.0"
+dependencies = [
+ "core-dsp",
+ "nih_plug",
+ "plugin-support",
 ]
 
 [[package]]
@@ -226,6 +237,7 @@ version = "0.1.0"
 dependencies = [
  "core-dsp",
  "nih_plug",
+ "plugin-support",
 ]
 
 [[package]]
@@ -235,6 +247,7 @@ dependencies = [
  "core-dsp",
  "nih_plug",
  "num-traits",
+ "plugin-support",
 ]
 
 [[package]]
@@ -243,6 +256,7 @@ version = "0.1.0"
 dependencies = [
  "core-dsp",
  "nih_plug",
+ "plugin-support",
 ]
 
 [[package]]
@@ -251,6 +265,7 @@ version = "0.1.0"
 dependencies = [
  "core-dsp",
  "nih_plug",
+ "plugin-support",
 ]
 
 [[package]]
@@ -259,6 +274,7 @@ version = "0.1.0"
 dependencies = [
  "core-dsp",
  "nih_plug",
+ "plugin-support",
 ]
 
 [[package]]
@@ -267,6 +283,7 @@ version = "0.1.0"
 dependencies = [
  "core-dsp",
  "nih_plug",
+ "plugin-support",
 ]
 
 [[package]]
@@ -275,6 +292,7 @@ version = "0.1.0"
 dependencies = [
  "core-dsp",
  "nih_plug",
+ "plugin-support",
 ]
 
 [[package]]
@@ -466,6 +484,13 @@ dependencies = [
  "redox_syscall",
  "smallvec",
  "windows-link",
+]
+
+[[package]]
+name = "plugin-support"
+version = "0.1.0"
+dependencies = [
+ "nih_plug",
 ]
 
 [[package]]

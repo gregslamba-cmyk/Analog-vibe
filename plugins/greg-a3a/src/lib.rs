@@ -1,4 +1,4 @@
-use std::{array, num::NonZeroU32, sync::Arc};
+use std::{array, sync::Arc};
 
 use core_dsp::core_dsp_modules::{
     metering::Metering,
@@ -10,8 +10,6 @@ use core_dsp::core_dsp_modules::{
     sidechain_processor::{SidechainFilter, SidechainProcessor},
 };
 use nih_plug::prelude::*;
-
-const SIDECHAIN_PORTS: [NonZeroU32; 1] = [new_nonzero_u32(2)];
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
 enum Mode {
@@ -196,12 +194,13 @@ impl Default for GregA3aParams {
 
 struct GregA3a {
     params: Arc<GregA3aParams>,
-    optical_cells: [OptoCell<f32>; 2],
-    sidechains: [SidechainProcessor<f32>; 2],
+    routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix,
+    optical_cells: [OptoCell<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    sidechains: [SidechainProcessor<f32>; plugin_support::MAX_AUDIO_CHANNELS],
     last_sidechain_settings: SidechainSettings,
-    oversamplers: [Oversampler<f32>; 2],
-    bypass_crossfades: [BypassCrossfade<f32>; 2],
-    dry_delays: [LatencyDelay<f32, 32>; 2],
+    oversamplers: [Oversampler<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    bypass_crossfades: [BypassCrossfade<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    dry_delays: [LatencyDelay<f32, 32>; plugin_support::MAX_AUDIO_CHANNELS],
     sample_rate: f32,
     last_oversampling: Oversampling,
     last_bypassed: bool,
@@ -214,7 +213,8 @@ impl Default for GregA3a {
     fn default() -> Self {
         Self {
             params: Arc::new(GregA3aParams::default()),
-            optical_cells: [OptoCell::default(); 2],
+            routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix::default(),
+            optical_cells: [OptoCell::default(); plugin_support::MAX_AUDIO_CHANNELS],
             sidechains: array::from_fn(|_| SidechainProcessor::default()),
             last_sidechain_settings: SidechainSettings {
                 filter: ScFilter::HighPass,
@@ -222,9 +222,9 @@ impl Default for GregA3a {
                 q: 0.707,
                 gain: 0.0,
             },
-            oversamplers: [Oversampler::default(); 2],
-            bypass_crossfades: [BypassCrossfade::default(); 2],
-            dry_delays: [LatencyDelay::default(); 2],
+            oversamplers: [Oversampler::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            bypass_crossfades: [BypassCrossfade::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            dry_delays: [LatencyDelay::default(); plugin_support::MAX_AUDIO_CHANNELS],
             sample_rate: 0.0,
             last_oversampling: Oversampling::X4,
             last_bypassed: false,
@@ -269,28 +269,7 @@ impl Plugin for GregA3a {
     const EMAIL: &'static str = "support@example.invalid";
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
-    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[
-        AudioIOLayout {
-            main_input_channels: NonZeroU32::new(2),
-            main_output_channels: NonZeroU32::new(2),
-            aux_input_ports: &SIDECHAIN_PORTS,
-            names: PortNames {
-                aux_inputs: &["Sidechain"],
-                ..PortNames::const_default()
-            },
-            ..AudioIOLayout::const_default()
-        },
-        AudioIOLayout {
-            main_input_channels: NonZeroU32::new(1),
-            main_output_channels: NonZeroU32::new(1),
-            aux_input_ports: &SIDECHAIN_PORTS,
-            names: PortNames {
-                aux_inputs: &["Sidechain"],
-                ..PortNames::const_default()
-            },
-            ..AudioIOLayout::const_default()
-        },
-    ];
+    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &plugin_support::DYNAMICS_IO_LAYOUTS;
 
     const MIDI_INPUT: MidiConfig = MidiConfig::None;
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
@@ -303,10 +282,22 @@ impl Plugin for GregA3a {
 
     fn initialize(
         &mut self,
-        _audio_io_layout: &AudioIOLayout,
+        audio_io_layout: &AudioIOLayout,
         buffer_config: &BufferConfig,
         context: &mut impl InitContext<Self>,
     ) -> bool {
+        let Some(channel_count) = audio_io_layout
+            .main_input_channels
+            .map(|channels| channels.get() as usize)
+        else {
+            return false;
+        };
+        if !self.routing_matrix.configure(
+            channel_count,
+            core_dsp::core_dsp_modules::routing_matrix::RoutingMode::DualMono,
+        ) {
+            return false;
+        }
         self.sample_rate = buffer_config.sample_rate;
         if !self.sample_rate.is_finite() || self.sample_rate <= 0.0 {
             return false;
@@ -427,9 +418,9 @@ impl Plugin for GregA3a {
                     let phase_input = input * polarity;
                     let dry = self.dry_delays[channel].process(phase_input);
                     let external_key = external_sidechain.as_ref().and_then(|channels| {
-                        channels
-                            .get(channel)
-                            .or_else(|| channels.first())
+                        self.routing_matrix
+                            .sidechain_channel(channel, channels.len())
+                            .and_then(|sidechain_channel| channels.get(sidechain_channel))
                             .and_then(|samples| samples.get(frame_index))
                             .copied()
                             .filter(|value| value.is_finite())

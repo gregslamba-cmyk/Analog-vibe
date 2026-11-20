@@ -1,4 +1,4 @@
-use std::{num::NonZeroU32, sync::Arc};
+use std::sync::Arc;
 
 use core_dsp::core_dsp_modules::{
     metering::Metering,
@@ -62,6 +62,7 @@ impl Default for MidSideEncoderParams {
 
 struct GregMsEncoder {
     params: Arc<MidSideEncoderParams>,
+    routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix,
     bypass_crossfades: [BypassCrossfade<f32>; 2],
     last_bypassed: bool,
     bypass_ramp_samples: u32,
@@ -73,6 +74,7 @@ impl Default for GregMsEncoder {
     fn default() -> Self {
         Self {
             params: Arc::new(MidSideEncoderParams::default()),
+            routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix::default(),
             bypass_crossfades: [BypassCrossfade::default(); 2],
             last_bypassed: false,
             bypass_ramp_samples: 1,
@@ -89,18 +91,7 @@ impl Plugin for GregMsEncoder {
     const EMAIL: &'static str = "support@example.invalid";
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
-    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[
-        AudioIOLayout {
-            main_input_channels: NonZeroU32::new(2),
-            main_output_channels: NonZeroU32::new(2),
-            ..AudioIOLayout::const_default()
-        },
-        AudioIOLayout {
-            main_input_channels: NonZeroU32::new(1),
-            main_output_channels: NonZeroU32::new(1),
-            ..AudioIOLayout::const_default()
-        },
-    ];
+    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &plugin_support::SURROUND_IO_LAYOUTS;
 
     const MIDI_INPUT: MidiConfig = MidiConfig::None;
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
@@ -114,10 +105,22 @@ impl Plugin for GregMsEncoder {
 
     fn initialize(
         &mut self,
-        _audio_io_layout: &AudioIOLayout,
+        audio_io_layout: &AudioIOLayout,
         buffer_config: &BufferConfig,
         context: &mut impl InitContext<Self>,
     ) -> bool {
+        let Some(channel_count) = audio_io_layout
+            .main_input_channels
+            .map(|channels| channels.get() as usize)
+        else {
+            return false;
+        };
+        if !self.routing_matrix.configure(
+            channel_count,
+            core_dsp::core_dsp_modules::routing_matrix::RoutingMode::MidSide,
+        ) {
+            return false;
+        }
         self.bypass_ramp_samples = (buffer_config.sample_rate * 0.005).round().max(1.0) as u32;
         self.last_bypassed = self.params.bypass.value();
         for crossfade in &mut self.bypass_crossfades {

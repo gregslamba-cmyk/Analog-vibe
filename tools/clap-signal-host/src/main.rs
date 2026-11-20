@@ -15,6 +15,9 @@ use clap_sys::{
     },
     ext::{
         audio_ports::{CLAP_EXT_AUDIO_PORTS, clap_audio_port_info, clap_plugin_audio_ports},
+        audio_ports_config::{
+            CLAP_EXT_AUDIO_PORTS_CONFIG, clap_audio_ports_config, clap_plugin_audio_ports_config,
+        },
         latency::{CLAP_EXT_LATENCY, clap_plugin_latency},
         params::{CLAP_EXT_PARAMS, clap_param_info, clap_plugin_params},
         thread_check::{CLAP_EXT_THREAD_CHECK, clap_host_thread_check},
@@ -229,6 +232,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut waveform = Waveform::Sine;
     let mut block_size = DEFAULT_BLOCK_SIZE;
     let mut variable_blocks = false;
+    let mut channel_count = 2_usize;
     let mut args = std::env::args().skip(1);
     while let Some(argument) = args.next() {
         match argument.as_str() {
@@ -246,6 +250,15 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             "--variable-blocks" => variable_blocks = true,
+            "--channels" => {
+                channel_count = args
+                    .next()
+                    .ok_or("--channels requires 1, 2, 6, or 8")?
+                    .parse()?;
+                if ![1, 2, 6, 8].contains(&channel_count) {
+                    return Err("--channels must be 1, 2, 6, or 8".into());
+                }
+            }
             value if value.starts_with('-') => {
                 return Err(format!("unknown option: {value}").into());
             }
@@ -255,8 +268,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     }
     let plugin_path = plugin_path.unwrap_or_else(|| "target/release/libgreg_fet.so".to_owned());
     println!(
-        "Signal: {:?}, max block: {block_size}, variable blocks: {variable_blocks}",
-        waveform
+        "Signal: {:?}, channels: {channel_count}, max block: {block_size}, variable blocks: {variable_blocks}",
+        waveform,
     );
     if !Path::new(&plugin_path).is_file() {
         return Err(format!("plugin binary not found: {plugin_path}").into());
@@ -732,6 +745,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 *suite_waveform,
                 block_size,
                 variable_blocks,
+                channel_count,
             )?);
         }
     }
@@ -778,6 +792,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     result.name, waveform, result.left_rms, result.right_rms
                 )
                 .into());
+            }
+        }
+    } else if channel_count == 1 {
+        for result in &results {
+            if result.left_rms < 0.0001 {
+                return Err(
+                    format!("{} produced unexpectedly low mono output", result.name).into(),
+                );
             }
         }
     } else if is_surgical_eq {
@@ -930,9 +952,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     for result in &results {
         println!(
-            "PASS {:52} latency={:2} samples, input peak L/R={:.4}/{:.4}, output peak L/R={:.4}/{:.4}, input RMS L/R={:.4}/{:.4}, output RMS L/R={:.4}/{:.4}, delta peak dB L/R={:+.2}/{:+.2}, delta RMS dB L/R={:+.2}/{:+.2}",
+            "PASS {:52} channels={} latency={:2} samples, channel RMS IN->OUT={:?}, output corr to ch0={:?}, input peak L/R={:.4}/{:.4}, output peak L/R={:.4}/{:.4}, input RMS L/R={:.4}/{:.4}, output RMS L/R={:.4}/{:.4}, delta RMS dB L/R={:+.2}/{:+.2}, stereo corr IN/OUT={:.3}/{:.3}, phase={:.1}deg, THD IN/OUT={:.2}/{:.2}%, centroid IN/OUT={:.1}/{:.1}Hz, est. GR={:.2}dB",
             result.name,
+            result.channel_rms.len(),
             result.latency,
+            result.channel_rms,
+            result.channel_correlation_to_first,
             result.left_input_peak,
             result.right_input_peak,
             result.left_peak,
@@ -941,10 +966,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             result.right_input_rms,
             result.left_rms,
             result.right_rms,
-            result.left_peak_difference_db,
-            result.right_peak_difference_db,
             result.left_rms_difference_db,
-            result.right_rms_difference_db
+            result.right_rms_difference_db,
+            result.stereo_correlation_input,
+            result.stereo_correlation_output,
+            result.phase_difference_deg,
+            result.thd_input,
+            result.thd_output,
+            result.spectral_centroid_input_hz,
+            result.spectral_centroid_output_hz,
+            result.estimated_gain_reduction_db
         );
     }
     write_plugin_report(
@@ -998,21 +1029,25 @@ fn write_plugin_report(
         .unwrap_or(&existing)
         .trim_end();
 
+    let channel_count = results.first().map_or(0, |result| result.channel_rms.len());
     let mut report = format!(
         "{base}\n\n## Verifica CLAP signal host\n\n\
 Questa sezione viene rigenerata dal host offline. Non e' una misura A/B su hardware reale: confronta il segnale d'ingresso sintetico con l'uscita del modello software.\n\n\
 - Waveform/test suite: {waveform_label}\n\
 - Block size massimo: {block_size} campioni\n\
 - Blocchi variabili: {variable_blocks}\n\
+- Canali audio: {channel_count}\n\
 - Sample rate: 48 kHz\n\
-\n| Test | Latenza | Peak IN L/R | Peak OUT L/R | RMS IN L/R | RMS OUT L/R | Delta peak dB L/R | Delta RMS dB L/R |\n\
-|---|---:|---:|---:|---:|---:|---:|---:|\n"
+\n| Test | Latenza | RMS per canale IN->OUT | Corr uscita per canale vs ch0 | Peak IN L/R | Peak OUT L/R | RMS IN L/R | RMS OUT L/R | Delta peak dB L/R | Delta RMS dB L/R | Stereo corr IN/OUT | Phase diff | THD IN/OUT % | Timbre centroid IN/OUT Hz | Est. gain reduction dB |\n\
+|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n"
     );
     for result in results {
         report.push_str(&format!(
-            "| {} | {} | {:.4}/{:.4} | {:.4}/{:.4} | {:.4}/{:.4} | {:.4}/{:.4} | {:+.2}/{:+.2} | {:+.2}/{:+.2} |\n",
+            "| {} | {} | {:?} | {:?} | {:.4}/{:.4} | {:.4}/{:.4} | {:.4}/{:.4} | {:.4}/{:.4} | {:+.2}/{:+.2} | {:+.2}/{:+.2} | {:.3}/{:.3} | {:.1} deg | {:.2}/{:.2} | {:.1}/{:.1} | {:.2} |\n",
             result.name,
             result.latency,
+            result.channel_rms,
+            result.channel_correlation_to_first,
             result.left_input_peak,
             result.right_input_peak,
             result.left_peak,
@@ -1025,6 +1060,14 @@ Questa sezione viene rigenerata dal host offline. Non e' una misura A/B su hardw
             result.right_peak_difference_db,
             result.left_rms_difference_db,
             result.right_rms_difference_db,
+            result.stereo_correlation_input,
+            result.stereo_correlation_output,
+            result.phase_difference_deg,
+            result.thd_input,
+            result.thd_output,
+            result.spectral_centroid_input_hz,
+            result.spectral_centroid_output_hz,
+            result.estimated_gain_reduction_db,
         ));
     }
     fs::write(path, report)?;
@@ -1033,6 +1076,8 @@ Questa sezione viene rigenerata dal host offline. Non e' una misura A/B su hardw
 
 struct Metrics {
     name: &'static str,
+    channel_rms: Vec<(f32, f32)>,
+    channel_correlation_to_first: Vec<f64>,
     latency: u32,
     left_input_peak: f32,
     right_input_peak: f32,
@@ -1065,6 +1110,7 @@ fn run_case(
     waveform: Waveform,
     block_size: usize,
     variable_blocks: bool,
+    channel_count: usize,
 ) -> Result<Metrics, Box<dyn std::error::Error>> {
     let plugin = unsafe {
         (*factory)
@@ -1082,6 +1128,51 @@ fn run_case(
         processing: false,
     };
 
+    let has_external_sidechain = case.name.contains("external sidechain");
+    let port_configs = unsafe {
+        extension::<clap_plugin_audio_ports_config>(plugin, CLAP_EXT_AUDIO_PORTS_CONFIG.as_ptr())?
+    };
+    let config_count = unsafe {
+        port_configs
+            .count
+            .expect("audio-port config count callback missing")(plugin)
+    };
+    let get_config = port_configs
+        .get
+        .expect("audio-port config get callback missing");
+    let mut selected_config = None;
+    for index in 0..config_count {
+        let mut config: clap_audio_ports_config = unsafe { std::mem::zeroed() };
+        if unsafe { get_config(plugin, index, &mut config) }
+            && config.has_main_input
+            && config.main_input_channel_count == channel_count as u32
+            && config.has_main_output
+            && config.main_output_channel_count == channel_count as u32
+            && config.output_port_count == 1
+            && config.input_port_count == 1 + u32::from(has_external_sidechain)
+        {
+            selected_config = Some(config.id);
+            break;
+        }
+    }
+    let selected_config = selected_config.ok_or_else(|| {
+        format!(
+            "plugin has no {}-channel layout{}",
+            channel_count,
+            if has_external_sidechain {
+                " with an external sidechain"
+            } else {
+                ""
+            }
+        )
+    })?;
+    if !unsafe {
+        port_configs
+            .select
+            .expect("audio-port config select callback missing")(plugin, selected_config)
+    } {
+        return Err("plugin rejected the requested audio-port configuration".into());
+    }
     if !unsafe { (*plugin).init.expect("plugin init callback missing")(plugin) } {
         return Err("plugin init returned false".into());
     }
@@ -1098,9 +1189,10 @@ fn run_case(
             .count
             .expect("audio ports count callback missing")(plugin, false)
     };
-    if !(1..=2).contains(&input_count) || output_count != 1 {
+    let expected_input_count = 1 + u32::from(has_external_sidechain);
+    if input_count != expected_input_count || output_count != 1 {
         return Err(format!(
-            "expected one main input, optional sidechain, and one output; got {input_count}/{output_count}"
+            "expected {expected_input_count} input port(s) and one output; got {input_count}/{output_count}"
         )
         .into());
     }
@@ -1110,11 +1202,14 @@ fn run_case(
     let get_port = audio_ports.get.expect("audio ports get callback missing");
     if !unsafe { get_port(plugin, 0, true, &mut input_info) }
         || !unsafe { get_port(plugin, 0, false, &mut output_info) }
-        || input_info.channel_count != 2
-        || output_info.channel_count != 2
+        || input_info.channel_count != channel_count as u32
+        || output_info.channel_count != channel_count as u32
     {
-        return Err("plugin does not expose the expected stereo layout".into());
+        return Err(
+            format!("plugin does not expose the requested {channel_count}-channel layout").into(),
+        );
     }
+    let mut sidechain_channel_count = 0_usize;
     if input_count == 2 {
         let mut sidechain_info = empty_audio_port_info();
         if !unsafe { get_port(plugin, 1, true, &mut sidechain_info) }
@@ -1122,6 +1217,7 @@ fn run_case(
         {
             return Err("plugin exposes an invalid sidechain input".into());
         }
+        sidechain_channel_count = sidechain_info.channel_count as usize;
     }
 
     let params = unsafe { extension::<clap_plugin_params>(plugin, CLAP_EXT_PARAMS.as_ptr())? };
@@ -1177,7 +1273,27 @@ fn run_case(
             plugin,
             params,
             "Peak Reduction",
-            if case.bypass { 0.0 } else { 0.5 },
+            if case.bypass {
+                0.0
+            } else {
+                (5.0 + 30.0 * case.mode_index / 3.0) / 40.0
+            },
+        )?;
+        set_parameter(
+            plugin,
+            params,
+            "Gain",
+            if case.bypass { 0.5 } else { 30.0 / 48.0 },
+        )?;
+        set_parameter(
+            plugin,
+            params,
+            "Tube Drive",
+            if case.bypass {
+                0.0
+            } else {
+                (3.0 + 9.0 * case.mode_index / 3.0) / 12.0
+            },
         )?;
         set_parameter(
             plugin,
@@ -1197,7 +1313,27 @@ fn run_case(
             plugin,
             params,
             "Peak Reduction",
-            if case.bypass { 0.0 } else { 0.75 },
+            if case.bypass {
+                0.0
+            } else {
+                (10.0 + 30.0 * case.mode_index / 3.0) / 40.0
+            },
+        )?;
+        set_parameter(
+            plugin,
+            params,
+            "Gain",
+            if case.bypass { 0.5 } else { 30.0 / 48.0 },
+        )?;
+        set_parameter(
+            plugin,
+            params,
+            "Output Drive",
+            if case.bypass {
+                0.0
+            } else {
+                (3.0 + 15.0 * case.mode_index / 3.0) / 18.0
+            },
         )?;
         set_parameter(
             plugin,
@@ -1233,6 +1369,21 @@ fn run_case(
             params,
             "Sidechain Listen",
             f64::from(case.name.contains("sidechain listen")),
+        )?;
+    } else if plugin_id == FET_CLAP_ID {
+        set_parameter(plugin, params, "Oversampling", case.mode_index)?;
+        set_parameter(
+            plugin,
+            params,
+            "Invert Left Polarity",
+            f64::from(case.invert_left),
+        )?;
+        set_parameter(plugin, params, "Ratio", case.mode_index)?;
+        set_parameter(
+            plugin,
+            params,
+            "Output",
+            if case.bypass { 0.5 } else { 30.0 / 48.0 },
         )?;
     } else {
         set_parameter(plugin, params, "Oversampling", case.mode_index)?;
@@ -1270,34 +1421,42 @@ fn run_case(
     }
     instance.processing = true;
 
-    let mut input_left = vec![0.0_f32; block_size];
-    let mut input_right = vec![0.0_f32; block_size];
-    let mut sidechain_left = vec![0.0_f32; block_size];
-    let mut sidechain_right = vec![0.0_f32; block_size];
-    let mut output_left = vec![0.0_f32; block_size];
-    let mut output_right = vec![0.0_f32; block_size];
-    let mut input_channels = [input_left.as_mut_ptr(), input_right.as_mut_ptr()];
-    let mut sidechain_channels = [sidechain_left.as_mut_ptr(), sidechain_right.as_mut_ptr()];
-    let mut output_channels = [output_left.as_mut_ptr(), output_right.as_mut_ptr()];
+    let mut input_channels = vec![vec![0.0_f32; block_size]; channel_count];
+    let mut sidechain_channels = vec![vec![0.0_f32; block_size]; sidechain_channel_count];
+    let mut output_channels = vec![vec![0.0_f32; block_size]; channel_count];
+    let mut input_channel_ptrs: Vec<_> = input_channels
+        .iter_mut()
+        .map(|samples| samples.as_mut_ptr())
+        .collect();
+    let mut sidechain_channel_ptrs: Vec<_> = sidechain_channels
+        .iter_mut()
+        .map(|samples| samples.as_mut_ptr())
+        .collect();
+    let mut output_channel_ptrs: Vec<_> = output_channels
+        .iter_mut()
+        .map(|samples| samples.as_mut_ptr())
+        .collect();
     let input_buffer = clap_audio_buffer {
-        data32: input_channels.as_mut_ptr(),
+        data32: input_channel_ptrs.as_mut_ptr(),
         data64: ptr::null_mut(),
-        channel_count: 2,
+        channel_count: channel_count as u32,
         latency: 0,
         constant_mask: 0,
     };
-    let sidechain_buffer = clap_audio_buffer {
-        data32: sidechain_channels.as_mut_ptr(),
-        data64: ptr::null_mut(),
-        channel_count: 2,
-        latency: 0,
-        constant_mask: 0,
-    };
-    let input_buffers = [input_buffer, sidechain_buffer];
+    let mut input_buffers = vec![input_buffer];
+    if sidechain_channel_count > 0 {
+        input_buffers.push(clap_audio_buffer {
+            data32: sidechain_channel_ptrs.as_mut_ptr(),
+            data64: ptr::null_mut(),
+            channel_count: sidechain_channel_count as u32,
+            latency: 0,
+            constant_mask: 0,
+        });
+    }
     let mut output_buffer = clap_audio_buffer {
-        data32: output_channels.as_mut_ptr(),
+        data32: output_channel_ptrs.as_mut_ptr(),
         data64: ptr::null_mut(),
-        channel_count: 2,
+        channel_count: channel_count as u32,
         latency: 0,
         constant_mask: 0,
     };
@@ -1326,6 +1485,9 @@ fn run_case(
     let mut stereo_output_right_square = 0.0_f64;
     let mut input_samples = Vec::with_capacity(SIGNAL_FRAMES);
     let mut output_samples = Vec::with_capacity(SIGNAL_FRAMES);
+    let mut channel_input_square_sums = vec![0.0_f64; channel_count];
+    let mut channel_output_square_sums = vec![0.0_f64; channel_count];
+    let mut channel_output_cross_with_first = vec![0.0_f64; channel_count];
 
     let mut block_start = 0;
     let mut block_index = 0;
@@ -1343,26 +1505,56 @@ fn run_case(
         for offset in 0..frames {
             let sample_index = block_start + offset;
             let sample = waveform.sample(sample_index, case.frequency, case.amplitude);
-            input_left[offset] = sample;
-            sidechain_left[offset] = 0.25;
-            sidechain_right[offset] = 0.25;
-            input_right[offset] = if plugin_id == CHILD_CLAP_ID
-                && (case.name.contains("linked stereo") || case.name.contains("dual mono"))
-            {
-                sample * 0.01
-            } else if !case.bypass && plugin_id == MS_ENCODER_CLAP_ID {
-                sample
-            } else if !case.bypass && plugin_id == MS_DECODER_CLAP_ID {
-                0.0
-            } else {
-                sample
-            };
-            left_input_peak = left_input_peak.max(input_left[offset].abs());
-            right_input_peak = right_input_peak.max(input_right[offset].abs());
-            left_input_square_sum += f64::from(input_left[offset]).powi(2);
-            right_input_square_sum += f64::from(input_right[offset]).powi(2);
-            output_left[offset] = 0.0;
-            output_right[offset] = 0.0;
+            input_channels[0][offset] = sample;
+            if channel_count > 1 {
+                input_channels[1][offset] = if case.name.contains("stereo phase") {
+                    let phase = std::f64::consts::TAU * case.frequency * sample_index as f64
+                        / SAMPLE_RATE
+                        + std::f64::consts::FRAC_PI_2;
+                    (phase.cos() * case.amplitude as f64).clamp(-1.0, 1.0) as f32
+                } else if plugin_id == CHILD_CLAP_ID
+                    && (case.name.contains("linked stereo") || case.name.contains("dual mono"))
+                {
+                    sample * 0.01
+                } else if !case.bypass && plugin_id == MS_ENCODER_CLAP_ID {
+                    sample
+                } else if !case.bypass && plugin_id == MS_DECODER_CLAP_ID {
+                    0.0
+                } else if !case.bypass
+                    && (plugin_id == FET_CLAP_ID
+                        || plugin_id == A2A_CLAP_ID
+                        || plugin_id == A3A_CLAP_ID)
+                {
+                    let phase = std::f64::consts::TAU * case.frequency * sample_index as f64
+                        / SAMPLE_RATE
+                        + std::f64::consts::FRAC_PI_2;
+                    (phase.cos() * case.amplitude as f64).clamp(-1.0, 1.0) as f32
+                } else {
+                    sample
+                };
+            }
+#[allow(clippy::needless_range_loop)]
+
+            for channel in 2..channel_count {
+                let channel_frequency = case.frequency * (1.0 + channel as f64 * 0.11);
+                input_channels[channel][offset] =
+                    waveform.sample(sample_index, channel_frequency, case.amplitude * 0.7);
+            }
+            for (channel, sidechain) in sidechain_channels.iter_mut().enumerate() {
+                sidechain[offset] = 0.2 + channel as f32 * 0.1;
+            }
+            for (channel, samples) in input_channels.iter().enumerate() {
+                let input = samples[offset];
+                channel_input_square_sums[channel] += f64::from(input).powi(2);
+            }
+            let right_channel = usize::from(channel_count > 1);
+            left_input_peak = left_input_peak.max(input_channels[0][offset].abs());
+            right_input_peak = right_input_peak.max(input_channels[right_channel][offset].abs());
+            left_input_square_sum += f64::from(input_channels[0][offset]).powi(2);
+            right_input_square_sum += f64::from(input_channels[right_channel][offset]).powi(2);
+            for output in &mut output_channels {
+                output[offset] = 0.0;
+            }
         }
         let process_data = clap_process {
             steady_time: block_start as i64,
@@ -1370,7 +1562,7 @@ fn run_case(
             transport: ptr::null(),
             audio_inputs: input_buffers.as_ptr(),
             audio_outputs: &mut output_buffer,
-            audio_inputs_count: input_count,
+            audio_inputs_count: input_buffers.len() as u32,
             audio_outputs_count: 1,
             in_events: &in_events,
             out_events: &out_events,
@@ -1382,12 +1574,22 @@ fn run_case(
 
         for offset in 0..frames {
             let sample_index = block_start + offset;
-            let left = output_left[offset];
-            let right = output_right[offset];
-            let input_left_value = f64::from(input_left[offset]);
-            let input_right_value = f64::from(input_right[offset]);
-            if !left.is_finite() || !right.is_finite() {
-                return Err(format!("non-finite output at sample {sample_index}").into());
+            let right_channel = usize::from(channel_count > 1);
+            let left = output_channels[0][offset];
+            let right = output_channels[right_channel][offset];
+            let input_left_value = f64::from(input_channels[0][offset]);
+            let input_right_value = f64::from(input_channels[right_channel][offset]);
+            for channel in 0..channel_count {
+                let output = output_channels[channel][offset];
+                if !output.is_finite() {
+                    return Err(format!(
+                        "non-finite output on channel {channel} at sample {sample_index}"
+                    )
+                    .into());
+                }
+                channel_output_square_sums[channel] += f64::from(output).powi(2);
+                channel_output_cross_with_first[channel] +=
+                    f64::from(output) * f64::from(output_channels[0][offset]);
             }
             input_samples.push(input_left_value);
             output_samples.push(f64::from(left));
@@ -1449,10 +1651,16 @@ fn run_case(
     let stereo_correlation = |left_square: f64, right_square: f64, cross: f64| {
         cross / (left_square * right_square).sqrt().max(f64::MIN_POSITIVE)
     };
-    let stereo_correlation_input =
-        stereo_correlation(stereo_input_left_square, stereo_input_right_square, stereo_input_cross);
-    let stereo_correlation_output =
-        stereo_correlation(stereo_output_left_square, stereo_output_right_square, stereo_output_cross);
+    let stereo_correlation_input = stereo_correlation(
+        stereo_input_left_square,
+        stereo_input_right_square,
+        stereo_input_cross,
+    );
+    let stereo_correlation_output = stereo_correlation(
+        stereo_output_left_square,
+        stereo_output_right_square,
+        stereo_output_cross,
+    );
     let phase_difference_deg = (stereo_correlation_output.clamp(-1.0, 1.0).acos() * 180.0
         / std::f64::consts::PI)
         .clamp(0.0, 180.0);
@@ -1462,10 +1670,32 @@ fn run_case(
     let spectral_centroid_output_hz = spectral_centroid(&output_samples, case.frequency);
     let estimated_gain_reduction_db =
         (-(left_rms_difference_db + right_rms_difference_db) * 0.5).max(0.0);
+    let channel_rms = channel_input_square_sums
+        .iter()
+        .zip(&channel_output_square_sums)
+        .map(|(input, output)| {
+            (
+                (input / SIGNAL_FRAMES as f64).sqrt() as f32,
+                (output / SIGNAL_FRAMES as f64).sqrt() as f32,
+            )
+        })
+        .collect();
+    let channel_correlation_to_first = channel_output_cross_with_first
+        .iter()
+        .enumerate()
+        .map(|(channel, cross)| {
+            cross
+                / (channel_output_square_sums[channel] * channel_output_square_sums[0])
+                    .sqrt()
+                    .max(f64::MIN_POSITIVE)
+        })
+        .collect();
 
     drop(instance);
     Ok(Metrics {
         name: case.name,
+        channel_rms,
+        channel_correlation_to_first,
         latency,
         left_input_peak,
         right_input_peak,
@@ -1496,13 +1726,11 @@ fn goertzel_magnitude(samples: &[f64], frequency_hz: f64) -> f64 {
     if samples.is_empty() || !frequency_hz.is_finite() || frequency_hz <= 0.0 {
         return 0.0;
     }
-    let coefficient = 2.0
-        * (std::f64::consts::TAU * frequency_hz / SAMPLE_RATE).cos();
-    let mut s0 = 0.0;
+    let coefficient = 2.0 * (std::f64::consts::TAU * frequency_hz / SAMPLE_RATE).cos();
     let mut s1 = 0.0;
     let mut s2 = 0.0;
     for sample in samples {
-        s0 = *sample + coefficient * s1 - s2;
+        let s0 = *sample + coefficient * s1 - s2;
         s2 = s1;
         s1 = s0;
     }

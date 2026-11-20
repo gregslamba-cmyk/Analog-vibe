@@ -1,4 +1,4 @@
-use std::{array, num::NonZeroU32, sync::Arc};
+use std::{array, sync::Arc};
 
 use core_dsp::core_dsp_modules::{
     metering::Metering,
@@ -9,7 +9,6 @@ use core_dsp::core_dsp_modules::{
 };
 use nih_plug::prelude::*;
 
-const SIDECHAIN_PORTS: [NonZeroU32; 1] = [new_nonzero_u32(2)];
 const LOOKAHEAD_MAX_SAMPLES: usize = 2048;
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
@@ -281,12 +280,13 @@ impl PeakLimiter {
 
 struct GregLimiter {
     params: Arc<GregLimiterParams>,
-    limiters: [PeakLimiter; 2],
-    sidechains: [SidechainProcessor<f32>; 2],
+    routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix,
+    limiters: [PeakLimiter; plugin_support::MAX_AUDIO_CHANNELS],
+    sidechains: [SidechainProcessor<f32>; plugin_support::MAX_AUDIO_CHANNELS],
     last_sidechain_settings: SidechainSettings,
-    oversamplers: [Oversampler<f32>; 2],
-    bypass_crossfades: [BypassCrossfade<f32>; 2],
-    dry_delays: [LatencyDelay<f32, 4096>; 2],
+    oversamplers: [Oversampler<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    bypass_crossfades: [BypassCrossfade<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    dry_delays: [LatencyDelay<f32, 4096>; plugin_support::MAX_AUDIO_CHANNELS],
     sample_rate: f32,
     last_oversampling: Oversampling,
     last_lookahead: f32,
@@ -301,7 +301,8 @@ impl Default for GregLimiter {
     fn default() -> Self {
         Self {
             params: Arc::new(GregLimiterParams::default()),
-            limiters: [PeakLimiter::default(); 2],
+            routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix::default(),
+            limiters: [PeakLimiter::default(); plugin_support::MAX_AUDIO_CHANNELS],
             sidechains: array::from_fn(|_| SidechainProcessor::default()),
             last_sidechain_settings: SidechainSettings {
                 filter: ScFilter::HighPass,
@@ -309,9 +310,9 @@ impl Default for GregLimiter {
                 q: 0.707,
                 gain: 0.0,
             },
-            oversamplers: [Oversampler::default(); 2],
-            bypass_crossfades: [BypassCrossfade::default(); 2],
-            dry_delays: [LatencyDelay::default(); 2],
+            oversamplers: [Oversampler::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            bypass_crossfades: [BypassCrossfade::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            dry_delays: [LatencyDelay::default(); plugin_support::MAX_AUDIO_CHANNELS],
             sample_rate: 0.0,
             last_oversampling: Oversampling::X4,
             last_lookahead: 5.0,
@@ -358,28 +359,7 @@ impl Plugin for GregLimiter {
     const EMAIL: &'static str = "support@example.invalid";
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
-    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &[
-        AudioIOLayout {
-            main_input_channels: NonZeroU32::new(2),
-            main_output_channels: NonZeroU32::new(2),
-            aux_input_ports: &SIDECHAIN_PORTS,
-            names: PortNames {
-                aux_inputs: &["Sidechain"],
-                ..PortNames::const_default()
-            },
-            ..AudioIOLayout::const_default()
-        },
-        AudioIOLayout {
-            main_input_channels: NonZeroU32::new(1),
-            main_output_channels: NonZeroU32::new(1),
-            aux_input_ports: &SIDECHAIN_PORTS,
-            names: PortNames {
-                aux_inputs: &["Sidechain"],
-                ..PortNames::const_default()
-            },
-            ..AudioIOLayout::const_default()
-        },
-    ];
+    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &plugin_support::DYNAMICS_IO_LAYOUTS;
 
     const MIDI_INPUT: MidiConfig = MidiConfig::None;
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
@@ -392,10 +372,22 @@ impl Plugin for GregLimiter {
 
     fn initialize(
         &mut self,
-        _audio_io_layout: &AudioIOLayout,
+        audio_io_layout: &AudioIOLayout,
         buffer_config: &BufferConfig,
         context: &mut impl InitContext<Self>,
     ) -> bool {
+        let Some(channel_count) = audio_io_layout
+            .main_input_channels
+            .map(|channels| channels.get() as usize)
+        else {
+            return false;
+        };
+        if !self.routing_matrix.configure(
+            channel_count,
+            core_dsp::core_dsp_modules::routing_matrix::RoutingMode::DualMono,
+        ) {
+            return false;
+        }
         self.sample_rate = buffer_config.sample_rate;
         if !self.sample_rate.is_finite() || self.sample_rate <= 0.0 {
             return false;
@@ -527,17 +519,17 @@ impl Plugin for GregLimiter {
         self.metering.begin_block();
         let protection_result = self.panic_protection.run(|| {
             for (frame_index, mut channel_samples) in buffer.iter_samples().enumerate() {
-                let mut processed = [0.0_f32; 2];
+                let mut processed = [0.0_f32; plugin_support::MAX_AUDIO_CHANNELS];
                 let channel_count = channel_samples.len();
-                let mut channel_values = [0.0_f32; 2];
-                let mut raw_values = [0.0_f32; 2];
+                let mut channel_values = [0.0_f32; plugin_support::MAX_AUDIO_CHANNELS];
+                let mut raw_values = [0.0_f32; plugin_support::MAX_AUDIO_CHANNELS];
                 for (channel, sample) in channel_samples.iter_mut().enumerate() {
-                    raw_values[channel.min(1)] = finite(*sample);
-                    channel_values[channel.min(1)] = raw_values[channel.min(1)] * input_gain;
+                    raw_values[channel] = finite(*sample);
+                    channel_values[channel] = raw_values[channel] * input_gain;
                 }
 
-                let mut keys = [0.0_f32; 2];
-                for channel in 0..channel_count.min(2) {
+                let mut keys = [0.0_f32; plugin_support::MAX_AUDIO_CHANNELS];
+                for channel in 0..channel_count {
                     let polarity = if (channel == 0 && self.params.invert_left.value())
                         || (channel == 1 && self.params.invert_right.value())
                     {
@@ -547,9 +539,9 @@ impl Plugin for GregLimiter {
                     };
                     let phase_input = channel_values[channel] * polarity;
                     let external_key = external_sidechain.as_ref().and_then(|channels| {
-                        channels
-                            .get(channel)
-                            .or_else(|| channels.first())
+                        self.routing_matrix
+                            .sidechain_channel(channel, channels.len())
+                            .and_then(|sidechain_channel| channels.get(sidechain_channel))
                             .and_then(|samples| samples.get(frame_index))
                             .copied()
                             .filter(|value| value.is_finite())
@@ -560,14 +552,13 @@ impl Plugin for GregLimiter {
                         use_external,
                     );
                 }
-                if stereo_link && channel_count > 1 {
+                if stereo_link && channel_count >= 2 {
                     let linked = keys[0].abs().max(keys[1].abs());
                     keys[0] = linked;
                     keys[1] = linked;
                 }
 
                 for (channel, sample) in channel_samples.iter_mut().enumerate() {
-                    let channel = channel.min(1);
                     let phase_input = channel_values[channel]
                         * if (channel == 0 && self.params.invert_left.value())
                             || (channel == 1 && self.params.invert_right.value())

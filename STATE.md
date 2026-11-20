@@ -1,3 +1,12 @@
+## Obiettivo completato: moduli DSP di carattere analogico puro (`core-dsp`)
+- [COMPLETATO] `zdf_filters`: filtri TPT State Variable Filter (ZDF) con integrazione di saturazione `tanh` nel loop di feedback risolta via iterazioni Newton-Raphson (1-2 iterazioni).
+- [COMPLETATO] `transformer_hysteresis` e `nonlinear_stages`: modello fisico di isteresi magnetica, saturazione dipendente dalla frequenza, pre/de-enfasi dinamica speculare, slew-rate limiting, AC coupling con micro-shift di bias DC, e curve di saturazione estese (valvola triodo/pentodo, stato solido Classe A, FET, Op-Amp discreto, soft/hard clip, wavefolding).
+- [COMPLETATO] `psu_sag`: calo di tensione dell'alimentatore sotto carico con generatori di rumore termico e ripple rigorosamente spenti di default (`0.0` / `false`), garantendo silenzio digitale assoluto a riposo.
+- [COMPLETATO] `analog_variance`: generatore deterministico basato su `instance_id` per micro-tolleranze L/R (±1% - 3%) e crosstalk minimo, scalabile/disattivabile via parametro `analog_drift`.
+- [COMPLETATO] Elaborazione interna interamente in `f64`, zero panics/allocazioni/unwrap, sanitizzazione NaN/Inf e test unitari completi (`cargo test --workspace` superati).
+- [COMPLETATO] Aggiornate `ARCHITECTURE.md` e `STATE.md` con firme pubbliche esatte.
+
+
 # Stato del progetto
 
 ## Obiettivo attivo: specifiche e catalogo dei compressori outboard
@@ -30,9 +39,9 @@
 - Vincolo fedelta': tempi e curve sono provvisori; calibrazione del modello circuitale rimane da fare su manuale di servizio e hardware.
 
 ## Prossimo plugin pianificato: `greg_bus_comp`
-- [DA FARE] Specificare topologia VCA, curve e controlli hardware essenziali.
-- [DA FARE] Implementare sidechain opzionale e scelta Stereo Link/Dual Mono.
-- [DA FARE] Validare DSP, latenza e comportamento in host CLAP; documentare limiti di fedelta'.
+- [COMPLETATO] Specificare topologia VCA, curve e controlli hardware essenziali.
+- [COMPLETATO] Implementare sidechain opzionale e scelta Stereo Link/Dual Mono.
+- [IN CORSO] Validare DSP, latenza e comportamento in host CLAP; documentare limiti di fedelta'.
 
 ## Nuovo modulo condiviso: metering
 - [COMPLETATO] Definire un'API DSP real-time per input/output peak e RMS e gain reduction.

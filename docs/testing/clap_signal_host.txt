@@ -4,6 +4,8 @@ Sorgente: tools/clap-signal-host/src/main.rs
 Uso: cargo run --release -p clap-signal-host -- [percorso-al-plugin]
 Percorso predefinito: target/release/libgreg_fet.so
 Funzioni: carica un modulo CLAP, crea l'istanza stereo, invia blocchi audio sintetici e verifica output finito, livelli RMS, parametri, bypass, inversione di polarita e latenza dichiarata.
+Metriche avanzate: peak/RMS d'ingresso e uscita, differenze in dB, correlazione stereo input/output, differenza di fase inter-canale, THD armonico 2..5, centroide spettrale e stima della gain reduction risultante incluse le regolazioni makeup.
+Suite waveforms: sinusoide, dente di sega, segnale complesso combinato, impulsivo, quadrato, triangolo, rumore e sweep. La suite `all` esegue sinusoide, dente di sega, complesso e impulso con blocchi fissi/variabili.
 Segnali FET: sinusoide a 440 Hz per oversampling 1x/2x/4x/8x; sinusoide a 1 kHz con bypass e inversione L indipendente.
 Segnali EQ: sinusoidi d'identita in modalita minimum-phase e linear-phase con tutti i filtri inattivi; boost +9 dB della prima banda tramite automazione CLAP.
 Segnali M/S: encoder con L=R verifica M attivo e S nullo; decoder con S=0 verifica L=R; entrambi verificano bypass e latenza zero.
