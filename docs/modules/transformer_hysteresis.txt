@@ -1,5 +1,18 @@
 ID: transformer_hysteresis
 File sorgente: core-dsp/src/core_dsp_modules/transformer_hysteresis.rs
-Stato: prototipo matematico, non modello fisico calibrato.
-Responsabilita: stato di flusso con memoria e saturazione morbida; reset esplicito.
-Da fare: analisi stabilita, risposta in frequenza dipendente dal livello, DC, armoniche e test; evitare di presentarlo come modello fisico senza validazione.
+Stato: modello fenomenologico con split in banda bassa/alta frequenza,
+saturazione asimmetrica zero-mean e slew-rate opzionale.
+
+Responsabilità: stato di flusso con memoria, saturazione morbida e DC blocker;
+reset esplicito; configurazione del crossover e del slew-rate.
+
+Caratteristiche:
+- Split a 180 Hz pre-warped: banda bassa saturata (core asimmetrico),
+  banda alta lineare per transients "silky".
+- Calibrazione headroom: guadagno unitario nominale a drive=1.0, bass_weight=0.0.
+- Slew-rate limit opzionale (set_slew_limit) in V/s, scalato dal sample rate.
+- Test: zero-silence, stabilità, slew-rate sample-rate independent,
+  basso compresso / alti lineari, rifiuto sample rate invalido.
+
+Da fare: analisi stabilità, risposta in frequenza dipendente dal livello,
+DC, armoniche e test; non presentare come modello fisico senza validazione.

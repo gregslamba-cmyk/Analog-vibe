@@ -1,13 +1,16 @@
 use std::{array, sync::Arc};
 
 use core_dsp::core_dsp_modules::{
+    analog_variance::AnalogVariance,
     metering::Metering,
-    nonlinear_stages::tube_saturate,
+    nonlinear_stages::{AcCoupling, DynamicMirrorPreEmphasis, tube_saturate},
     opto_compressor::{OptoCell, OptoMode, target_reduction_db},
     panic_protection::{PanicProtection, ProtectionResult},
+    psu_sag::PsuSag,
     realtime_controls::{BypassCrossfade, LatencyDelay},
     resampler_bitdepth::{Oversampler, OversamplingFactor},
     sidechain_processor::{SidechainFilter, SidechainProcessor},
+    transformer_hysteresis::TransformerHysteresis,
 };
 use nih_plug::prelude::*;
 
@@ -94,6 +97,11 @@ struct GregA2a {
     bypass_crossfades: [BypassCrossfade<f32>; plugin_support::MAX_AUDIO_CHANNELS],
     dry_delays: [LatencyDelay<f32, 32>; plugin_support::MAX_AUDIO_CHANNELS],
     sidechains: [SidechainProcessor<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    power_sags: [PsuSag<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    transformers: [TransformerHysteresis; plugin_support::MAX_AUDIO_CHANNELS],
+    ac_couplings: [AcCoupling; plugin_support::MAX_AUDIO_CHANNELS],
+    pre_emphases: [DynamicMirrorPreEmphasis; plugin_support::MAX_AUDIO_CHANNELS],
+    analog_variance: AnalogVariance,
     last_sidechain_settings: SidechainSettings,
     sample_rate: f32,
     last_oversampling: Oversampling,
@@ -135,6 +143,8 @@ struct GregA2aParams {
     sidechain_q: FloatParam,
     #[id = "sidechain_gain"]
     sidechain_gain: FloatParam,
+    #[id = "analog_drift"]
+    analog_drift: FloatParam,
 }
 
 impl Default for GregA2aParams {
@@ -204,6 +214,14 @@ impl Default for GregA2aParams {
                 },
             )
             .with_unit(" dB"),
+            analog_drift: FloatParam::new(
+                "Analog Drift",
+                0.2,
+                FloatRange::Linear {
+                    min: 0.0,
+                    max: 1.0,
+                },
+            ),
         }
     }
 }
@@ -218,6 +236,11 @@ impl Default for GregA2a {
             bypass_crossfades: [BypassCrossfade::default(); plugin_support::MAX_AUDIO_CHANNELS],
             dry_delays: [LatencyDelay::default(); plugin_support::MAX_AUDIO_CHANNELS],
             sidechains: array::from_fn(|_| SidechainProcessor::default()),
+            power_sags: [PsuSag::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            transformers: [TransformerHysteresis::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            ac_couplings: [AcCoupling::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            pre_emphases: [DynamicMirrorPreEmphasis::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            analog_variance: AnalogVariance::from_seed(12345, 0.03, 0.01, 0.2),
             last_sidechain_settings: SidechainSettings {
                 filter: ScFilter::HighPass,
                 frequency: 80.0,
@@ -315,6 +338,26 @@ impl Plugin for GregA2a {
             .dry_delays
             .iter_mut()
             .all(|delay| delay.set_delay_samples(latency_samples as usize));
+
+        let variance = AnalogVariance::from_seed(
+            13579,
+            0.03,
+            0.01,
+            self.params.analog_drift.value() as f64,
+        );
+        self.analog_variance = variance;
+        for sag in &mut self.power_sags {
+            sag.initialize(self.sample_rate, 0.1, 0.3);
+        }
+        for t in &mut self.transformers {
+            t.reset();
+        }
+        for ac in &mut self.ac_couplings {
+            ac.reset();
+        }
+        for pe in &mut self.pre_emphases {
+            pe.reset();
+        }
         if initialized && delays_initialized {
             self.last_oversampling = oversampling;
             self.last_bypassed = self.params.bypass.value();
@@ -342,6 +385,18 @@ impl Plugin for GregA2a {
         }
         for delay in &mut self.dry_delays {
             delay.reset();
+        }
+        for sag in &mut self.power_sags {
+            sag.reset();
+        }
+        for t in &mut self.transformers {
+            t.reset();
+        }
+        for ac in &mut self.ac_couplings {
+            ac.reset();
+        }
+        for pe in &mut self.pre_emphases {
+            pe.reset();
         }
         self.last_bypassed = self.params.bypass.value();
         for crossfade in &mut self.bypass_crossfades {
@@ -445,13 +500,24 @@ impl Plugin for GregA2a {
                     let drive_db = self.params.tube_drive.value();
                     let tube_drive = 1.0 + 0.2 * (util::db_to_gain(drive_db) - 1.0);
                     let compressed = phase_input * makeup_gain;
+                    let drift = if channel == 0 {
+                        self.analog_variance.left_gain
+                    } else {
+                        self.analog_variance.right_gain
+                    };
+                    let sag_gain = self.power_sags[channel].gain(compressed);
+                    let pre_emph = self.pre_emphases[channel].pre_emphasis((compressed as f64) * drift * (sag_gain as f64), 0.3);
                     let oversampler = &mut self.oversamplers[channel];
+                    let saturated = oversampler.process(pre_emph as f32, factor, |value| {
+                        tube_saturate(value, tube_drive)
+                    });
+                    let de_emph = self.pre_emphases[channel].de_emphasis(saturated as f64, 0.3);
+                    let ac_coupled = self.ac_couplings[channel].process(de_emph);
+                    let transformer_out = self.transformers[channel].process(ac_coupled, 1.0, 0.5, 0.2);
                     *sample =
                         finite(self.bypass_crossfades[channel].process(
                             dry,
-                            oversampler.process(compressed, factor, |value| {
-                                tube_saturate(value, tube_drive)
-                            }),
+                            transformer_out as f32,
                         ));
                     self.metering.record_sample(input, *sample, reduction_db);
                 }

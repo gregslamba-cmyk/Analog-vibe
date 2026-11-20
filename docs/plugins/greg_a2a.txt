@@ -17,7 +17,7 @@ Parametri:
 DSP:
 - `core-dsp::opto_compressor::OptoCell` modella attacco nominale di circa 10 ms, dipendente dalla riduzione richiesta, una fase di rilascio iniziale di circa 60 ms e una coda da 0.5 a 5 s che dipende dalla memoria del programma.
 - Il livello del segnale e Peak Reduction determinano una curva ottica morbida e progressiva; Compress e Limit usano inviluppi di ratio differenti.
-- `tube_saturate` fornisce una curva morbida asimmetrica normalizzata vicino allo zero; il fattore di oversampling e la latenza dichiarata sono 0/15/22/25 campioni.
+- `tube_saturate` con pre/de-enfasi dinamica speculare, inter-stage AC coupling, isteresi del trasformatore d'uscita, calo di tensione PSU (`PsuSag` con noise/ripple spenti di default) e micro-tolleranze L/R deterministiche (`AnalogVariance` controllata da `analog_drift`); il fattore di oversampling e la latenza dichiarata sono 0/15/22/25 campioni.
 - Coefficienti temporali e rampa bypass derivano dal sample rate dell'host; processing mono/stereo, senza allocazioni nel callback.
 - Panic Rust nel DSP: blocco corrente silenziato e istanza latched in pass-through tramite `PanicProtection`.
 

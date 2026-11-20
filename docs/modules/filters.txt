@@ -1,7 +1,18 @@
 ID: filters
 File sorgente: core-dsp/src/core_dsp_modules/filters.rs
-Stato: biquad alpha implementato.
+Stato: biquad alpha implementato; aggiunti filtri ZDF/SVF (Zero-Delay Feedback / Topology-Preserving Transform) con pre-warp della frequenza a evitare frequency warping vicino a Nyquist.
+
 Tipi: HighPass, LowPass, Bell, LowShelf, HighShelf, Notch, BandPass.
+
+Nuove funzionalità:
+- Topologia SvfFilter (TPT) con saturazione integrata (tanh) nel ramo di feedback.
+- Filtri shelf (LowShelf/HighShelf) con pre-warp via sqrt(A): i guadagni DC e Nyquist rimangono esatti, evitando errori di layout tipici dei filtri analogici modellati digitalmente.
+- Biquad standard con correzione di pre-warp (campionamento bilineare corretto per evitare compressione della risposta in frequenza).
+- Pole-zero symmetric handling e rinormalizzazione automatica dei coefficienti.
+
 Vincoli: configurare coefficienti in initialize o quando cambia il parametro, non nel thread audio; verificare stabilita e risposta vicino a Nyquist.
+
 Test attuali: configurazione dei tipi e rifiuto di cutoff invalido.
-Da fare: test di risposta in frequenza, precisione, stabilita e smoothing dei coefficienti.
+Nuovi test: risposta in frequenza, precisione stabilita, smoothing dei coefficienti, guadagni shelf DC/Nyquist.
+
+Filtri: ZDF/SVF disponibili anche via crate separata `zdf_filters`, con saturazione configurabile (`non_linearity` in [0..10]).
