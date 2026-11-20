@@ -1,0 +1,15 @@
+ID: greg_api_t25
+Nome plugin: Greg T25
+Categoria: compressore/limiter FET a due canali con uscita valvolare
+Stato: pianificato
+Riferimento hardware: API Select T25.
+
+Caratteristiche hardware:
+- Riduzione FET feedback; uscita Class A a valvole 12AT7WC/12BH7 e trasformatore API custom.
+- Due canali, dual mono o stereo link; ratio 2:1, 4:1, 8:1 e 20:1.
+- Attack 20 us..0.8 ms e release 50 ms..1.2 s, entrambi su 11 posizioni.
+- Threshold/input e output/makeup a 31 scatti; THRUST e controllo D-S per il detector.
+- Risposta dichiarata 20 Hz–40 kHz (+0/-1 dB), output massimo +24 dBu.
+
+Distinguere l'attack a scatti e il percorso valvolare/trasformatore dalla modellazione del FET. Il D-S non equivale a un sidechain EQ digitale liberamente parametrico.
+Fonte primaria: https://apiaudio.com/product/t25-tube-compressor/

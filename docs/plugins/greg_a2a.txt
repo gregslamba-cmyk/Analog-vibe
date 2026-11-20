@@ -1,7 +1,62 @@
 ID: greg_a2a
 Categoria: compressore opto valvolare
-Stato: pianificato
-Scopo: compressione foto-ottica con attacco dipendente dal programma e rilascio lento a doppio stadio.
-Requisiti: detector ottico con memoria; stadio valvolare configurabile; controlli di riduzione e makeup; coefficienti derivati dal sample rate.
-Riutilizzare: envelope follower, stadi non lineari e filtri condivisi.
-Da documentare all'implementazione: parametri/API, curva del detector, tempi effettivi, latenza e test.
+Nome CLAP: Greg A2A
+Stato: alpha implementata, non ancora calibrata contro hardware reale.
+Riferimento progettuale: compressore foto-ottico valvolare classico indicato nel catalogo; il nome del plugin resta originale.
+Scopo: compressione ottica con attacco dipendente dal livello/program material, memoria fotoresistiva e rilascio rapido iniziale seguito da coda lenta.
+
+Parametri:
+- Peak Reduction: 0..40 dB, aumenta l'eccitazione del detector ottico.
+- Gain: -24..+24 dB di makeup.
+- Mode: Compress oppure Limit; cambia la curva/ratio progressiva.
+- Tube Drive: 0..12 dB, intensita' dello stadio non lineare asimmetrico.
+- Oversampling: 1x/2x/4x/8x sullo stadio valvolare.
+- Bypass: crossfade di 5 ms, con ramo dry compensato.
+- Invert Left Polarity / Invert Right Polarity: inversione prima dei rami dry/wet.
+
+DSP:
+- `core-dsp::opto_compressor::OptoCell` modella attacco nominale di circa 10 ms, dipendente dalla riduzione richiesta, una fase di rilascio iniziale di circa 60 ms e una coda da 0.5 a 5 s che dipende dalla memoria del programma.
+- Il livello del segnale e Peak Reduction determinano una curva ottica morbida e progressiva; Compress e Limit usano inviluppi di ratio differenti.
+- `tube_saturate` fornisce una curva morbida asimmetrica normalizzata vicino allo zero; il fattore di oversampling e la latenza dichiarata sono 0/15/22/25 campioni.
+- Coefficienti temporali e rampa bypass derivano dal sample rate dell'host; processing mono/stereo, senza allocazioni nel callback.
+- Panic Rust nel DSP: blocco corrente silenziato e istanza latched in pass-through tramite `PanicProtection`.
+
+Verifiche: test DSP per attacco, memoria e rilascio a due stadi, monotonia della compressione, armoniche pari; host CLAP controlla riduzione a 1x/2x/4x/8x, bypass, inversione L e latenza 0/15/22/25 campioni.
+API: `plugins/greg-a2a/src/lib.rs`; registrazione: `docs/specs/greg_a2a_api.md`.
+Limite di fedelta': i valori sono un modello iniziale derivato dalle caratteristiche qualitative richieste, non una misura o una replica circuitale; richiede misure A/B su unita' reale per calibrare curva, tempi, distorsione e risposta in frequenza.
+
+## Verifica CLAP signal host
+
+Questa sezione viene rigenerata dal host offline. Non e' una misura A/B su hardware reale: confronta il segnale d'ingresso sintetico con l'uscita del modello software.
+
+- Waveform/test suite: all (sine/saw/complex/impulse)
+- Block size massimo: 256 campioni
+- Blocchi variabili: true
+- Sample rate: 48 kHz
+
+| Test | Latenza | Peak IN L/R | Peak OUT L/R | RMS IN L/R | RMS OUT L/R | Delta peak dB L/R | Delta RMS dB L/R |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| opto gain reduction at 1x | 0 | 0.5000/0.5000 | 0.4482/0.4482 | 0.3536/0.3536 | 0.0687/0.0687 | -0.95/-0.95 | -14.23/-14.23 |
+| opto gain reduction at 2x | 15 | 0.5000/0.5000 | 0.4481/0.4481 | 0.3536/0.3536 | 0.0687/0.0687 | -0.95/-0.95 | -14.23/-14.23 |
+| opto gain reduction at 4x | 22 | 0.5000/0.5000 | 0.4475/0.4475 | 0.3536/0.3536 | 0.0687/0.0687 | -0.96/-0.96 | -14.23/-14.23 |
+| opto gain reduction at 8x | 25 | 0.5000/0.5000 | 0.4483/0.4483 | 0.3536/0.3536 | 0.0687/0.0687 | -0.95/-0.95 | -14.23/-14.23 |
+| opto external sidechain filter | 22 | 0.5000/0.5000 | 0.4509/0.4509 | 0.3536/0.3536 | 0.1033/0.1033 | -0.90/-0.90 | -10.68/-10.68 |
+| opto compressor latency-compensated bypass | 22 | 0.2500/0.2500 | 0.2500/0.2500 | 0.1768/0.1768 | 0.1768/0.1768 | +0.00/+0.00 | -0.00/-0.00 |
+| opto gain reduction at 1x | 0 | 0.5000/0.5000 | 0.4942/0.4942 | 0.2888/0.2888 | 0.0648/0.0648 | -0.10/-0.10 | -12.98/-12.98 |
+| opto gain reduction at 2x | 15 | 0.5000/0.5000 | 0.5445/0.5445 | 0.2888/0.2888 | 0.0645/0.0645 | +0.74/+0.74 | -13.02/-13.02 |
+| opto gain reduction at 4x | 22 | 0.5000/0.5000 | 0.5329/0.5329 | 0.2888/0.2888 | 0.0646/0.0646 | +0.55/+0.55 | -13.01/-13.01 |
+| opto gain reduction at 8x | 25 | 0.5000/0.5000 | 0.5368/0.5368 | 0.2888/0.2888 | 0.0645/0.0645 | +0.62/+0.62 | -13.02/-13.02 |
+| opto external sidechain filter | 22 | 0.5000/0.5000 | 0.5338/0.5338 | 0.2888/0.2888 | 0.0842/0.0842 | +0.57/+0.57 | -10.71/-10.71 |
+| opto compressor latency-compensated bypass | 22 | 0.2500/0.2500 | 0.2500/0.2500 | 0.1444/0.1444 | 0.1444/0.1444 | +0.00/+0.00 | +0.00/+0.00 |
+| opto gain reduction at 1x | 0 | 0.6663/0.6663 | 0.4797/0.4797 | 0.3278/0.3278 | 0.0665/0.0665 | -2.85/-2.85 | -13.86/-13.86 |
+| opto gain reduction at 2x | 15 | 0.6663/0.6663 | 0.4799/0.4799 | 0.3278/0.3278 | 0.0665/0.0665 | -2.85/-2.85 | -13.86/-13.86 |
+| opto gain reduction at 4x | 22 | 0.6663/0.6663 | 0.4800/0.4800 | 0.3278/0.3278 | 0.0665/0.0665 | -2.85/-2.85 | -13.86/-13.86 |
+| opto gain reduction at 8x | 25 | 0.6663/0.6663 | 0.4796/0.4796 | 0.3278/0.3278 | 0.0665/0.0665 | -2.86/-2.86 | -13.86/-13.86 |
+| opto external sidechain filter | 22 | 0.6663/0.6663 | 0.4890/0.4890 | 0.3278/0.3278 | 0.0958/0.0958 | -2.69/-2.69 | -10.69/-10.69 |
+| opto compressor latency-compensated bypass | 22 | 0.3332/0.3332 | 0.3332/0.3332 | 0.1639/0.1639 | 0.1639/0.1639 | +0.00/+0.00 | -0.00/-0.00 |
+| opto gain reduction at 1x | 0 | 0.5000/0.5000 | 0.4308/0.4308 | 0.0442/0.0442 | 0.0277/0.0277 | -1.29/-1.29 | -4.07/-4.07 |
+| opto gain reduction at 2x | 15 | 0.5000/0.5000 | 0.2790/0.2790 | 0.0442/0.0442 | 0.0263/0.0263 | -5.07/-5.07 | -4.50/-4.50 |
+| opto gain reduction at 4x | 22 | 0.5000/0.5000 | 0.3787/0.3787 | 0.0442/0.0442 | 0.0265/0.0265 | -2.41/-2.41 | -4.45/-4.45 |
+| opto gain reduction at 8x | 25 | 0.5000/0.5000 | 0.3350/0.3350 | 0.0442/0.0442 | 0.0264/0.0264 | -3.48/-3.48 | -4.49/-4.49 |
+| opto external sidechain filter | 22 | 0.5000/0.5000 | 0.3793/0.3793 | 0.0442/0.0442 | 0.0119/0.0119 | -2.40/-2.40 | -11.41/-11.41 |
+| opto compressor latency-compensated bypass | 22 | 0.2500/0.2500 | 0.2500/0.2500 | 0.0221/0.0221 | 0.0221/0.0221 | +0.00/+0.00 | -0.00/-0.00 |

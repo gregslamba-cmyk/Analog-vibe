@@ -1,5 +1,63 @@
 # Stato del progetto
 
+## Obiettivo attivo: specifiche e catalogo dei compressori outboard
+- [COMPLETATO] Riprendere la mappatura dei riferimenti analogici e creare il dossier hardware iniziale.
+- [COMPLETATO] Confermare: 1176 D/E da documentare entrambi; SSL EQ E/G; Harrison 32C; Studer A800 Mk III; Aphex Aural Exciter Type C; dbx 120A; SSL G-Series bus compressor.
+- [COMPLETATO] Aggiungere al catalogo e creare schede plugin separate per DBX 160A/160X/165A e gli 11 compressori API standalone trovati nel catalogo ufficiale.
+- [COMPLETATO] Aggiornare dossier hardware, cataloghi e inventario con specifiche dichiarate, fonti e differenze tra modelli.
+- [COMPLETATO] Estrarre dal manuale DBX combinato 165/165A le specifiche principali e la differenza PeakStop del 165A.
+- [IN CORSO] Verificare revisione e configurazione del manuale DBX 160X, per ora reperito solo in copia d'archivio non ospitata dal produttore.
+- [DA FARE] Recuperare service manual per Harrison 32C, A800 Mk III e Aphex Type C; predisporre misure A/B prima di dichiarare fedelta'.
+- [COMPLETATO] Definire il criterio catalogo per i channel strip: un plugin per modello esatto, revisioni dello stesso modello accorpate in profili; modelli distinti restano distinti.
+- [COMPLETATO] Aggiungere 15 schede channel strip per Neve, Harrison/Mixbus, SSL, API e shortlist Trident/AMEK/MCI, mantenendo i plugin di sezione esistenti.
+- [DA FARE] Trascrivere manuali e revisioni dei nuovi channel strip; Mixbus va trattato come strip software, non come banco analogico.
+
+## Greg A3A: compressore opto a stato solido
+- [COMPLETATO] Verificare e documentare il crate CLAP gia' presente nel workspace.
+- [COMPLETATO] Esercitare oversampling 1x/2x/4x/8x, riduzione di guadagno, modo Limit e sidechain esterna nell'host.
+- [COMPLETATO] Aggiornare API, scheda plugin, README, inventario e test host.
+- [COMPLETATO] Verificare test workspace, Clippy strict e build release.
+- Limite: modello alpha non calibrato con hardware reale.
+
+## Obiettivo attivo: `greg_child` Vari-Mu
+- [COMPLETATO] Definire specifica e parametri del compressore Vari-Mu.
+- [COMPLETATO] Implementare detector/curva Vari-Mu con rapporto crescente e sei costanti di tempo.
+- [COMPLETATO] Integrare detector stereo-link/dual mono, sidechain opzionale, bypass, metering e protezione panic.
+- [COMPLETATO] Aggiungere prove host per i sei selettori, stereo-link/dual mono e Sidechain Listen esterna.
+- [COMPLETATO] Aggiornare crate workspace, schede API/plugin, cataloghi, README e inventario.
+- [COMPLETATO] Verificare 48 test workspace, Clippy strict librerie, build release e regressioni CLAP di tutti i plugin implementati.
+- Vincolo dual mono: dove sensato, le coppie L/R possono usare detector e gain reduction indipendenti; controlli hardware non sono duplicati a meno che richiesto dal modello.
+- Vincolo fedelta': tempi e curve sono provvisori; calibrazione del modello circuitale rimane da fare su manuale di servizio e hardware.
+
+## Prossimo plugin pianificato: `greg_bus_comp`
+- [DA FARE] Specificare topologia VCA, curve e controlli hardware essenziali.
+- [DA FARE] Implementare sidechain opzionale e scelta Stereo Link/Dual Mono.
+- [DA FARE] Validare DSP, latenza e comportamento in host CLAP; documentare limiti di fedelta'.
+
+## Nuovo modulo condiviso: metering
+- [COMPLETATO] Definire un'API DSP real-time per input/output peak e RMS e gain reduction.
+- [COMPLETATO] Esporre snapshot atomici thread-safe e coprire i casi con test unitari.
+- [COMPLETATO] Integrare la raccolta nei plugin CLAP presenti nel workspace.
+- [COMPLETATO] Aggiornare `vcinst.md`, il catalogo esteso, inventario e schede DSP.
+- [DA FARE] Esporre i meter a una GUI o ai controlli host quando verra' aggiunta l'interfaccia.
+
+## Obiettivo completato: protezione da panic nel DSP
+- [COMPLETATO] Aggiungere un guard condiviso che intercetti i panic Rust durante il processing audio.
+- [COMPLETATO] Integrare il guard nei plugin CLAP attualmente implementati.
+- [COMPLETATO] In caso di panic, silenziare il blocco compromesso e latched-bypass in pass-through dai blocchi successivi.
+- [COMPLETATO] Testare il guard: panic intercettato, latch permanente e callback DSP successivi non eseguiti.
+- [COMPLETATO] Documentare che panic=abort, segfault e corruzione memoria non sono intercettabili in-process.
+- [DA FARE] Salvare un commit locale dopo aver concordato il perimetro delle modifiche non ancora committate.
+
+## Nuovo obiettivo attivo: emulazione analogica `greg_a2a`
+- [COMPLETATO] Definire parametri e metadati CLAP con naming originale Greg Audio.
+- [COMPLETATO] Aggiungere il modulo opto condiviso con attacco dipendente dalla riduzione e rilascio a due stadi basato sul sample rate.
+- [COMPLETATO] Integrare stadio valvolare asimmetrico, oversampling, bypass allineato e protezione panic condivisa.
+- [COMPLETATO] Aggiornare scheda plugin, specifica API, schede DSP, inventario, README e host CLAP.
+- [COMPLETATO] Verificare formattazione, test workspace (37), Clippy, build release e test host CLAP nuovo/esistenti.
+- [DA FARE] Calibrare curva, tempi, risposta e armoniche con misure A/B su hardware reale.
+- Vincolo di fedeltà: la prima alpha è un modello ispirato alla topologia e ai comportamenti documentati, non una replica misurata; calibrare contro hardware reale e misure rimane necessario.
+
 ## Obiettivo attivo: utility di polarita'
 - [COMPLETATO] Implementare `greg_phase` come plugin CLAP standalone mono/stereo.
 - [COMPLETATO] Riutilizzare `StereoFrame::invert_phase` per inversione L/R e inversione linkata.
@@ -16,6 +74,15 @@
 
 ## Obiettivo
 Creare una suite di plugin audio CLAP in Rust, con DSP senza interfaccia grafica nella fase iniziale e requisiti real-time. Allineare il catalogo breve e quello esteso.
+
+## Obiettivo attivo: limiter alpha `greg_limiter`
+- [COMPLETATO] Step 0: definire specifica API, controlli e policy di limitazione.
+- [COMPLETATO] Step A: aggiungere crate workspace, parametri CLAP e layout mono/stereo.
+- [COMPLETATO] Step B: inizializzare lookahead, oversampling, delay dry, sidechain e coefficenti al sample rate.
+- [COMPLETATO] Step C: implementare rilevamento peak, gain reduction, ceiling, release e bypass.
+- [COMPLETATO] Step D: integrare oversampling, clipping hard del ceiling e protezione da crash.
+- [COMPLETATO] Aggiornare schede plugin/API, test host e inventario.
+- [DA FARE] Salvare un commit locale dopo aver concordato il perimetro delle modifiche non ancora committate.
 
 ## Passi pianificati
 - [COMPLETATO] Integrare nel FET bypass con crossfade, inversione di polarità L/R e dry delay allineato alla latenza dichiarata.
@@ -42,14 +109,14 @@ Creare una suite di plugin audio CLAP in Rust, con DSP senza interfaccia grafica
 - [COMPLETATO] Riutilizzare in `greg-fet` envelope follower e saturazione condivisi.
 - [COMPLETATO] Aggiungere notch e band-pass al modulo filtri; test (19), Clippy e build release passati.
 - [DA FARE] Integrare bypass, routing, sidechain, modelli analogici e oversampling nei singoli plugin quando implementati.
-- [DA FARE] Completare in iterazioni successive bypass crossfade, smoothing e ulteriori moduli elencati in `vcinstext.md`.
+- [DA FARE] Completare in iterazioni successive bypass crossfade, smoothing e ulteriori moduli elencati in `vcinst.md`.
 - [COMPLETATO] Aggiungere threshold, knee e modalità All Buttons In al compressore FET.
 - [COMPLETATO] Separare lo stato dell'envelope follower per canale e aggiornare attack/release durante il processamento.
 - [COMPLETATO] Limitare il selettore alle ratio classiche 4:1, 8:1, 12:1 e 20:1.
 - [COMPLETATO] Verificare formattazione e test del crate `greg-fet` (7 test).
 - [COMPLETATO] Compilare la libreria `greg-fet` in release.
 - [DA FARE] Proseguire la rifinitura DSP del FET e poi iniziare il successivo modulo della suite.
-- [COMPLETATO] Confrontare `vcinst.md` e `vcinstext.md` e rilevare i requisiti non allineati.
+- [COMPLETATO] Consolidare requisiti e catalogo in `vcinst.md`, unica fonte normativa.
 - [COMPLETATO] Aggiungere al catalogo EQ chirurgico, exciter, low enhancer sub-armonico e distorsore multi-tecnologia.
 - [DA FARE] Allineare i requisiti mancanti e le incongruenze residue tra i due documenti.
 - [COMPLETATO] Inizializzare il workspace Cargo.
@@ -78,4 +145,4 @@ Utility `greg_phase`: crate CLAP autonomo con inversione indipendente Left/Right
 
 ## Vincoli
 - `nih_plug::Buffer` espone campioni `f32`: un core DSP generico può supportare `f32` e `f64`, ma il wrapper NIH-plug non fornisce processing host-native `f64`.
-- Il plugin sanitizza i campioni non finiti e verifica le allocazioni in debug; l'isolamento da panic o segfault non può essere garantito dal plugin stesso e dipende dall'host audio.
+- `PanicProtection` intercetta panic Rust solo con strategia `panic=unwind`; il blocco che genera il panic viene azzerato e l'istanza resta in pass-through. `panic=abort`, segfault e corruzione della memoria richiedono isolamento a livello host/processo.

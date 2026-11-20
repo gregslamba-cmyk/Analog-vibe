@@ -1,7 +1,12 @@
 ID: greg_low_enhancer
 Categoria: enhancer/sintetizzatore subarmonico
-Stato: pianificato
-Scopo: generare subarmoniche musicali agganciate al segnale d'ingresso.
-Requisiti: ottava inferiore e sub-ottava opzionale, filtro low-pass, mix, dinamica e protezione DC.
+Stato: pianificato; specifiche hardware di base verificate
+Riferimento: dbx 120A Subharmonic Synthesizer con Modeled Waveform Synthesis.
+Metodo dichiarato: crea una nota di basso modellata usando la forma d'onda del basso sorgente, dichiarata dal produttore un'ottava sotto. Due bande separate coprono 26-36 Hz e 36-56 Hz; il manuale indica sintesi 26-56 Hz da ingresso 54-110 Hz. I controlli delle bande sono etichettati 24-36 Hz e 36-56 Hz.
+Controlli originali: Subharmonics master, livelli delle due bande, LF Boost, crossover 80/120 Hz, bypass sintesi e livello uscita subwoofer. Il crossover dichiara HPF 12 dB/ottava e LPF 6 dB/ottava.
+Specifiche pubblicate: risposta 20 Hz-20 kHz ±0.5 dB senza sintesi in full-range mode; THD 0.05% senza sintesi; rumore -88 dBu (22 Hz-22 kHz non pesato); dynamic range 112 dB; input max +22 dBu su jack/+8.5 dBV RCA; output max +22 dBu su 600 ohm.
+Requisiti: non sostituire la sintesi modellata con un semplice divide-per-due; caratterizzare tracking, transienti e interazione delle bande su sorgenti reali. Mix e altri controlli software sono estensioni, non comandi hardware equivalenti.
+Fonte primaria: https://dbxpro.com/en/product_documents/120a-manual-18-2217-cpdf
+Fonte prodotto: https://dbxpro.com/en/products/120a
 Riutilizzare: filtri, envelope follower e smoothing.
 Da documentare all'implementazione: metodo di sintesi, tracking, limiti e test.

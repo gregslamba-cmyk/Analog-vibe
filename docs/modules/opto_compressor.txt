@@ -1,0 +1,18 @@
+ID: opto_compressor
+File sorgente: core-dsp/src/core_dsp_modules/opto_compressor.rs
+Stato: modello alpha condiviso; usato da `greg_a2a`.
+
+API:
+- `OptoCell<T>::initialize(sample_rate)` configura la memoria temporale per il sample rate attivo.
+- `OptoCell<T>::process(target_reduction_db)` aggiorna la riduzione ottica, con risposta d'attacco e due fasi di rilascio.
+- `target_reduction_db(input_level_db, peak_reduction_db, mode)` calcola la curva di riduzione dipendente dal livello.
+- `OptoMode::{Compress, Limit}` seleziona due curve a ratio progressiva.
+
+Modello:
+- Attacco nominale circa 10 ms, accelerato moderatamente con la riduzione richiesta.
+- Prima fase di rilascio circa 60 ms fino a circa meta' della riduzione memorizzata.
+- Coda di rilascio da 0.5 a 5 s: la durata aumenta con l'esposizione sostenuta, approssimata da memoria del programma con costante di 2 s.
+- Tutti i coefficienti sono calcolati dal sample rate fornito; stato allocato staticamente e nessuna allocazione nel callback.
+
+Test: rifiuto del sample rate non valido, attacco, dipendenza del rilascio dalla durata del programma, rilascio rapido/lento e incremento della riduzione con Peak Reduction/modalita' Limit.
+Limite: modello fenomenologico e non modello fisico della cella fotoresistiva; costanti e curva necessitano calibrazione con sweep e materiale reale.

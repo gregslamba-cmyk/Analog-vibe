@@ -1,0 +1,10 @@
+ID: greg_api_legacy_plus_strip
+Nome: Greg API Legacy Plus Channel Strip
+Categoria: channel strip analogico
+Stato: pianificato; modello console identificato, specifiche di strip da raccogliere
+Riferimento: channel strip della console API Legacy Plus; distinta da API Vision.
+Perimetro: selezionare un modulo canale e documentare preamp, equalizzazione, dinamica opzionale, routing e revisione.
+Specifiche: non trasferire automaticamente i circuiti opzionali API 550/560/225/235 o le specifiche Vision; acquisire prima manuale e composizione dei moduli.
+Plugin di sezione: greg_api_pre e i compressori API standalone restano disponibili.
+Fonte primaria: documentazione console API Legacy Plus da individuare negli archivi del produttore.
+Da completare: revisione, moduli canale e misure A/B.

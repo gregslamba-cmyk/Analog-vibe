@@ -1,0 +1,15 @@
+ID: greg_api_225l
+Nome plugin: Greg 225L
+Categoria: compressore VCA per channel strip
+Stato: pianificato
+Riferimento hardware: modulo API 225L della serie 200.
+
+Caratteristiche hardware:
+- Threshold +10..-20 dBu; ratio 1:1..infinito.
+- Attack 1..25 ms e release 0.3..3 s continui.
+- Selettori Old/feed-back o New/feed-forward, knee hard/soft, auto makeup.
+- Sidechain input e collegamento stereo fra due moduli; operativita' mono per singolo modulo.
+- Op-amp API 2510/2520 e uscita a trasformatore, fino a +28 dBu.
+
+Il controllo di makeup automatico mantiene l'uscita circa a unity secondo il produttore; va testato con soglia/ratio, non implementato come guadagno compensativo ideale.
+Fonte primaria: https://apiaudio.com/product/225l-compressor/

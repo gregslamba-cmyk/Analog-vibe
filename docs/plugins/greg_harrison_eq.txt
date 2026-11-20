@@ -1,7 +1,10 @@
 ID: greg_harrison_eq
 Categoria: equalizzatore di canale
-Stato: pianificato
-Scopo: EQ musicale con filtri proporzionali e risposta utile su canali.
-Requisiti: bande e filtri selezionabili con coefficienti derivati dal sample rate.
+Stato: pianificato; riferimento hardware selezionato, specifiche da completare
+Riferimento: sezione EQ della channel strip Harrison 32C; non e' un outboard separato.
+Scopo: EQ musicale con risposta caratteristica della 32C.
+Specifiche mancanti: revisione, bande, curve, frequenze, gamme, filtri e Q dal manuale della console.
+Requisiti: non fissare controlli o curve per analogia con la 32Classic moderna; distinguere le eventuali bande/filtri digitali aggiunti.
 Riutilizzare: filtri condivisi e smoothing.
-Da documentare all'implementazione: curve, controlli, fase e test.
+Fonte primaria: manuale di servizio/scheda Harrison 32C da reperire.
+Da documentare all'implementazione: curve, controlli originali/aggiunti, fase e test.

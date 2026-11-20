@@ -1,0 +1,15 @@
+ID: greg_api_sr22
+Nome plugin: Greg SR22
+Categoria: compressore analogico dual-channel
+Stato: pianificato
+Riferimento hardware: API SR22, circuito derivato dalla console ATI Paragon.
+
+Caratteristiche hardware:
+- Due canali, stereo link con somma di potenza RMS reale.
+- Threshold -40..+15 dBu; ratio 1:1..10:1; makeup 0..+20 dB.
+- Attack adattivo a programma/controllo 10..40 ms; release adattivo 30..400 ms.
+- Knee hard/soft e sidechain flat/THRUST.
+- Risposta ±0.5 dB 20 Hz–50 kHz; THD+N <0.005% a 1 kHz/+4 dBu; livello massimo +19 dBu.
+
+Non sostituire gli inviluppi adattivi con tempi fissi impostati ai limiti del range. L'esposizione del detector deve essere misurata.
+Fonte primaria: https://apiaudio.com/product/sr22-compressor/

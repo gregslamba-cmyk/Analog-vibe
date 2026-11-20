@@ -1,6 +1,8 @@
 ID: sidechain_processor
 File sorgente: core-dsp/src/core_dsp_modules/sidechain_processor.rs
-Stato: alpha implementato con biquad e listen.
-Responsabilita: filtrare il segnale detector e selezionare ascolto del segnale filtrato oppure livello rettificato.
-Tipi filtro disponibili: Bell, Low/High-Shelf, Low/High-Pass, Notch e BandPass tramite modulo filters.
-Da fare: routing della sidechain esterna dall'host, controlli automabili e test del comportamento di listen.
+Stato: alpha implementato con biquad, selezione internal/external e listen.
+Responsabilita: selezionare il detector interno o esterno (fallback interno se manca un campione esterno valido), filtrare il segnale chiave e selezionare ascolto del segnale filtrato oppure livello rettificato.
+Filtri richiesti ai processori dinamici: High-Pass, Low-Pass, Bell, Low-Shelf e High-Shelf. `Biquad` espone inoltre Notch e BandPass per usi interni.
+API: `SidechainProcessor::configure`, `process_key(internal, external, use_external)`, `set_listen`, `process`, `reset`; `SidechainFilter` limita i cinque tipi standard.
+I plugin devono esporre un ingresso sidechain opzionale via `AudioIOLayout::aux_input_ports`; i controlli GUI/automazione appartengono al plugin e il detector deve essere attivo in compressori, limiter, gate/expander, transient e multibanda.
+Test: selezione sorgente esterna, fallback su valore non finito e configurabilita' di tutti i cinque filtri.

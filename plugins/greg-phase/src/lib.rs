@@ -1,6 +1,11 @@
 use std::{num::NonZeroU32, sync::Arc};
 
-use core_dsp::core_dsp_modules::{realtime_controls::BypassCrossfade, routing_matrix::StereoFrame};
+use core_dsp::core_dsp_modules::{
+    metering::Metering,
+    panic_protection::{PanicProtection, ProtectionResult},
+    realtime_controls::BypassCrossfade,
+    routing_matrix::StereoFrame,
+};
 use nih_plug::prelude::*;
 
 #[derive(Params)]
@@ -31,6 +36,8 @@ struct GregPhase {
     bypass_crossfades: [BypassCrossfade<f32>; 2],
     last_bypassed: bool,
     bypass_ramp_samples: u32,
+    panic_protection: PanicProtection,
+    metering: Metering,
 }
 
 impl Default for GregPhase {
@@ -40,6 +47,8 @@ impl Default for GregPhase {
             bypass_crossfades: [BypassCrossfade::default(); 2],
             last_bypassed: false,
             bypass_ramp_samples: 1,
+            panic_protection: PanicProtection::default(),
+            metering: Metering::default(),
         }
     }
 }
@@ -102,6 +111,9 @@ impl Plugin for GregPhase {
         _aux: &mut AuxiliaryBuffers,
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
+        if self.panic_protection.is_disabled() {
+            return ProcessStatus::Normal;
+        }
         let bypassed = self.params.bypass.value();
         if bypassed != self.last_bypassed {
             for crossfade in &mut self.bypass_crossfades {
@@ -114,25 +126,36 @@ impl Plugin for GregPhase {
         let invert_left = invert_both || self.params.invert_left.value();
         let invert_right = invert_both || self.params.invert_right.value();
 
-        for mut frame in buffer.iter_samples() {
-            let mut samples = frame.iter_mut();
-            let Some(left_sample) = samples.next() else {
-                continue;
-            };
-            let left_input = finite(*left_sample);
-            let Some(right_sample) = samples.next() else {
-                let polarity = if invert_left { -left_input } else { left_input };
-                *left_sample = finite(self.bypass_crossfades[0].process(left_input, polarity));
-                continue;
-            };
-            let right_input = finite(*right_sample);
-            let output = StereoFrame {
-                left: left_input,
-                right: right_input,
+        self.metering.begin_block();
+        let protection_result = self.panic_protection.run(|| {
+            for mut frame in buffer.iter_samples() {
+                let mut samples = frame.iter_mut();
+                let Some(left_sample) = samples.next() else {
+                    continue;
+                };
+                let left_input = finite(*left_sample);
+                let Some(right_sample) = samples.next() else {
+                    let polarity = if invert_left { -left_input } else { left_input };
+                    *left_sample = finite(self.bypass_crossfades[0].process(left_input, polarity));
+                    self.metering.record_sample(left_input, *left_sample, 0.0);
+                    continue;
+                };
+                let right_input = finite(*right_sample);
+                let output = StereoFrame {
+                    left: left_input,
+                    right: right_input,
+                }
+                .invert_phase(invert_left, invert_right);
+                *left_sample = finite(self.bypass_crossfades[0].process(left_input, output.left));
+                *right_sample =
+                    finite(self.bypass_crossfades[1].process(right_input, output.right));
+                self.metering.record_sample(left_input, *left_sample, 0.0);
+                self.metering.record_sample(right_input, *right_sample, 0.0);
             }
-            .invert_phase(invert_left, invert_right);
-            *left_sample = finite(self.bypass_crossfades[0].process(left_input, output.left));
-            *right_sample = finite(self.bypass_crossfades[1].process(right_input, output.right));
+        });
+        self.metering.publish_block();
+        if protection_result == ProtectionResult::Tripped {
+            silence_buffer(buffer);
         }
 
         ProcessStatus::Normal
@@ -151,6 +174,14 @@ impl ClapPlugin for GregPhase {
         ClapFeature::Mono,
         ClapFeature::Stereo,
     ];
+}
+
+fn silence_buffer(buffer: &mut Buffer) {
+    for mut samples in buffer.iter_samples() {
+        for sample in samples.iter_mut() {
+            *sample = 0.0;
+        }
+    }
 }
 
 fn finite(sample: f32) -> f32 {

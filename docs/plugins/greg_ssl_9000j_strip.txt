@@ -1,0 +1,10 @@
+ID: greg_ssl_9000j_strip
+Nome: Greg SSL 9000 J Channel Strip
+Categoria: channel strip analogico
+Stato: pianificato; modello identificato, manuale di revisione da acquisire
+Riferimento: channel strip della console SSL 9000 J, modello distinto dalla serie 4000.
+Perimetro: documentare percorso d'ingresso, filtri, EQ, dinamica, routing e gain structure dal manuale della console.
+Specifiche mancanti: gamme dei controlli, curve e tempi, topologia di detector, livelli e misure.
+Plugin di sezione: greg_ssl_eq e greg_bus_comp restano disponibili come componenti separati.
+Fonte primaria: manuali SSL da https://solidstatelogic.com/support/downloads
+Da completare: revisione della channel card e misure A/B.

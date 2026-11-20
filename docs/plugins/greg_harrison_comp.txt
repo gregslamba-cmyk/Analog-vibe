@@ -1,7 +1,10 @@
 ID: greg_harrison_comp
 Categoria: compressore di canale
-Stato: pianificato
-Scopo: compressione morbida per canale con controllo musicale della dinamica.
-Requisiti: threshold, ratio, attack, release, makeup e detector sidechain interno.
+Stato: pianificato; riferimento hardware selezionato, specifiche da completare
+Riferimento: sezione compressore della channel strip Harrison 32C; non e' un outboard separato.
+Scopo: compressione di canale con controllo musicale della dinamica.
+Specifiche mancanti: revisione, topologia/detector, controlli originali, curve e gamme dei parametri dal manuale della 32C.
+Requisiti: documentare threshold, ratio, attack, release, makeup e sidechain soltanto dopo aver verificato quali appartengono alla revisione scelta; distinguere estensioni digitali.
 Riutilizzare: envelope follower, sidechain_processor e smoothing.
-Da documentare all'implementazione: curva, parametri, latenza e test.
+Fonte primaria: manuale di servizio/scheda Harrison 32C da reperire; non trasferire specifiche dalla 32Classic moderna.
+Da documentare all'implementazione: curva, parametri hardware e aggiunti, latenza e test.

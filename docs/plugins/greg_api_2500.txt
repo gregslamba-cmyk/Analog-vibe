@@ -1,0 +1,16 @@
+ID: greg_api_2500
+Nome plugin: Greg 2500
+Categoria: compressore stereo VCA da bus
+Stato: pianificato; riferimento API fuori produzione
+Riferimento hardware: API 2500 Stereo Bus Compressor originale, non la versione 2500+.
+
+Caratteristiche documentate:
+- Due canali, impiego stereo linkato o indipendente; opzioni variabili di link.
+- Soglia -20..+10 dBu, ratio/attack/release selezionabili.
+- Detector THRUST con filtro prima del rilevatore RMS; selezione feedback "Old" o feed-forward "New".
+- Knee soft/medium/hard, makeup automatico o manuale, ingressi sidechain bilanciati da 1/4".
+- Output clipping dichiarato a +28 dBu.
+
+Da recuperare dal manuale della revisione: valori di ogni posizione ratio/attack/release, curva THRUST, modalità di link e specifiche elettriche complete.
+Fonte primaria: https://apiaudio.com/product/2500-stereo-compressor/
+Non condividere indiscriminatamente il DSP con 2500+ o 529: controlli, revisioni e percorso differiscono.

@@ -1,7 +1,11 @@
 ID: greg_exciter
 Categoria: exciter armonico
-Stato: pianificato
+Stato: pianificato; riferimento hardware selezionato, manuale da reperire
+Riferimento: Aphex Aural Exciter Type C; non confondere con gli Exciter Aphex piu' recenti.
 Scopo: generare armoniche controllate per aggiungere presenza e aria.
-Requisiti: banda/frequenza, intensità, mix e controllo dei picchi; oversampling quando necessario.
+Specifiche mancanti: revisione, topologia di generazione, frequenza di sintonia, livelli e controlli originali dal manuale Type C.
+Nota sulle fonti: la pagina ufficiale Aphex dell'Exciter attuale riguarda un prodotto diverso e non conferma le specifiche Type C.
+Requisiti: banda/frequenza, intensita', mix e controllo dei picchi solo dopo verifica hardware; oversampling e controlli extra sono estensioni digitali.
 Riutilizzare: filtri, nonlinear_stages, oversampler e bypass crossfade.
-Da documentare all'implementazione: spettro, aliasing, controlli e test.
+Fonte di contesto: https://aphex.com/products/exciter
+Da documentare all'implementazione: spettro, aliasing, controlli hardware/aggiunti e test.

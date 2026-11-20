@@ -1,7 +1,11 @@
 use std::{num::NonZeroU32, sync::Arc};
 
-use core_dsp::core_dsp_modules::realtime_controls::BypassCrossfade;
-use core_dsp::core_dsp_modules::routing_matrix::{RoutingMode, StereoFrame};
+use core_dsp::core_dsp_modules::{
+    metering::Metering,
+    panic_protection::{PanicProtection, ProtectionResult},
+    realtime_controls::BypassCrossfade,
+    routing_matrix::{RoutingMode, StereoFrame},
+};
 use nih_plug::prelude::*;
 
 #[derive(Params)]
@@ -61,6 +65,8 @@ struct GregMsEncoder {
     bypass_crossfades: [BypassCrossfade<f32>; 2],
     last_bypassed: bool,
     bypass_ramp_samples: u32,
+    panic_protection: PanicProtection,
+    metering: Metering,
 }
 
 impl Default for GregMsEncoder {
@@ -70,6 +76,8 @@ impl Default for GregMsEncoder {
             bypass_crossfades: [BypassCrossfade::default(); 2],
             last_bypassed: false,
             bypass_ramp_samples: 1,
+            panic_protection: PanicProtection::default(),
+            metering: Metering::default(),
         }
     }
 }
@@ -132,6 +140,9 @@ impl Plugin for GregMsEncoder {
         _aux: &mut AuxiliaryBuffers,
         _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
+        if self.panic_protection.is_disabled() {
+            return ProcessStatus::Normal;
+        }
         let bypassed = self.params.bypass.value();
         if bypassed != self.last_bypassed {
             for crossfade in &mut self.bypass_crossfades {
@@ -146,25 +157,36 @@ impl Plugin for GregMsEncoder {
         let invert_left = self.params.invert_left.value();
         let invert_right = self.params.invert_right.value();
 
-        for mut frame in buffer.iter_samples() {
-            let mut samples = frame.iter_mut();
-            let Some(left_sample) = samples.next() else {
-                continue;
-            };
-            let left_input = finite(*left_sample);
-            let Some(right_sample) = samples.next() else {
-                let polarity = if invert_left { -1.0 } else { 1.0 };
-                *left_sample = self.bypass_crossfades[0].process(left_input, left_input * polarity);
-                continue;
-            };
-            let right_input = finite(*right_sample);
-            let left = left_input * left_balance * if invert_left { -1.0 } else { 1.0 };
-            let right = right_input * right_balance * if invert_right { -1.0 } else { 1.0 };
-            let encoded = StereoFrame { left, right }.route(RoutingMode::MidSide);
-            let mid = encoded.left * mid_gain;
-            let side = encoded.right * side_gain;
-            *left_sample = finite(self.bypass_crossfades[0].process(left_input, mid));
-            *right_sample = finite(self.bypass_crossfades[1].process(right_input, side));
+        self.metering.begin_block();
+        let protection_result = self.panic_protection.run(|| {
+            for mut frame in buffer.iter_samples() {
+                let mut samples = frame.iter_mut();
+                let Some(left_sample) = samples.next() else {
+                    continue;
+                };
+                let left_input = finite(*left_sample);
+                let Some(right_sample) = samples.next() else {
+                    let polarity = if invert_left { -1.0 } else { 1.0 };
+                    *left_sample =
+                        self.bypass_crossfades[0].process(left_input, left_input * polarity);
+                    self.metering.record_sample(left_input, *left_sample, 0.0);
+                    continue;
+                };
+                let right_input = finite(*right_sample);
+                let left = left_input * left_balance * if invert_left { -1.0 } else { 1.0 };
+                let right = right_input * right_balance * if invert_right { -1.0 } else { 1.0 };
+                let encoded = StereoFrame { left, right }.route(RoutingMode::MidSide);
+                let mid = encoded.left * mid_gain;
+                let side = encoded.right * side_gain;
+                *left_sample = finite(self.bypass_crossfades[0].process(left_input, mid));
+                *right_sample = finite(self.bypass_crossfades[1].process(right_input, side));
+                self.metering.record_sample(left_input, *left_sample, 0.0);
+                self.metering.record_sample(right_input, *right_sample, 0.0);
+            }
+        });
+        self.metering.publish_block();
+        if protection_result == ProtectionResult::Tripped {
+            silence_buffer(buffer);
         }
 
         ProcessStatus::Normal
@@ -183,6 +205,14 @@ impl ClapPlugin for GregMsEncoder {
         ClapFeature::Mono,
         ClapFeature::Stereo,
     ];
+}
+
+fn silence_buffer(buffer: &mut Buffer) {
+    for mut samples in buffer.iter_samples() {
+        for sample in samples.iter_mut() {
+            *sample = 0.0;
+        }
+    }
 }
 
 fn balance_gains(balance: f32) -> (f32, f32) {

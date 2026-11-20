@@ -5,11 +5,7 @@ pub use core_dsp::core_dsp_modules::realtime_controls::{BypassCrossfade, Latency
 pub use core_dsp::core_dsp_modules::resampler_bitdepth::{Oversampler, OversamplingFactor};
 
 pub fn soft_saturate<T: Float>(sample: T, drive: T) -> T {
-    core_dsp::core_dsp_modules::nonlinear_stages::process(
-        sample,
-        drive,
-        core_dsp::core_dsp_modules::nonlinear_stages::NonlinearMode::SoftClip,
-    )
+    core_dsp::core_dsp_modules::nonlinear_stages::soft_clip(sample, drive)
 }
 
 pub fn gain_reduction_db<T: Float>(level_db: T, threshold_db: T, ratio: T, knee_db: T) -> T {
@@ -38,9 +34,34 @@ pub fn gain_reduction_db<T: Float>(level_db: T, threshold_db: T, ratio: T, knee_
     }
 }
 
+pub const FET_ATTACK_MIN_MS: f32 = 0.02;
+pub const FET_ATTACK_MAX_MS: f32 = 0.8;
+pub const FET_RELEASE_MIN_MS: f32 = 50.0;
+pub const FET_RELEASE_MAX_MS: f32 = 1100.0;
+pub const FET_RATIO_4: f32 = 4.0;
+pub const FET_RATIO_8: f32 = 8.0;
+pub const FET_RATIO_12: f32 = 12.0;
+pub const FET_RATIO_20: f32 = 20.0;
+
 #[cfg(test)]
 mod tests {
-    use super::{EnvelopeFollower, gain_reduction_db, soft_saturate};
+    use super::{
+        EnvelopeFollower, FET_ATTACK_MAX_MS, FET_ATTACK_MIN_MS, FET_RATIO_4, FET_RATIO_8,
+        FET_RATIO_12, FET_RATIO_20, FET_RELEASE_MAX_MS, FET_RELEASE_MIN_MS, gain_reduction_db,
+        soft_saturate,
+    };
+
+    #[test]
+    fn historical_1176ln_ranges_are_represented() {
+        assert_eq!(FET_ATTACK_MIN_MS, 0.02);
+        assert_eq!(FET_ATTACK_MAX_MS, 0.8);
+        assert_eq!(FET_RELEASE_MIN_MS, 50.0);
+        assert_eq!(FET_RELEASE_MAX_MS, 1100.0);
+        assert_eq!(
+            [FET_RATIO_4, FET_RATIO_8, FET_RATIO_12, FET_RATIO_20],
+            [4.0, 8.0, 12.0, 20.0]
+        );
+    }
 
     #[test]
     fn coefficients_follow_the_host_sample_rate() {

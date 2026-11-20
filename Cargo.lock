@@ -205,12 +205,44 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1033caf0b349c518623b5396bfb2cf0bddf44f0306d543a250e5743297aafd10"
 
 [[package]]
+name = "greg-a2a"
+version = "0.1.0"
+dependencies = [
+ "core-dsp",
+ "nih_plug",
+]
+
+[[package]]
+name = "greg-a3a"
+version = "0.1.0"
+dependencies = [
+ "core-dsp",
+ "nih_plug",
+]
+
+[[package]]
+name = "greg-child"
+version = "0.1.0"
+dependencies = [
+ "core-dsp",
+ "nih_plug",
+]
+
+[[package]]
 name = "greg-fet"
 version = "0.1.0"
 dependencies = [
  "core-dsp",
  "nih_plug",
  "num-traits",
+]
+
+[[package]]
+name = "greg-limiter"
+version = "0.1.0"
+dependencies = [
+ "core-dsp",
+ "nih_plug",
 ]
 
 [[package]]

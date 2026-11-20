@@ -1,0 +1,9 @@
+ID: greg_amek_9098_strip
+Nome: Greg AMEK 9098 Channel Strip
+Categoria: channel strip analogico
+Stato: pianificato; modello storico in shortlist, fonti tecniche da verificare
+Riferimento: strip della console AMEK 9098.
+Perimetro: documentare il percorso di preamp, EQ e dinamica della console; distinguere il channel module dalle unita' 9098 outboard correlate.
+Specifiche: revisione della console, schemi, gamme, curve e tempi del modulo non ancora trascritti.
+Fonte primaria: manuale operativo/service AMEK 9098 della console da reperire.
+Da completare: confermare il modulo sorgente e le differenze rispetto ai prodotti rack 9098; eseguire misure A/B.

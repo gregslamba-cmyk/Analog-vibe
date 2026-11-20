@@ -1,6 +1,7 @@
 ID: greg_neve_pre
 Categoria: preamplificatore con trasformatore
 Stato: pianificato
+Riferimento hardware: sezione preamplificatore Neve 1073. Il plugin completo greg_neve_1073_strip aggiunge il percorso di EQ dello stesso modello; questo ID resta un processore di sezione autonomo.
 Scopo: saturazione d'ingresso morbida, con risposta dipendente dalla frequenza e dal livello.
 Requisiti: drive, output trim, headroom e risposta alle basse frequenze.
 Riutilizzare: transformer_hysteresis, nonlinear_stages e analog_variance.

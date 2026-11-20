@@ -1,0 +1,15 @@
+ID: greg_api_525
+Nome plugin: Greg 525
+Categoria: compressore/limiter FET peak-detecting
+Stato: pianificato; un solo ID per il modello 525 attraverso le revisioni documentate
+Riferimento hardware: API 525 originale e reissue 525 attuale.
+
+Caratteristiche hardware:
+- Topologia feedback peak-detecting, attack fisso nominale di 15 us.
+- Ratio 2:1 oppure Limit 20:1; quattro release modes con rilascio dipendente dalla frequenza.
+- Threshold, Output e Ceiling multifunzione; De-Ess inserisce una curva inversa nel detector.
+- Link multi-unit, ingresso/uscita bilanciati attivi e bypass hardwire.
+- Massima riduzione dichiarata 25 dB; risposta ±0.5 dB 20 Hz–40 kHz.
+
+Attenzione: la pagina API riporta release mode diversi fra descrizione e tabella specifiche. Non fissare i quattro valori finche' la discrepanza non viene verificata sul manuale. Unita' e reissue che mantengono il modello esatto confluiscono in questo plugin come profili; il 525A resta distinto perche' e' un altro modello.
+Fonte primaria: https://apiaudio.com/product/525-compressor/

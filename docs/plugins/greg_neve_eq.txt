@@ -1,6 +1,7 @@
 ID: greg_neve_eq
 Categoria: equalizzatore a induttori
 Stato: pianificato
+Riferimento hardware: sezione EQ Neve 1073. Il plugin completo greg_neve_1073_strip integra EQ e preamp dello stesso modello; questo ID resta un processore di sezione autonomo.
 Scopo: EQ con curve d'induttore e colorazione armonica controllata.
 Requisiti: bande a frequenze selezionabili, filtro passa-alto e comportamento stereo coerente.
 Riutilizzare: filtri, nonlinear_stages, transformer_hysteresis e analog_variance.

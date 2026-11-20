@@ -1,0 +1,10 @@
+ID: metering
+File sorgente: core-dsp/src/core_dsp_modules/metering.rs
+Stato: implementato e integrato nei plugin CLAP attualmente presenti nel workspace.
+Scopo: misurare input/output e riduzione di guadagno senza allocazioni nel callback audio.
+API: `Metering::begin_block()`, `record_sample(input, output, gain_reduction_db)`, `publish_block()` e `snapshot()`.
+Metriche: peak e RMS input/output in dBFS per blocco; gain reduction massima in dB per blocco.
+Concorrenza: pubblica i valori con atomiche `Relaxed`; lo snapshot e' adatto alla lettura concorrente da un editor o thread UI. I valori sono istantanee per blocco, senza peak-hold o smoothing grafico.
+Policy: livelli non finiti sono trattati come silenzio; la gain reduction non finita e' ignorata e quella negativa e' limitata a zero.
+Integrazione: ciascun plugin registra campioni grezzi in ingresso e campioni dopo il processing/bypass; le utility non dinamiche riportano gain reduction zero. I plugin alpha non espongono ancora una GUI o parametri meter host-visibili.
+Test: precisione peak/RMS/GR, reset tra blocchi e gestione di input non finiti.

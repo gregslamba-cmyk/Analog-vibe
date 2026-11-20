@@ -1,0 +1,9 @@
+ID: greg_mci_jh500_strip
+Nome: Greg MCI JH-500 Channel Strip
+Categoria: channel strip analogico
+Stato: pianificato; modello storico in shortlist, fonti tecniche da verificare
+Riferimento: strip della famiglia di console MCI JH-500.
+Perimetro: fissare modello e revisione del banco prima di descrivere preamp, EQ, dinamica, routing e gain staging.
+Specifiche: non assumere identita' tra revisioni JH-500 o tra varianti di modulo; manuale e schemi primari da acquisire.
+Fonte primaria: manuale operativo/service MCI JH-500 da reperire e verificare.
+Da completare: definire revisione/modulo, trascrivere le specifiche e misurare l'hardware di riferimento.

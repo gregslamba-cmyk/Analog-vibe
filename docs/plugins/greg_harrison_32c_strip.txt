@@ -1,0 +1,11 @@
+ID: greg_harrison_32c_strip
+Nome: Greg Harrison 32C Channel Strip
+Categoria: channel strip analogico
+Stato: pianificato; riferimento hardware confermato, manuale di revisione da reperire
+Riferimento: channel strip della console Harrison 32C.
+Perimetro: un solo percorso integrato per preamp, filtri, EQ e dinamica secondo la revisione scelta; la disponibilita' e il tipo di dinamica integrata vanno verificati dal manuale.
+Specifiche mancanti: gain structure e impedenze, topologia/range del compressore, frequenze e curve EQ, filtri, livelli operativi e risposta.
+Plugin di sezione: greg_harrison_pre, greg_harrison_comp e greg_harrison_eq restano disponibili separatamente.
+Nota: non trasferire caratteristiche dalla 32Classic moderna o dalla strip software Mixbus.
+Fonte primaria: manuale operativo/service Harrison 32C da reperire.
+Da completare: identificativo di modulo/revisione, percorso circuitale e misure A/B.

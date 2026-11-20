@@ -1,0 +1,9 @@
+ID: greg_trident_80b_strip
+Nome: Greg Trident Series 80B Channel Strip
+Categoria: channel strip analogico
+Stato: pianificato; modello storico in shortlist, fonti tecniche da verificare
+Riferimento: channel strip della console Trident Series 80B; distinto dall'A-Range.
+Perimetro: documentare preamp, EQ, dinamica e routing solo sulla base del manuale della console e della revisione scelta.
+Specifiche: manuale e schemi del modulo non ancora acquisiti; non riutilizzare i dati A-Range.
+Fonte primaria: manuale operativo/service Trident Series 80B da reperire e verificare.
+Da completare: revisione, schema modulo, curve e misure A/B.

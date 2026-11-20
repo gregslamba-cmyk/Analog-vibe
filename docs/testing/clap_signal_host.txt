@@ -8,6 +8,9 @@ Segnali FET: sinusoide a 440 Hz per oversampling 1x/2x/4x/8x; sinusoide a 1 kHz 
 Segnali EQ: sinusoidi d'identita in modalita minimum-phase e linear-phase con tutti i filtri inattivi; boost +9 dB della prima banda tramite automazione CLAP.
 Segnali M/S: encoder con L=R verifica M attivo e S nullo; decoder con S=0 verifica L=R; entrambi verificano bypass e latenza zero.
 Segnali fase/polarita': il plugin `greg_phase` verifica inversione L, inversione R, inversione linkata e bypass, con correlazione e latenza zero.
+Segnali opto: `greg_a2a` verifica riduzione di guadagno a 1x/2x/4x/8x, latenza 0/15/22/25 campioni e bypass compensato con inversione L.
+Segnali opto solido: `greg_a3a` verifica gain reduction a 1x/2x/4x/8x, modo Limit con sidechain esterna, bypass compensato con inversione L e latenza dichiarata.
+Segnali Vari-Mu: `greg_child` verifica sei selettori, differenza tra detector stereo-link e dual mono, Sidechain Listen esterna e latenza.
 Controlli di latenza: confronta i valori dichiarati con 0/15/22/25 campioni per 1x/2x/4x/8x; verifica la correlazione del segnale bypassato compensato e latenza EQ 0/128 campioni.
 Eventi parametri: invia valori secondo la codifica CLAP/NIH-plug (float normalizzati, enum e booleani discreti) e controlla che il valore sia stato accettato.
 Limiti: harness minimale senza GUI, clock hardware, MIDI, trasporto o misure del round-trip ADC/DAC; non sostituisce i test in DAW e i test DSP numerici.

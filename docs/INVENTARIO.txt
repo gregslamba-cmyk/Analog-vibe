@@ -1,21 +1,23 @@
 INVENTARIO MASTER DELLA SUITE AUDIO
 Ultimo controllo: 2026-11-19
-Cataloghi di riferimento: vcinst.md e vcinstext.md
+Catalogo di riferimento unico: vcinst.md
 Ogni ID plugin ha una scheda in docs/plugins/<id>.txt.
 Ogni modulo riutilizzabile ha una scheda in docs/modules/<id>.txt.
+I riferimenti hardware e le specifiche documentate per le emulazioni analogiche sono raccolti in docs/specs/outboard_hardware_research.md.
 Stato "pianificato" significa non implementato; la presenza della scheda non equivale al completamento.
 
-Stato implementazione attuale: greg_76, greg_surgical_eq, greg_ms_encoder, greg_ms_decoder e greg_phase hanno crate CLAP alpha; gli altri plugin sono documentati ma non ancora implementati.
+Stato implementazione attuale: greg_76, greg_a2a, greg_a3a, greg_child, greg_limiter, greg_surgical_eq, greg_ms_encoder, greg_ms_decoder e greg_phase hanno crate CLAP alpha; gli altri plugin sono documentati ma non ancora implementati.
 
 COPERTURA RICHIESTA
-- Compressori: greg_76, greg_a2a, greg_a3a, greg_child, greg_bus_comp, greg_harrison_comp, greg_manley_comp, greg_multiband_comp (4 bande iniziali, espandibile), greg_lin_comp.
+- Compressori: greg_76, greg_a2a, greg_a3a, greg_child, greg_bus_comp, greg_dbx_160a, greg_dbx_160x, greg_dbx_165a, greg_api_2500, greg_api_2500_plus, greg_api_sr22, greg_api_225l, greg_api_t25, greg_api_525, greg_api_525a, greg_api_527, greg_api_527a, greg_api_529, greg_api_sv12, greg_harrison_comp, greg_manley_comp, greg_multiband_comp (4 bande iniziali, espandibile), greg_lin_comp.
 - EQ e preamp: greg_pultec, greg_ssl_eq, greg_neve_eq, greg_api_pre, greg_neve_pre, greg_harrison_pre, greg_harrison_eq, greg_manley_eq, greg_surgical_eq, greg_lin_eq.
 - Utility e creativi: greg_ms_encoder, greg_ms_decoder, greg_phase, greg_tape, greg_destroyer, greg_exciter, greg_low_enhancer, greg_pitch_clean, greg_pitch_formant, greg_space, greg_pingpong, greg_ir_reverb, greg_trans_mono, greg_trans_multi, greg_gate, greg_bus_summer, greg_limiter.
 - Restauro: greg_denoiser, greg_declipper, greg_dehummer, greg_declicker.
-- Moduli condivisi: routing_matrix, phase_inversion, filters, sidechain_processor, resampler_bitdepth, nonlinear_stages, transformer_hysteresis, psu_sag, analog_variance, realtime_controls, surgical_eq.
+- Channel strip completi: greg_neve_1073_strip, greg_neve_1081_strip, greg_neve_1084_strip, greg_neve_88rs_strip, greg_harrison_32c_strip, greg_harrison_mixbus_strip (software), greg_ssl_4000e_strip, greg_ssl_4000g_strip, greg_ssl_9000j_strip, greg_api_vision_strip, greg_api_legacy_plus_strip, greg_trident_a_range_strip, greg_trident_80b_strip, greg_amek_9098_strip, greg_mci_jh500_strip.
+- Moduli condivisi: routing_matrix, phase_inversion, filters, sidechain_processor, resampler_bitdepth, nonlinear_stages, transformer_hysteresis, psu_sag, analog_variance, realtime_controls, metering, surgical_eq, panic_protection, opto_compressor, vari_mu.
 
 RISULTATO DELL'AUDIT
-Il catalogo esteso includeva denoiser, pitch shift, spazio stereo, delay ping-pong, riverbero IR, transient mono/multibanda, gate, tape, exciter, subharmonic enhancer e distorsore. La suite Harrison e' stata resa esplicita come tre plugin; la coppia encoder/decoder M/S e la coppia EQ/comp passivi sono documentate separatamente.
+Il catalogo esteso includeva denoiser, pitch shift, spazio stereo, delay ping-pong, riverbero IR, transient mono/multibanda, gate, tape, exciter, subharmonic enhancer e distorsore. La suite Harrison resta esplicita come tre plugin di sezione; i nuovi strip completi sono aggiunti senza sostituirli. Anche Neve/API/SSL mantengono i componenti di sezione; i channel strip sono profili distinti. La coppia encoder/decoder M/S e la coppia EQ/comp passivi sono documentate separatamente.
 Mancavano esplicitamente un compressore multibanda a quattro bande espandibile e un limiter/maximizer: aggiunti come greg_multiband_comp e greg_limiter.
 L'inversione di polarita' e' ora elencata come utility/plugin greg_phase e come modulo condiviso phase_inversion.
 Il catalogo include inoltre denoiser, declipper, dehummer, declicker ed EQ/comp lineari che sono extra rispetto all'elenco utente.
@@ -25,4 +27,5 @@ DA VALIDARE
 - Definire il numero massimo di bande del compressore multibanda.
 - Distinguere inversione di polarita' (latency zero) da rotazione/ritardo di fase.
 - Mantenere nomi originali per i prodotti; i riferimenti circuitali non sono nomi di plugin.
+- Accorpare revisioni nel plugin del medesimo modello esatto; non unificare modelli differenti solo perche' della stessa famiglia.
 - Aggiornare ogni scheda TXT insieme all'API e ai test del relativo componente.

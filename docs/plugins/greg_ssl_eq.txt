@@ -1,6 +1,7 @@
 ID: greg_ssl_eq
 Categoria: equalizzatore parametrico a quattro bande
 Stato: pianificato
+Nota catalogo: questo ID generico di sezione E/G resta per compatibilita'; i channel strip completi SSL 4000 E e 4000 G hanno plugin distinti e non condividono il profilo hardware.
 Scopo: EQ di canale a quattro bande con larghezza dipendente dal guadagno.
 Requisiti: HPF e LPF indipendenti; profili di curva commutabili; filtri stereo coerenti.
 Riutilizzare: Biquad e filtri condivisi.

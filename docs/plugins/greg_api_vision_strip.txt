@@ -1,0 +1,11 @@
+ID: greg_api_vision_strip
+Nome: Greg API Vision Channel Strip
+Categoria: channel strip analogico
+Stato: pianificato; architettura console documentata, configurazione di strip da scegliere
+Riferimento: channel strip della console API Vision.
+Percorso configurabile: doppio ingresso, filtri sweep, EQ 550L a quattro bande oppure 560L grafico a dieci bande; dinamica opzionale con compressore 225L e gate 235L. La strip dipende dai moduli effettivamente installati.
+Routing console: ciascun canale puo' includere fader/assegnazione surround e routing a bus; il plugin deve separare le funzioni del channel path dalla superficie di controllo/automazione del banco.
+Specifiche mancanti: varianti di modulo, valori del filtro sweep, livelli e comportamento elettrico della console.
+Plugin di sezione: greg_api_pre e le schede compressori API restano disponibili separatamente.
+Fonte primaria: https://apiaudio.com/product/vision-console/
+Da completare: scegliere configurazione di strip, manuale corrispondente e misure A/B.

@@ -1,0 +1,15 @@
+ID: greg_api_2500_plus
+Nome plugin: Greg 2500 Plus
+Categoria: compressore stereo VCA da bus
+Stato: pianificato
+Riferimento hardware: API 2500+ Stereo Bus Compressor.
+
+Caratteristiche hardware:
+- Due canali; stereo link o funzionamento dual-channel.
+- Gain reduction Old/feedback oppure New/feed-forward, circuito THRUST e auto makeup.
+- Mix/Blend: dry/wet incrociato oppure compressione parallela; OFF usa il solo segnale compresso.
+- Input impedance 60 kOhm; uscita bilanciata a trasformatore, 75 Ohm; max +32 dBu.
+- Risposta 20 Hz–50 kHz ±0.5 dB; S/N dichiarato 120 dB.
+
+Da completare dal manuale: range ratio/threshold/attack/release e calibrazione delle tre modalita' Mix. Il mix parallelo e l'auto makeup sono proprieta' di questa revisione, non trasferirli automaticamente al 2500 originale.
+Fonte primaria: https://apiaudio.com/product/2500-stereo-bus-compressor/

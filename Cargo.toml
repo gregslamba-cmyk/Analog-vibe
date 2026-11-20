@@ -3,6 +3,10 @@ resolver = "2"
 members = [
     "core-dsp",
     "plugins/greg-fet",
+    "plugins/greg-a2a",
+    "plugins/greg-a3a",
+    "plugins/greg-child",
+    "plugins/greg-limiter",
     "plugins/greg-surgical-eq",
     "plugins/greg-ms-encoder",
     "plugins/greg-ms-decoder",

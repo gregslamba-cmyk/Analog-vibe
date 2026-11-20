@@ -1,0 +1,10 @@
+ID: greg_neve_88rs_strip
+Nome: Greg Neve 88RS Channel Strip
+Categoria: channel strip analogico
+Stato: pianificato; console identificata, specifiche di modulo da acquisire
+Riferimento: strip della console Neve 88RS, generazione moderna distinta dai moduli Class A/AB vintage.
+Perimetro: documentare ingresso, filtri, EQ, dinamica e routing dalla revisione del manuale selezionata. Non riutilizzare i controlli o le curve del 1073/1081.
+Specifiche: manuale di console/modulo e revisioni non ancora trascritti; nessun range di frequenza, tempo o gain viene assunto in questa scheda.
+Plugin di sezione: i plugin Neve pre/EQ e i compressori restano processori separati.
+Fonte primaria: documentazione tecnica Neve 88RS da reperire presso AMS Neve.
+Da completare: manuale, varianti di channel module, routing e misure A/B.

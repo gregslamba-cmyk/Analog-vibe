@@ -1,0 +1,11 @@
+ID: greg_neve_1073_strip
+Nome: Greg Neve 1073 Channel Strip
+Categoria: channel strip analogico
+Stato: pianificato; specifiche del 1073SPX-D documentate, revisione vintage da scegliere
+Riferimento: modulo channel Neve 1073; preamp ed EQ sono funzioni della stessa unita'.
+Percorso: preamplificatore mic/line con trasformatori Marinair, EQ a tre bande e filtro passa-alto. Le dotazioni digitali del 1073SPX-D (conversione, monitor e routing) non fanno parte del modello analogico.
+Specifiche pubblicate per 1073SPX-D: gain mic 20..80 dB a passi di 5 dB; HF shelving 12 kHz ±16 dB; LF shelving 35/60/110/220 Hz ±16 dB; MF peaking 360/700/1600/3200/4800/7200 Hz ±18 dB; HPF 50/80/160/300 Hz a 18 dB/ottava.
+Limite di applicabilita': i numeri sopra descrivono il 1073SPX-D corrente; non attribuirli automaticamente a ogni modulo storico 1073. Specificare la revisione e le differenze sul manuale prima di dichiarare fedelta'.
+Plugin di sezione: greg_neve_pre e greg_neve_eq restano disponibili separatamente.
+Fonte primaria: https://www.ams-neve.com/outboard/1073-range/1073spx-d/
+Da completare: confronto revisione per revisione, gain staging, risposta delle reti EQ, saturazione dei trasformatori e misure A/B.

@@ -1,0 +1,14 @@
+ID: greg_api_529
+Nome plugin: Greg 529
+Categoria: compressore stereo dual-slot 500 Series
+Stato: pianificato
+Riferimento hardware: API 529 Stereo Compressor, basato sulla famiglia 2500.
+
+Caratteristiche hardware:
+- Stereo; Old/feedback oppure New/feed-forward, THRUST, tre impostazioni di knee.
+- Threshold +10..-20 dBu; ratio 1.5:1..infinito; attack <1..50 ms; release 0.05..4 s.
+- Makeup automatico o variabile; meter stereo; op-amp discreti 2510/2520 e uscita a trasformatore.
+- Impedenza input 80 kOhm, output massimo +26 dBu, risposta ±0.25 dB 20 Hz–20 kHz.
+
+Condivide principi con API 2500 ma non e' una sua miniatura: conservare gamme, routing 500 Series, meter e curve specifiche del 529.
+Fonte primaria: https://apiaudio.com/product/529-stereo-compressor/

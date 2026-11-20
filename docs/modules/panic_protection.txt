@@ -1,0 +1,19 @@
+Modulo: panic_protection
+File sorgente: core-dsp/src/core_dsp_modules/panic_protection.rs
+Stato: implementato e integrato nei plugin CLAP attualmente presenti.
+
+Responsabilita:
+- Intercettare panic Rust con `catch_unwind` durante il callback DSP.
+- Segnalare il primo fault e disabilitare permanentemente l'elaborazione DSP per l'istanza.
+- Consentire al plugin di azzerare il blocco in cui e' avvenuto il panic e lasciare passare l'audio dai callback successivi.
+
+Limiti:
+- Richiede una build con strategia `panic=unwind`; `panic=abort` non puo' essere intercettato.
+- Non intercetta segfault, abort espliciti, corruzione della memoria o crash nativi.
+- Non fornisce isolamento tra processi: per contenere guasti non recuperabili serve supporto dell'host.
+- La closure deve contenere il percorso DSP che si vuole proteggere; il modulo non rende sicuro codice eseguito fuori da essa.
+
+Test:
+- Il panic viene segnalato come `Tripped`.
+- Dopo il fault, la closure non viene eseguita e il guard restituisce `Disabled`.
+- Un'elaborazione riuscita non disabilita il guard.

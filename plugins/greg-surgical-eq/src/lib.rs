@@ -2,6 +2,8 @@ use std::{array, num::NonZeroU32, sync::Arc};
 
 use core_dsp::core_dsp_modules::{
     filters::FilterType,
+    metering::Metering,
+    panic_protection::{PanicProtection, ProtectionResult},
     realtime_controls::{BypassCrossfade, LatencyDelay},
     surgical_eq::{EqBand, EqPhaseMode, SurgicalEq},
 };
@@ -128,6 +130,8 @@ struct GregSurgicalEq {
     bypass_ramp_samples: u32,
     sample_rate: f32,
     initialized: bool,
+    panic_protection: PanicProtection,
+    metering: Metering,
 }
 
 impl Default for GregSurgicalEq {
@@ -143,6 +147,8 @@ impl Default for GregSurgicalEq {
             bypass_ramp_samples: 1,
             sample_rate: 0.0,
             initialized: false,
+            panic_protection: PanicProtection::default(),
+            metering: Metering::default(),
         }
     }
 }
@@ -284,6 +290,9 @@ impl Plugin for GregSurgicalEq {
         _aux: &mut AuxiliaryBuffers,
         context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
+        if self.panic_protection.is_disabled() {
+            return ProcessStatus::Normal;
+        }
         if !self.initialized {
             return ProcessStatus::Error("plugin has not been initialized");
         }
@@ -312,13 +321,21 @@ impl Plugin for GregSurgicalEq {
             self.last_bypassed = bypassed;
         }
 
-        for mut channel_samples in buffer.iter_samples() {
-            for (channel, sample) in channel_samples.iter_mut().enumerate() {
-                let input = if sample.is_finite() { *sample } else { 0.0 };
-                let dry = self.dry_delays[channel].process(input);
-                let wet = self.filters[channel].process(input);
-                *sample = self.bypass_crossfades[channel].process(dry, wet);
+        self.metering.begin_block();
+        let protection_result = self.panic_protection.run(|| {
+            for mut channel_samples in buffer.iter_samples() {
+                for (channel, sample) in channel_samples.iter_mut().enumerate() {
+                    let input = if sample.is_finite() { *sample } else { 0.0 };
+                    let dry = self.dry_delays[channel].process(input);
+                    let wet = self.filters[channel].process(input);
+                    *sample = self.bypass_crossfades[channel].process(dry, wet);
+                    self.metering.record_sample(input, *sample, 0.0);
+                }
             }
+        });
+        self.metering.publish_block();
+        if protection_result == ProtectionResult::Tripped {
+            silence_buffer(buffer);
         }
 
         ProcessStatus::Normal
@@ -337,6 +354,14 @@ impl ClapPlugin for GregSurgicalEq {
         ClapFeature::Mono,
         ClapFeature::Stereo,
     ];
+}
+
+fn silence_buffer(buffer: &mut Buffer) {
+    for mut samples in buffer.iter_samples() {
+        for sample in samples.iter_mut() {
+            *sample = 0.0;
+        }
+    }
 }
 
 nih_export_clap!(GregSurgicalEq);

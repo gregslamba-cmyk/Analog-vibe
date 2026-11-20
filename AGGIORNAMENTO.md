@@ -1,7 +1,63 @@
 # Aggiornamento del progetto
 
+## Unificazione del catalogo
+- Consolidati istruzioni, requisiti e indice completo dei plugin in `vcinst.md`, mantenendolo compatto e rinviando specifiche e stato alle schede dedicate e al dossier hardware.
+- Rimosso `vcinstext.md` e aggiornati i riferimenti in README, inventario e stato operativo. Verificata la presenza delle schede per tutti i 69 ID del catalogo.
+
+## Ricerca riferimenti outboard per la fedelta' (2026-11-19)
+- Ripreso lo Step 0 partendo dal catalogo `vcinst.md` e dalle schede plugin.
+- Creato `docs/specs/outboard_hardware_research.md`: mappa dei riferimenti analogici, descrizione dei modelli confermati, specifiche pubblicate da costruttori, estensioni digitali e scelte ancora aperte.
+- Confermati dall'utente i riferimenti 1176 D/E (documentarli entrambi), SSL 4000 E/G, Harrison 32C, Studer A800 Mk III, Aphex Aural Exciter Type C, dbx 120A e SSL G-Series bus compressor.
+- Aggiunti plugin distinti per DBX 160A, 160X e 165A e per gli 11 compressori API standalone nel catalogo ufficiale: 2500, 2500+, SR22, 225L, T25, 525, 525A, 527, 527A, 529 e SV12.
+- Create 14 nuove schede `docs/plugins/` e aggiornati il catalogo, `docs/INVENTARIO.txt` e il dossier hardware.
+- Documentate topologia e controlli dai manuali/pagine dei produttori; le schede distinguono i dati pubblicati dai parametri ancora da trascrivere e dalle estensioni digitali.
+- Estratte dal manuale ufficiale combinato 165/165A le specifiche principali del 165 e il supplemento PeakStop del 165A; i valori storici sono marcati come tali. Il 160X e' stato trascritto da una scansione d'archivio terza, da verificare contro revisione e configurazione. Il manuale A800 Mk III, Harrison 32C e Aphex Type C restano da reperire.
+- Trascritto il manuale ufficiale del dbx 120A: bande e range di sintesi, crossover, controlli, risposta, rumore, THD e livelli elettrici sono ora riportati nel dossier e nella scheda plugin.
+- Aggiunti 15 channel strip distinti per modello: Neve 1073/1081/1084/88RS, Harrison 32C e Mixbus, SSL 4000 E/G e 9000 J, API Vision/Legacy Plus e shortlist Trident A-Range/80B, AMEK 9098 e MCI JH-500. I plugin pre/EQ/comp esistenti restano disponibili. Mixbus e' separato dall'hardware; per ogni modello le revisioni confluiranno in profili dello stesso ID, senza unire modelli diversi.
+- Fonti Neve 1073/1081 e API Vision consultate; per gli altri strip le schede indicano le lacune di manuali primari e non assumono specifiche mancanti.
+- Nessuna modifica DSP e nessuna calibrazione A/B eseguita. Le alpha restano hardware-inspired, non misurate.
+- Prossimo: validare le fonti manuali mancanti, poi costruire la matrice di misure A/B prima di implementare i nuovi DSP.
+
+## Nuovo obiettivo: `greg_child` Vari-Mu (2026-11-19)
+- Requisiti: compressione con ratio crescente in funzione della gain reduction, sei costanti di tempo selezionabili e detector stereo-link oppure dual mono.
+- Implementati modulo DSP `vari_mu` e crate CLAP `greg-child`; `Stereo Link` condivide il detector L/R, disattivandolo si hanno inviluppi indipendenti dual mono.
+- Host CLAP: testati i sei tempi (latenza zero a 1x), differenza misurata fra stereo-link e dual mono e Sidechain Listen esterna.
+- Verifiche finali: 48 test workspace, Clippy strict sulle librerie, build release e host CLAP di regressione per Child, FET, A2A, A3A, limiter, EQ, fase e M/S passati.
+- Fedelta': le sei costanti nominali sono I 0.3 s, II 0.8 s, III 2 s, IV 5 s, V 2+10 s, VI 0.3+25 s; i passaggi di coda, la ratio e la saturazione sono semplificazioni ancora da calibrare A/B su hardware/manuale.
+- Opzioni digitali aggiunte (sidechain, oversampling, inversione e output drive) documentate separatamente dalle caratteristiche circuitali.
+- Prossimo plugin in ordine di catalogo: `greg_bus_comp`, compressore VCA da bus.
+
+## Completamento alpha `greg_a3a` (2026-11-19)
+- Verificato il crate CLAP `greg-a3a`, compressore opto a stato solido con curva e risposta temporale distinte da `greg-a2a`, modo Compress/Limit e stadio SoftClip oversampled.
+- Esteso l'host CLAP offline con verifiche di riduzione a 1x/2x/4x/8x, sidechain esterna in modo Limit, latenza 0/15/22/25 campioni, bypass compensato e inversione L.
+- Host: RMS compresso 0.0237 (1x..8x), sidechain esterna/Limit 0.0300, bypass RMS 0.1768; tutti i test host passano.
+- Aggiornati scheda plugin/API, README, inventario e documentazione del test host.
+- Prossimo plugin in ordine di catalogo: `greg_child`, compressore Vari-Mu.
+
+## Modulo condiviso di metering (2026-11-19)
+- Aggiunto `core_dsp_modules::metering::Metering` con misure input/output peak e RMS in dBFS, gain reduction massima per blocco e snapshot atomici leggibili in concorrenza.
+- Integrato nei plugin CLAP presenti nel workspace; le utility non dinamiche riportano GR pari a zero.
+- Aggiornati `vcinst.md`, inventario e scheda DSP.
+- Limite alpha: il motore raccoglie e pubblica i valori ma non esiste ancora GUI né esposizione a parametri meter host-visibili.
+
+## Nuovo obiettivo: limiter alpha `greg_limiter` (2026-11-19)
+- Selezionato `greg_limiter` come prossimo plugin da creare: il crate non era ancora presente nel workspace.
+- Obiettivo: controlli Input/Drive e Ceiling/Limit, true-peak conservativo, lookahead dichiarato, oversampling, release, bypass crossfade, sidechain opzionale e protezione da panic.
+- Implementazione alpha avviata nel crate `plugins/greg-limiter`: parametri CLAP, layout mono/stereo, lookahead, oversampling, sidechain filtrato, bypass, dry delay e protezione panic.
+- Verifica host: 1x/2x/4x/8x riportano latenza 240/255/262/265 campioni inclusi 5 ms di lookahead; bypass latenza-compensato e inversione passano.
+- Verifiche: limiter crate compila con Clippy strict, 2 test unitari passano, suite workspace 43 test passano e build release workspace passa.
+
 Ultimo aggiornamento: 2026-11-19
 Stato complessivo: IN CORSO
+
+## Prima emulazione analogica `greg_a2a` (2026-11-19)
+- Aggiunto il crate CLAP `greg-a2a` (ID `com.greg.audio.greg-a2a`), mono/stereo, con Peak Reduction, Gain, Compress/Limit, Tube Drive, oversampling 1x/2x/4x/8x, bypass crossfade e inversione di polarita' L/R.
+- Aggiunto `core_dsp_modules::opto_compressor`: detector soft-knee a ratio progressiva e memoria ottica con attacco circa 10 ms, prima fase di rilascio circa 60 ms e coda 0.5..5 s dipendente dall'esposizione del programma; coefficienti derivati dal sample rate.
+- Aggiunta `tube_saturate`, curva asimmetrica normalizzata vicino allo zero per introdurre una componente armonica pari nello stadio d'uscita; il modello e' processato con oversampling e dichiara 0/15/22/25 campioni di latenza.
+- Integrati `PanicProtection` e pass-through latched gia' condivisi; aggiornate scheda, specifica API, inventario, README e host CLAP offline.
+- Limite di fedelta': modello fenomenologico alpha, non modello elettrico completo o replica calibrata. Sono necessarie misure A/B su una macchina reale per accordare costanti di tempo, curva di compressione, risposta in frequenza e spettro armonico.
+- Verifiche passate: `cargo fmt --all -- --check`, `cargo test --workspace` (37 test), Clippy con `-D warnings`, build release e host CLAP per `greg_a2a`.
+- Host: gain reduction e latenze a 1x/2x/4x/8x (0/15/22/25 campioni); a 4x il segnale di test misura RMS 0.069. Bypass compensato RMS 0.177 e inversione L corretta. Test host regressivi FET, EQ, encoder/decoder M/S e fase tutti passati.
 
 ## Obiettivo
 Realizzare una suite di plugin audio CLAP in Rust con DSP prioritario, senza GUI nella fase alpha, elaborazione real-time e latenza dichiarata correttamente alla DAW.
@@ -107,7 +163,14 @@ Realizzare una suite di plugin audio CLAP in Rust con DSP prioritario, senza GUI
 ## Limiti e verifiche aperte
 - Il plugin e' stato caricato dall'host CLAP offline; resta da validare in una DAW reale e la latenza totale di monitoraggio non e' misurata.
 - NIH-plug fornisce al plugin buffer `f32`; il core DSP generico puo' supportare `f32` e `f64`, ma il wrapper non offre elaborazione host-native `f64`.
-- La sanitizzazione dei campioni non finiti non sostituisce l'isolamento da panic o segfault, che dipende dall'host audio.
+- La protezione condivisa intercetta panic Rust solo con `panic=unwind`; `panic=abort`, segfault e corruzione della memoria non sono recuperabili in-process e richiedono isolamento a livello host/processo.
+
+## Protezione condivisa dai panic (2026-11-19)
+- Aggiunto `core_dsp_modules::panic_protection::PanicProtection`, riusato dai cinque plugin CLAP attualmente implementati.
+- Il panic nel callback DSP viene intercettato: il blocco audio corrente viene azzerato e l'istanza resta latched in pass-through, senza eseguire altro DSP nei callback successivi.
+- Test del modulo condiviso: il panic porta allo stato `Tripped`, l'esecuzione successiva torna `Disabled` senza richiamare la closure e l'elaborazione normale resta attiva in assenza di fault.
+- La cattura richiede la strategia Rust `panic=unwind`; non protegge da `panic=abort`, abort espliciti, segfault, corruzione della memoria o guasti del processo host.
+- La verifica in una DAW reale e l'isolamento di un plugin guasto a livello processo restano fuori dalla protezione in-process.
 
 ## Prossimi passi
 - Eseguire i test in una DAW reale.

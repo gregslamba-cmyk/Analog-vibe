@@ -1,0 +1,10 @@
+ID: greg_neve_1084_strip
+Nome: Greg Neve 1084 Channel Strip
+Categoria: channel strip analogico
+Stato: pianificato; modello identificato, manuale/revisione da reperire
+Riferimento: modulo channel Neve 1084, mantenuto distinto dai 1073 e 1081.
+Perimetro: ricostruire il percorso preamp/EQ e i controlli sulla documentazione della specifica revisione; non copiare il layout o le gamme da un 1073 per somiglianza di famiglia.
+Specifiche: frequenze, curve, gain range, impedenze e trasformatori non sono ancora confermati in questo dossier.
+Plugin di sezione: greg_neve_pre e greg_neve_eq restano disponibili separatamente e non sono sostituiti da questo channel strip.
+Fonte primaria: manuale Neve 1084 di revisione da individuare negli archivi di supporto AMS Neve.
+Da completare: fonte primaria, confronto revisioni, diagramma di percorso e misure A/B.

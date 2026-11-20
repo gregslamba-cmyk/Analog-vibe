@@ -1,0 +1,10 @@
+ID: greg_harrison_mixbus_strip
+Nome: Greg Harrison Mixbus Channel Strip
+Categoria: channel strip software
+Stato: pianificato; identificato come profilo DAW, specifiche/versioni da documentare
+Riferimento: channel strip della DAW Harrison Mixbus; non rappresenta una console analogica né una revisione hardware.
+Perimetro: documentare le sezioni, i controlli e il modello di bus della versione software presa a riferimento. Le versioni Mixbus successive restano profili dello stesso plugin solo dopo aver verificato se cambiano algoritmi o comportamento.
+Specifiche: controlli, gamme, routing e differenze tra versioni non ancora trascritti da manuale ufficiale.
+Plugin analogici: greg_harrison_32c_strip e i plugin Harrison di sezione restano riferimenti distinti.
+Fonte primaria: documentazione ufficiale Harrison Mixbus/versione da reperire; il vecchio URL del prodotto non e' attualmente accessibile.
+Da completare: versione software di riferimento, manuale, topologia digitale e test di confronto.

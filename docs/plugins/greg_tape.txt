@@ -1,7 +1,10 @@
 ID: greg_tape
 Categoria: simulatore di nastro magnetico
-Stato: pianificato
+Stato: pianificato; riferimento hardware selezionato, allineamento da definire
+Riferimento: registratore multitraccia Studer A800 Mk III da 2 pollici.
 Scopo: simulare saturazione magnetica, compressione naturale e risposta del nastro.
-Requisiti: bias, velocita, head bump e wow/flutter controllabili; prevenzione DC e aliasing.
+Specifiche mancanti: velocita' (15/30 IPS), formulazione del nastro, flusso di riferimento, EQ NAB/IEC, bias e allineamento playback/record.
+Requisiti: non fissare curve o head bump prima di scegliere una configurazione documentata; wow/flutter e controlli aggiuntivi vanno distinti dalle impostazioni di calibrazione hardware.
 Riutilizzare: transformer_hysteresis, nonlinear_stages, psu_sag e oversampler.
-Da documentare all'implementazione: modello, controlli, latenza e test.
+Fonte primaria: manuale della revisione Mk III da reperire; il sito Studer attuale non documenta questo registratore storico.
+Da documentare all'implementazione: configurazione del nastro, modello, controlli, latenza e test.

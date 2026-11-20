@@ -1,0 +1,11 @@
+ID: greg_neve_1081_strip
+Nome: Greg Neve 1081 Channel Strip
+Categoria: channel strip analogico
+Stato: pianificato; topologia e specifiche generali ufficiali reperite
+Riferimento: modulo Neve 1081, design Class A/B introdotto nel 1972.
+Percorso: preamplificatore mic/line con trasformatori Marinair in ingresso/uscita, EQ a quattro bande con opzioni shelf/bell e filtri HP/LP selezionabili. Non e' un profilo alternativo del 1073.
+Specifiche pubblicate: mic input a 300/1200 ohm e gain 20..80 dB a passi di 5 dB; line input 10 kOhm bridging; filtri HP/LP a 18 dB/ottava; uscita max >+26 dBu su 600 ohm; THD <=0.07% a +20 dBm, 50 Hz..15 kHz; risposta ±0.5 dB, 20 Hz..20 kHz.
+EQ dichiarato: HF e LF con cinque frequenze e curva shelf/peaking; due bande presence a dieci frequenze e selezione Q alta/bassa; gamme esatte da trascrivere dal manuale.
+Plugin di sezione: greg_neve_pre e greg_neve_eq restano disponibili come processori distinti.
+Fonte primaria: https://www.ams-neve.com/outboard/1081-range/1081-classic/
+Da completare: revisione hardware, frequenze discrete, interazione delle bande e misure A/B.

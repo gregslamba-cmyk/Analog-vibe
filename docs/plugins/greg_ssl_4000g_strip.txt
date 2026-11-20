@@ -1,0 +1,10 @@
+ID: greg_ssl_4000g_strip
+Nome: Greg SSL 4000 G Channel Strip
+Categoria: channel strip analogico
+Stato: pianificato; modello identificato, revisione/modulo da fissare
+Riferimento: channel strip della console SSL 4000 G.
+Perimetro: ricostruire preamp, filtri, EQ G-Series, dinamica, routing e percorso di uscita dalla revisione scelta. Non accorpare con SSL 4000 E o con il bus compressor rack come fossero lo stesso apparecchio.
+Specifiche mancanti: manuale di modulo/revisione, gamme e curve EQ, detector e parametri dinamica, livelli e risposta.
+Plugin di sezione: greg_ssl_eq e greg_bus_comp restano disponibili separatamente.
+Fonte primaria: documentazione SSL e manuali console da https://solidstatelogic.com/support/downloads
+Da completare: revisione della channel card e misure A/B.

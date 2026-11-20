@@ -1,0 +1,9 @@
+ID: greg_trident_a_range_strip
+Nome: Greg Trident A-Range Channel Strip
+Categoria: channel strip analogico
+Stato: pianificato; modello storico in shortlist, fonti tecniche da verificare
+Riferimento: strip della console Trident A-Range.
+Perimetro: modulo canale completo con preamp, EQ, filtri e routing secondo la revisione effettiva; non assumere che moduli successivi con il nome Trident condividano lo stesso circuito.
+Specifiche: manuale e schemi della revisione non ancora acquisiti. Non fissare controlli, frequenze o topologie per sentito dire.
+Fonte primaria: manuale di servizio/console Trident A-Range da reperire e verificare.
+Da completare: revisione, schema modulo, curve e misure A/B.

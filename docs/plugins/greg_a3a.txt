@@ -1,7 +1,49 @@
 ID: greg_a3a
 Categoria: compressore opto a stato solido
-Stato: pianificato
+Nome: Greg A3A
+Nome CLAP: Greg A3A
+Stato: alpha implementata, non calibrata contro hardware reale
 Scopo: compressione ottica con transitori piu definiti e trasparenti.
-Requisiti: risposta foto-ottica distinta da greg_a2a, detector e release dipendenti dal programma, uscita stabile.
-Riutilizzare: envelope follower, filtri, smoothing e sidechain.
-Da documentare all'implementazione: parametri/API, curva dinamica, latenza e test.
+Parametri: Peak Reduction, Gain, Mode Compress/Limit, Output Drive, Oversampling 1x/2x/4x/8x, bypass crossfade, inversione L/R e sidechain interno/esterno filtrabile con Listen.
+DSP: curva soft-knee a ratio progressiva dedicata al modello solido; OptoCell con attack circa 3.5 ms, rilascio iniziale a emivita circa 25 ms e coda 120..1500 ms dipendente dal programma; stadio SoftClip con oversampling.
+Latenza: 0/15/22/25 campioni a 1x/2x/4x/8x, comunicata alla DAW; ramo dry compensato.
+Condivisi: opto_compressor, nonlinear_stages, resampler_bitdepth, realtime_controls, sidechain_processor, metering e panic_protection.
+Verifiche: host CLAP offline controlla gain reduction 1x/2x/4x/8x, Limit con sidechain esterna, bypass, polarita' e latenza. Test DSP confronta tracking A3A/A2A e curve Compress/Limit.
+Limite: modello fenomenologico alpha da calibrare con misure A/B su hardware reale.
+API completa: docs/specs/greg_a3a_api.md.
+
+## Verifica CLAP signal host
+
+Questa sezione viene rigenerata dal host offline. Non e' una misura A/B su hardware reale: confronta il segnale d'ingresso sintetico con l'uscita del modello software.
+
+- Waveform/test suite: all (sine/saw/complex/impulse)
+- Block size massimo: 256 campioni
+- Blocchi variabili: true
+- Sample rate: 48 kHz
+
+| Test | Latenza | Peak IN L/R | Peak OUT L/R | RMS IN L/R | RMS OUT L/R | Delta peak dB L/R | Delta RMS dB L/R |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| solid-state opto gain reduction at 1x | 0 | 0.5000/0.5000 | 0.3950/0.3950 | 0.3536/0.3536 | 0.0237/0.0237 | -2.05/-2.05 | -23.49/-23.49 |
+| solid-state opto gain reduction at 2x | 15 | 0.5000/0.5000 | 0.3944/0.3944 | 0.3536/0.3536 | 0.0237/0.0237 | -2.06/-2.06 | -23.49/-23.49 |
+| solid-state opto gain reduction at 4x | 22 | 0.5000/0.5000 | 0.3947/0.3947 | 0.3536/0.3536 | 0.0237/0.0237 | -2.05/-2.05 | -23.49/-23.49 |
+| solid-state opto gain reduction at 8x | 25 | 0.5000/0.5000 | 0.3947/0.3947 | 0.3536/0.3536 | 0.0237/0.0237 | -2.05/-2.05 | -23.49/-23.49 |
+| solid-state limit mode external sidechain | 22 | 0.5000/0.5000 | 0.3868/0.3868 | 0.3536/0.3536 | 0.0300/0.0300 | -2.23/-2.23 | -21.43/-21.43 |
+| solid-state opto latency-compensated bypass | 22 | 0.2500/0.2500 | 0.2500/0.2500 | 0.1768/0.1768 | 0.1768/0.1768 | +0.00/+0.00 | -0.00/-0.00 |
+| solid-state opto gain reduction at 1x | 0 | 0.5000/0.5000 | 0.4545/0.4545 | 0.2888/0.2888 | 0.0224/0.0224 | -0.83/-0.83 | -22.21/-22.21 |
+| solid-state opto gain reduction at 2x | 15 | 0.5000/0.5000 | 0.4972/0.4972 | 0.2888/0.2888 | 0.0223/0.0223 | -0.05/-0.05 | -22.25/-22.25 |
+| solid-state opto gain reduction at 4x | 22 | 0.5000/0.5000 | 0.4890/0.4890 | 0.2888/0.2888 | 0.0223/0.0223 | -0.19/-0.19 | -22.24/-22.24 |
+| solid-state opto gain reduction at 8x | 25 | 0.5000/0.5000 | 0.4892/0.4892 | 0.2888/0.2888 | 0.0223/0.0223 | -0.19/-0.19 | -22.24/-22.24 |
+| solid-state limit mode external sidechain | 22 | 0.5000/0.5000 | 0.4903/0.4903 | 0.2888/0.2888 | 0.0244/0.0244 | -0.17/-0.17 | -21.46/-21.46 |
+| solid-state opto latency-compensated bypass | 22 | 0.2500/0.2500 | 0.2500/0.2500 | 0.1444/0.1444 | 0.1444/0.1444 | +0.00/+0.00 | +0.00/+0.00 |
+| solid-state opto gain reduction at 1x | 0 | 0.6663/0.6663 | 0.4217/0.4217 | 0.3278/0.3278 | 0.0229/0.0229 | -3.97/-3.97 | -23.13/-23.13 |
+| solid-state opto gain reduction at 2x | 15 | 0.6663/0.6663 | 0.4216/0.4216 | 0.3278/0.3278 | 0.0228/0.0228 | -3.98/-3.98 | -23.14/-23.14 |
+| solid-state opto gain reduction at 4x | 22 | 0.6663/0.6663 | 0.4218/0.4218 | 0.3278/0.3278 | 0.0228/0.0228 | -3.97/-3.97 | -23.14/-23.14 |
+| solid-state opto gain reduction at 8x | 25 | 0.6663/0.6663 | 0.4214/0.4214 | 0.3278/0.3278 | 0.0229/0.0229 | -3.98/-3.98 | -23.14/-23.14 |
+| solid-state limit mode external sidechain | 22 | 0.6663/0.6663 | 0.4150/0.4150 | 0.3278/0.3278 | 0.0278/0.0278 | -4.11/-4.11 | -21.43/-21.43 |
+| solid-state opto latency-compensated bypass | 22 | 0.3332/0.3332 | 0.3332/0.3332 | 0.1639/0.1639 | 0.1639/0.1639 | +0.00/+0.00 | -0.00/-0.00 |
+| solid-state opto gain reduction at 1x | 0 | 0.5000/0.5000 | 0.4545/0.4545 | 0.0442/0.0442 | 0.0227/0.0227 | -0.83/-0.83 | -5.78/-5.78 |
+| solid-state opto gain reduction at 2x | 15 | 0.5000/0.5000 | 0.2908/0.2908 | 0.0442/0.0442 | 0.0213/0.0213 | -4.71/-4.71 | -6.35/-6.35 |
+| solid-state opto gain reduction at 4x | 22 | 0.5000/0.5000 | 0.3942/0.3942 | 0.0442/0.0442 | 0.0214/0.0214 | -2.07/-2.07 | -6.29/-6.29 |
+| solid-state opto gain reduction at 8x | 25 | 0.5000/0.5000 | 0.3488/0.3488 | 0.0442/0.0442 | 0.0213/0.0213 | -3.13/-3.13 | -6.33/-6.33 |
+| solid-state limit mode external sidechain | 22 | 0.5000/0.5000 | 0.3951/0.3951 | 0.0442/0.0442 | 0.0035/0.0035 | -2.04/-2.04 | -22.01/-22.01 |
+| solid-state opto latency-compensated bypass | 22 | 0.2500/0.2500 | 0.2500/0.2500 | 0.0221/0.0221 | 0.0221/0.0221 | +0.00/+0.00 | -0.00/-0.00 |

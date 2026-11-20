@@ -1,6 +1,7 @@
 ID: nonlinear_stages
 File sorgente: core-dsp/src/core_dsp_modules/nonlinear_stages.rs
 Stato: primitive alpha implementate.
-Modalita: soft clip, hard clip, asimmetrica, wavefold e rettificazione full-wave.
-Requisiti: validare livelli, continuita, spettro, DC e comportamento sotto oversampling; i nomi descrivono famiglie DSP, non una simulazione circuitale validata.
-Test attuali: finitezza e limite hard-clip.
+Modalita: soft clip, hard clip, asimmetrica, wavefold, rettificazione full-wave e curva `tube_saturate`.
+`tube_saturate` e' una curva statica asimmetrica con pendenza normalizzata vicino allo zero; puo' generare armoniche pari, ma non modella la topologia elettrica completa di una valvola.
+Requisiti: validare livelli, continuita', spettro, DC e comportamento sotto oversampling; i nomi descrivono famiglie DSP, non una simulazione circuitale validata.
+Test: finitezza e limite hard-clip; pendenza di piccolo segnale e asimmetria della curva valvolare.

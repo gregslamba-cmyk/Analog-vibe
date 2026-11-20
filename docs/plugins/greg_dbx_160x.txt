@@ -1,0 +1,20 @@
+ID: greg_dbx_160x
+Nome plugin: Greg 160X
+Categoria: compressore/limiter analogico
+Stato: pianificato; dati estratti da manuale d'archivio, revisione da verificare
+Riferimento hardware: DBX 160X, non DBX 160A.
+
+Topologia e controlli dichiarati nel manuale: detector true RMS, VCA Blackmer e feed-forward; Over Easy o hard knee; ratio 1:1..infinito:1 e Infinity+ fino a -1:1; threshold, output gain, bypass hard-wire, detector accessibile e detector-stereo link fra due unita'. Tempi di attacco/rilascio program-dependent.
+
+Specifiche pubblicate nella copia consultata:
+- Threshold -40..+20 dBm; output gain -20..+20 dB; compressione massima >60 dB.
+- Attack: 15 ms per aumento di livello di 10 dB, 5 ms per 20 dB e 3 ms per 30 dB.
+- Release automatico program-dependent indicato 0..500 ms.
+- Input max +24 dBm; output max +24 dBm su 600 ohm o superiore; uscita standard single-ended 22 ohm.
+- Risposta +0/-1 dB, 20 Hz..20 kHz; dynamic range >113 dB; EIN < -89 dBm, 20 Hz..20 kHz.
+
+La documentazione d'archivio descrive anche modifiche di uscita attiva bilanciata e a trasformatore. Configurazione e revisione del singolo esemplare restano da verificare; i dati non sono confermati da una copia ospitata dal produttore.
+
+Fonte DBX sulla famiglia: https://dbxpro.com/en/products/160a
+Manuale d'archivio non ospitato dal produttore: https://tcfurlong.com/wp-content/uploads/dbx-160X-Rental-Manual.pdf
+Fedelta': nessuna calibrazione A/B disponibile; l'identificazione del manuale/revisione resta necessaria.

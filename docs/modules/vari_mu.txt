@@ -1,0 +1,10 @@
+ID: vari_mu
+File sorgente: core-dsp/src/core_dsp_modules/vari_mu.rs
+Stato: modello DSP alpha; costanti temporali e curva non calibrate con misure hardware.
+Scopo: compressione Vari-Mu con rapporto crescente al crescere della riduzione di guadagno.
+API: `TimeConstant::{I, II, III, IV, V, VI}`, `VariMuCell<T>::initialize(sample_rate, time_constant)`, `set_time_constant()`, `process(detector_level, threshold_db)` e `vari_mu_target_reduction_db(input_level_db, threshold_db)`.
+Modello: attack nominale circa 0.2 ms; rapporti crescenti da circa 2:1 fino a circa 20:1, con soft knee di 2 dB.
+Tempi di rilascio implementati: I 0.3 s; II 0.8 s; III 2 s; IV 5 s; V 2 s + coda 10 s; VI 0.3 s + coda 25 s. I valori sono impostazioni iniziali del modello e richiedono verifica su manuale di servizio/unita' reale.
+Tempo di coda: nei modi V/VI il passaggio dal rilascio iniziale alla coda avviene quando la riduzione residua scende alla meta' di quella presente all'inizio del rilascio.
+Safety: sample rate invalido rifiutato, input e controlli non finiti sanificati; stato a dimensione fissa e nessuna allocazione per campione.
+Test: monotonia della curva, distinzione tra sei rilasci e gestione sample rate/input invalidi.
