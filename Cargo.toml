@@ -13,6 +13,17 @@ members = [
     "plugins/greg-ms-encoder",
     "plugins/greg-ms-decoder",
     "plugins/greg-phase",
+    "plugins/greg_dbx_160a",
+    "plugins/greg_76",
+    "crates/greg_gui_core",
+    "plugins/greg-fet-gui",
+    "plugins/greg_76-gui",
+    "plugins/greg-a2a-gui",
+    "plugins/greg-a3a-gui",
+    "plugins/greg-child-gui",
+    "plugins/greg-bus-comp-gui",
+    "plugins/greg-limiter-gui",
+    "plugins/greg-surgical-eq-gui",
     "tools/clap-signal-host",
 ]
 

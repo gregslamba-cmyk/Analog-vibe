@@ -8,6 +8,23 @@
 - [COMPLETATO] `.clinerules`: inserita regola vincolante per l'uso obbligatorio di `export_greg_plugin!` (CLAP + VST3) e dual licensing su ogni plugin futuro.
 - [COMPLETATO] Verifiche completate: `cargo check --workspace` e `cargo test --workspace` (55 test in `core-dsp`, unit test di tutti i plugin) superati con 0 errori e 0 warning.
 
+## Obiettivo completato: Moduli DSP di carattere analogico puro (`core-dsp`)
+- [COMPLETATO] `zdf_filters`: filtri TPT State Variable Filter (ZDF) con integrazione di saturazione `tanh` nel loop di feedback risolta via iterazioni Newton-Raphson (1-2 iterazioni).
+- [COMPLETATO] `transformer_hysteresis` e `nonlinear_stages`: modello fisico di isteresi magnetica, saturazione dipendente dalla frequenza, pre/de-enfasi dinamica speculare, slew-rate limiting, AC coupling con micro-shift di bias DC, e curve di saturazione estese (valvola triodo/pentodo, stato solido Classe A, FET, Op-Amp discreto, soft/hard clip, wavefolding).
+- [COMPLETATO] `psu_sag`: calo di tensione dell'alimentatore sotto carico con generatori di rumore termico e ripple rigorosamente spenti di default (`0.0` / `false`), garantendo silenzio digitale assoluto a riposo.
+- [COMPLETATO] `analog_variance`: generatore deterministico basato su `instance_id` per micro-tolleranze L/R (±1% - 3%) e crosstalk minimo, scalabile/disattivabile via parametro `analog_drift`.
+- [COMPLETATO] Elaborazione interna interamente in `f64`, zero panics/allocazioni/unwrap, sanitizzazione NaN/Inf e test unitari completi (`cargo test --workspace` superati).
+- [COMPLETATO] Aggiornate `ARCHITECTURE.md` e `STATE.md` con firme pubbliche esatte.
+
+## Obiettivo completato: Visualizzazione dati e integrazione sidechain nei plugin (2026-11-21)
+- [COMPLETATO] Creato modulo `MeterVisualization` in `core-dsp/src/core_dsp_modules/metering.rs` per esposizione dati di visualizzazione (input peak/RMS, output peak/RMS, gain reduction, phase correlation, sidechain input)
+- [COMPLETATO] Aggiunto `MeterVisualization` struct con tutti i valori richiesti per host/clap visualizzazione
+- [COMPLETATO] Corretto test `sidechain_input_metering` per riflettere calcolo RMS corretto (true RMS, non peak-matching)
+- [COMPLETATO] Verificato che tutti i 9 plugin dinamici usano `self.metering` per esposizione input/output/gain reduction
+- [COMPLETATO] Verificato che 6/9 plugin dinamici usano `SidechainProcessor` con filtri HP/LP/Bell/LS/HS
+- [COMPLETATO] Workspace `cargo check --workspace` e `cargo test -p core-dsp` entrambi passano (70 test, 0 failure)
+- [COMPLETATO] Aggiornato STATE.md con stato completamento
+
 ## Obiettivo completato: moduli DSP di carattere analogico puro (`core-dsp`)
 - [COMPLETATO] `zdf_filters`: filtri TPT State Variable Filter (ZDF) con integrazione di saturazione `tanh` nel loop di feedback risolta via iterazioni Newton-Raphson (1-2 iterazioni).
 - [COMPLETATO] `transformer_hysteresis` e `nonlinear_stages`: modello fisico di isteresi magnetica, saturazione dipendente dalla frequenza, pre/de-enfasi dinamica speculare, slew-rate limiting, AC coupling con micro-shift di bias DC, e curve di saturazione estese (valvola triodo/pentodo, stato solido Classe A, FET, Op-Amp discreto, soft/hard clip, wavefolding).

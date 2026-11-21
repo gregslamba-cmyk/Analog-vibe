@@ -395,9 +395,9 @@ impl Plugin for GregFet {
             .inputs
             .first_mut()
             .map(|sidechain| sidechain.as_slice_immutable());
-        self.metering.begin_block();
         let panic_protection = std::mem::take(&mut self.panic_protection);
         let protection_result = panic_protection.run(|| {
+            self.metering.begin_block();
             let oversampling = self.params.oversampling.value();
             let oversampling_factor = match oversampling {
                 FetOversampling::X1 => dsp::OversamplingFactor::X1,
@@ -451,7 +451,12 @@ impl Plugin for GregFet {
             let use_external_sidechain = self.params.external_sidechain.value();
             let mut frame_index = 0;
             for mut channel_samples in buffer.iter_samples() {
+                // Capture first two channels for phase correlation
+                let mut stereo_samples = [0.0_f32, 0.0_f32];
                 for (channel, sample) in channel_samples.iter_mut().enumerate() {
+                    if channel < 2 {
+                        stereo_samples[channel] = if sample.is_finite() { *sample } else { 0.0 };
+                    }
                     let bypassed = self.params.bypass.value();
                     if bypassed != self.last_bypassed {
                         for crossfade in &mut self.bypass_crossfades {
@@ -472,7 +477,7 @@ impl Plugin for GregFet {
                         }
                     }
 
-                    let input_sample = if sample.is_finite() { *sample } else { 0.0 };
+                    let input_sample = stereo_samples[channel];
                     let invert_left = self.params.invert_left.value();
                     let invert_right = self.params.invert_right.value();
                     let polarity =
@@ -497,6 +502,9 @@ impl Plugin for GregFet {
                         external_key,
                         use_external_sidechain,
                     );
+                    // Record sidechain input for metering
+                    self.metering.record_sidechain_input(key);
+                    
                     if self.params.sidechain_listen.value() {
                         *sample = key;
                         self.metering.record_sample(input_sample, *sample, 0.0);
@@ -523,6 +531,11 @@ impl Plugin for GregFet {
                     *sample = self.bypass_crossfades[channel].process(dry, wet);
                     self.metering
                         .record_sample(input_sample, *sample, gain_reduction_db);
+                }
+                // Record stereo pair for phase correlation (channels 0 and 1)
+                let frame_channel_count = channel_samples.len();
+                if frame_channel_count >= 2 {
+                    self.metering.record_stereo_sample(stereo_samples[0], stereo_samples[1]);
                 }
                 frame_index += 1;
             }

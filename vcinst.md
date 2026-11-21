@@ -7,8 +7,9 @@ Questo e' l'unico catalogo normativo della suite. E' volutamente compatto: non d
 1. Leggi sempre questo file prima di modificare codice o requisiti.
 2. Per il plugin/modulo interessato, leggi solo `docs/plugins/<id>.txt` e/o `docs/modules/<id>.txt`.
 3. Per ricerca hardware, fedelta' analogica o confronto tra revisioni, consulta `docs/specs/outboard_hardware_research.md` e le fonti li' citate.
-4. Leggi `STATE.md` solo per lo stato operativo corrente. Aggiornalo ai cambi di fase o a conclusione del task; non duplicarvi istruzioni, specifiche o cronologia tecnica.
-5. Non aprire tutti i cataloghi/schede senza necessita'. Aggiorna la scheda specifica insieme al componente e questa pagina solo quando cambia un requisito comune, l'indice o una decisione globale.
+4. **Leggi `docs/specs/Guida_Componenti_Audio_Fisica_Acustica.pdf` per le caratteristiche dei componenti elettronici** prima di programmare un'emulazione hardware: questa guida contiene dati tecnici sui componenti fisici che informano il modello DSP. Non sostituire dati anecdotici o supposizioni con le misure documentate in questo file.
+5. Leggi `STATE.md` solo per lo stato operativo corrente. Aggiornalo ai cambi di fase o a conclusione del task; non duplicarvi istruzioni, specifiche o cronologia tecnica.
+6. Non aprire tutti i cataloghi/schede senza necessita'. Aggiorna la scheda specifica insieme al componente e questa pagina solo quando cambia un requisito comune, l'indice o una decisione globale.
 
 La scheda del componente e' l'unica sede dei suoi parametri, API, test, latenza e stato dettagliato. Il dossier hardware e' l'unica sede delle specifiche documentate e delle fonti comuni. Se manca una fonte, marca il dato come non verificato: non colmare il vuoto per analogia.
 

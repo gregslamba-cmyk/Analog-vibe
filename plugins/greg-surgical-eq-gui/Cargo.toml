@@ -1,0 +1,17 @@
+[package]
+name = "greg-surgical-eq-gui"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+
+[dependencies]
+core-dsp = { path = "../../core-dsp" }
+plugin-support = { path = "../../plugin-support" }
+nih-plug = { git = "https://github.com/robbert-vdh/nih-plug.git", default-features = false, features = ["assert_process_allocs", "vst3"] }
+vizia = "0.7"
+baseview = "0.7"
+greg-gui-core = { path = "../../crates/greg_gui_core" }
+greg-surgical-eq = { path = "../../plugins/greg-surgical-eq" }
+
+[features]
+gui = []

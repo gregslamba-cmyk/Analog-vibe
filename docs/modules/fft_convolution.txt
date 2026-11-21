@@ -1,0 +1,43 @@
+Modulo DSP: fft_convolution
+Stato: Implementato e verificato (core-dsp)
+Tipo: Convoluzione partizionata lock-free & Analisi spettrale STFT
+
+Descrizione:
+Il modulo `fft_convolution` fornisce due motori di elaborazione spettrale avanzata basati su trasformate di Fourier reali veloci (realfft/rustfft) in doppia precisione `f64`:
+1. `PartitionedConvolution`: motore di convoluzione partizionata uniforme per riverberi a risposta all'impulso (`greg_ir_reverb`), simulazione di cabinet ed emulazioni acustiche.
+2. `StftAnalyzer`: motore Short-Time Fourier Transform con analisi e sintesi overlap-add per processori spettrali dinamici (`greg_denoiser`, `greg_declicker`).
+
+Caratteristiche e Garanzie:
+- Zero allocazioni dinamiche nel thread audio (`process_sample`, `process_block`).
+- Pre-allocazione completa di buffer, delay line spettrali e scratch vector durante `new()` / `set_ir()`.
+- Gestione overlap-save con scorrimento circolare dei blocchi nel dominio della frequenza.
+- Finestra di Hann normalizzata con proprietà di perfetta ricostruzione (Constant Overlap-Add - COLA).
+- Sanitizzazione completa NaN/Inf e garanzia di silenzio digitale assoluto a riposo.
+- Reporting rigoroso della latenza all'host (`latency_samples`).
+
+Firme pubbliche principali:
+```rust
+pub struct PartitionedConvolution {
+    pub fn new(block_size: usize) -> Self;
+    pub fn set_ir(&mut self, ir: &[f64]) -> bool;
+    pub fn latency_samples(&self) -> u32;
+    pub fn reset(&mut self);
+    pub fn process_sample(&mut self, input: f64) -> f64;
+    pub fn process_block(&mut self, input: &[f64], output: &mut [f64]);
+}
+
+pub struct StftAnalyzer {
+    pub fn new(window_size: usize, hop_size: usize) -> Self;
+    pub fn latency_samples(&self) -> u32;
+    pub fn complex_len(&self) -> usize;
+    pub fn reset(&mut self);
+    pub fn process_sample<F>(&mut self, input: f64, spectral_fn: F) -> f64
+    where F: FnMut(&mut [Complex<f64>]);
+    pub fn process_block<F>(&mut self, input: &[f64], output: &mut [f64], mut spectral_fn: F)
+    where F: FnMut(&mut [Complex<f64>]);
+}
+```
+
+Plugin utilizzatori:
+- `greg_ir_reverb`: convoluzione di risposte all'impulso ad altissima definizione.
+- `greg_denoiser`, `greg_declicker`: analisi spettrale, attenuazione rumore stazionario e riparazione transitori.
