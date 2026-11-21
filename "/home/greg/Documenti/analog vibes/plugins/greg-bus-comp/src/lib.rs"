@@ -1,1 +1,0 @@
-                for (channel, sample) in channel_samples.iter_mut().enumerate() {

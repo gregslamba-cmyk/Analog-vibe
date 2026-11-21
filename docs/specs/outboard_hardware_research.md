@@ -18,7 +18,7 @@ Le pagine prodotto citate sotto attestano il modello e le caratteristiche dichia
 ## Mappa dei riferimenti
 
 | Plugin | Riferimento | Stato del riferimento |
-|---|---|---|
+| --- | --- | --- |
 | `greg_76` | UREI / Universal Audio 1176LN FET Limiting Amplifier | Rev D/E restano profili di revisione dentro lo stesso plugin 1176LN. |
 | `greg_a2a` | Teletronix / Universal Audio LA-2A Leveling Amplifier | Identificato; scegliere revisione/cella di riferimento. |
 | `greg_a3a` | UREI / Universal Audio LA-3A Audio Leveler | Identificato; verificare tempi sulla revisione scelta. |
@@ -34,15 +34,15 @@ Le pagine prodotto citate sotto attestano il modello e le caratteristiche dichia
 | `greg_tape` | Studer A800 Mk III | Modello confermato; restano da fissare formulazione nastro, allineamento e velocita' di riferimento. |
 | `greg_exciter` | Aphex Aural Exciter Type C | Modello confermato; revisione e parametri di processo da documentare. |
 | `greg_low_enhancer` | dbx 120A Subharmonic Synthesizer | Modello confermato; tradurre le bande e i controlli dal manuale. |
-| `greg_dbx_160a`, `greg_dbx_160x`, `greg_dbx_165a` | DBX 160A / 160X / 165A | Aggiunti al catalogo come plugin separati, su richiesta. |
-| `greg_api_*` | API 2500, 2500+, SR22, 225L, T25, 525, 525A, 527, 527A, 529 e SV12 | Tutti i compressori standalone elencati nel catalogo ufficiale API sono mappati a plugin distinti. |
+| `greg_dbx_160`, `greg_dbx_165` | DBX 160 (160 VU / 160X / 160A) e DBX 165 (165 / 165A) | Versioni differenti dello stesso outboard accorpate con selettore di versione. |
+| `greg_api_2500`, `greg_api_525`, `greg_api_527`, `greg_api_sr22`, `greg_api_225l`, `greg_api_t25`, `greg_api_529` | API 2500, 525, 527, SR22, 225L, T25, 529 | Versioni differenti dello stesso outboard (2500/2500+, 525/525A, 527/527A, SR22/SV12) accorpate con selettore di versione; modelli diversi restano plugin separati. |
 
 ### Channel strip di console aggiunti
 
 Ogni modello esatto ha un plugin di channel strip completo, distinto dai plugin di sezione gia' presenti (preamp, EQ e compressori standalone). Le revisioni della stessa sigla/modello sono documentate sotto un unico ID; modelli diversi, anche della stessa serie o dello stesso costruttore, restano plugin separati. La selezione di una revisione o configurazione e' esposta come profilo solo se documentata per quel modello.
 
 | ID plugin | Modello/profilo | Natura e perimetro documentale |
-|---|---|---|
+| --- | --- | --- |
 | `greg_neve_1073_strip` | Neve 1073 | Channel module preamp/EQ; le specifiche moderne 1073SPX-D sono marcate come versione specifica, non generalizzate alle revisioni vintage. |
 | `greg_neve_1081_strip` | Neve 1081 | Channel module preamp, EQ a quattro bande e filtri; i dati ufficiali correnti dichiarano il design originale 1972. |
 | `greg_neve_1084_strip` | Neve 1084 | Modello distinto dal 1073; schemi/gamme da trascrivere dal manuale della revisione scelta. |
@@ -136,14 +136,14 @@ Non hanno per ora un outboard analogico univoco nel catalogo: `greg_multiband_co
 ### `greg_api_pre` — API 512c
 
 - **Topologia dichiarata dal costruttore:** preamp microfonico discreto con op-amp API 2520 e trasformatore d'uscita bilanciato; ingressi mic e Hi-Z/line, selettore, pad -20 dB e inversione di polarita'.
-- **Specifiche 512c pubblicate:** guadagno mic 34–65 dB (14–45 dB con pad); ingresso Hi-Z 14–45 dB; impedenza mic 1.5 kΩ, Hi-Z 400 kΩ; risposta 30 Hz–20 kHz (+0/-0.3 dB); clipping +30 dBu; THD <0.05% a +4 dBu.
+- **Specifiche 512c pubblicate:** guadagno mic 34–65 dB (14–45 dB con pad); ingresso Hi-Z 14–45 dB; impedenza mic 1.5 kΩ, Hi-Z 400 kΩ; risposta 30 Hz–20 kHz (+0/-0.3 dB); clipping +30 dBu; THD \<0.05% a +4 dBu.
 - **Punti di fedelta':** variare il drive degli stadi 2520/trasformatore in funzione del livello interno; la distorsione non e' solo una funzione statica di tanh.
 - **Fonte primaria:** [API 512c — descrizione e specifiche ufficiali](https://apiaudio.com/product/512c-mic-pre/).
 
 ### `greg_manley_eq` — Manley Massive Passive
 
 - **Topologia dichiarata:** EQ passivo valvolare con induttori avvolti a mano e stadi valvolari di makeup; quattro bande sovrapposte, selezione shelf/bell e filtri HP/LP passivi. E' un EQ stereo di mastering, non una ricostruzione dell'EQP-1A.
-- **Specifiche pubblicate:** bande distribuite nel range 22 Hz–27 kHz; bandwidth 10 Hz–70 kHz; THD <0.01%, S/N 116 dB, massimo output +37 dBu (circa +26 dBu nella LF section).
+- **Specifiche pubblicate:** bande distribuite nel range 22 Hz–27 kHz; bandwidth 10 Hz–70 kHz; THD \<0.01%, S/N 116 dB, massimo output +37 dBu (circa +26 dBu nella LF section).
 - **Punti di fedelta':** curve e fattori Q a ogni frequenza/boost-cut, interazione tra bande e filtri, stadio valvolare/makeup. Ottenere dal manuale le posizioni discrete prima di fissare la GUI/API.
 - **Fonte primaria:** [Manley Massive Passive — pagina ufficiale](https://www.manley.com/products/pro-audio/eqs/massive-passive-eq).
 
@@ -209,8 +209,8 @@ Non hanno per ora un outboard analogico univoco nel catalogo: `greg_multiband_co
 ### DBX 160X
 
 - **Topologia e controlli (manuale d'archivio):** detector true RMS, VCA Blackmer e circuito feed-forward; Over Easy o hard knee, ratio continuo da 1:1 a infinito e oltre fino a -1:1 (Infinity+), threshold, output gain, bypass hard-wire e detector accessibile. Stereo link tra due unita' tramite detector RMS; attacco e rilascio sono program-dependent.
-- **Range e tempi dichiarati:** threshold -40..+20 dBm; output gain -20..+20 dB; attack 15 ms per incremento di 10 dB, 5 ms/20 dB, 3 ms/30 dB; rilascio automatico program-dependent, indicato come 0..500 ms. Compressione massima dichiarata >60 dB.
-- **Dati elettrici della copia consultata:** ingresso max +24 dBm; uscita max +24 dBm su 600 ohm o superiore; uscita single-ended 22 ohm nella configurazione standard; risposta +0/-1 dB, 20 Hz..20 kHz; dynamic range >113 dB; rumore equivalente ingresso < -89 dBm, 20 Hz..20 kHz.
+- **Range e tempi dichiarati:** threshold -40..+20 dBm; output gain -20..+20 dB; attack 15 ms per incremento di 10 dB, 5 ms/20 dB, 3 ms/30 dB; rilascio automatico program-dependent, indicato come 0..500 ms. Compressione massima dichiarata \>60 dB.
+- **Dati elettrici della copia consultata:** ingresso max +24 dBm; uscita max +24 dBm su 600 ohm o superiore; uscita single-ended 22 ohm nella configurazione standard; risposta +0/-1 dB, 20 Hz..20 kHz; dynamic range \>113 dB; rumore equivalente ingresso \< -89 dBm, 20 Hz..20 kHz.
 - **Revisione/limite fonte:** dati estratti da una scansione del manuale 160X ospitata da terzi, non dal produttore. La stessa documentazione descrive opzioni di uscita bilanciata attiva o a trasformatore, quindi verificare la configurazione della macchina fisica prima di usare i valori d'uscita come riferimento.
 - **Punto di fedelta':** non trasferire al 160X i dati del 160A. La copia del manuale 160X documenta l'uscita standard single-ended, mentre il 160A ha uscita elettronicamente bilanciata.
 - **Fonti:** [DBX 160A e storia della famiglia](https://dbxpro.com/en/products/160a); [manuale 160X d'archivio, copia non ospitata dal produttore](https://tcfurlong.com/wp-content/uploads/dbx-160X-Rental-Manual.pdf).
@@ -220,35 +220,31 @@ Non hanno per ora un outboard analogico univoco nel catalogo: `greg_multiband_co
 - **Differenza fra 165 e 165A:** il memo DBX allegato al manuale dichiara che il 165A e' identico al 165 salvo PeakStop. Percio' i dati seguenti provengono dal manuale del 165 e dal memo 165A: non sono specifiche generiche della famiglia 160.
 - **Topologia e controlli:** compressore mono Over Easy con detector RMS true e VCA in feed-forward; soglia, rapporto 1:1..infinito:1, attacco e rilascio manuali o auto, output gain, meter input/output/gain change, bypass hard-wire e accoppiamento stereo di due unita'. Il detector e' accessibile separatamente per EQ/filtri o altre elaborazioni esterne.
 - **Tempi dichiarati:** in auto, attack tipico 15 ms per variazione di 10 dB, 5 ms/20 dB e 3 ms/30 dB; release 120 dB/s. In manuale, attack 1..400 dB/ms e release 10..4000 dB/s. Non convertire questi slew rate direttamente in un singolo tempo RC.
-- **Dati elettrici del manuale 165:** threshold -40..+10 dB riferiti a 0.775 V RMS; ingresso max +24 dB (12.3 V RMS); uscita max +23 dBm su 600 ohm o superiore; risposta +0/-1 dB, 20 Hz..20 kHz; rumore equivalente ingresso < -90 dBm, 20 Hz..20 kHz. Distorsione tipica a compressione infinita e 1 kHz/0 dBm: 0.05% seconda armonica, 0.2% terza con tempi centrati.
+- **Dati elettrici del manuale 165:** threshold -40..+10 dB riferiti a 0.775 V RMS; ingresso max +24 dB (12.3 V RMS); uscita max +23 dBm su 600 ohm o superiore; risposta +0/-1 dB, 20 Hz..20 kHz; rumore equivalente ingresso \< -90 dBm, 20 Hz..20 kHz. Distorsione tipica a compressione infinita e 1 kHz/0 dBm: 0.05% seconda armonica, 0.2% terza con tempi centrati.
 - **PeakStop del 165A:** limiter/clipper a valle del compressore e dell'output gain, istantaneo, basato su clipper controllato in tensione con arrotondamento dei picchi. Il memo specifica range -2..+24 dBm; ammette brevi overshoot per l'arrotondamento e raccomanda di impostare il limite 1..2 dB sotto il ceiling assoluto.
 - **Punto di fedelta':** Over Easy, risposta temporale auto/manuale, detector separato, stereo-link e PeakStop sono comportamenti distinti; non riutilizzare i valori del 160A/160X. Il PeakStop non e' un limiter lookahead trasparente.
 - **Fonti primarie:** [DBX 165A — manuale ufficiale combinato 165/165A](https://dbxpro.com/en/products/165a).
 
 ### Compressori API standalone
 
-La pagina ufficiale [API Compressors](https://apiaudio.com/compressors/) elenca i modelli sotto. TCS-II e' un channel strip integrato, non aggiunto come un secondo plugin compressore: la sua sezione compressore e' gia' coperta dal relativo riferimento 527A.
+La pagina ufficiale [API Compressors](https://apiaudio.com/compressors/) elenca i modelli sotto. TCS-II e' un channel strip integrato, non aggiunto come un secondo plugin compressore: la sua sezione compressore e' gia' coperta dal relativo riferimento 527A. In conformità alla regola di accorpamento, le versioni differenti dello stesso outboard sono accorpate nello stesso plugin con selettore di versione.
 
-| Plugin proposto | Modello | Specifica utile alla fedelta' (pagina costruttore) | Fonte |
-|---|---|---|---|
-| `greg_api_2500` | API 2500 (fuori produzione) | Dual-channel; threshold -20..+10 dBu; THRUST con filtro prima del detector RMS; feedback oppure feed-forward; knee soft/medium/hard; auto/manual makeup; sidechain bilanciata; output clipping dichiarato a +28 dBu. I tempi e le posizioni di ratio/attack/release sono da completare dal manuale esatto. | [API 2500](https://apiaudio.com/product/2500-stereo-compressor/) |
-| `greg_api_2500_plus` | API 2500+ | Dual-channel stereo o due unità mono; vecchio feedback e nuovo feed-forward; THRUST; auto makeup; Mix/Blend OFF, crossfade o parallel. Impedenza in 60 kΩ, uscita bilanciata a trasformatore 75 Ω, max +32 dBu, 20 Hz–50 kHz ±0.5 dB, S/N 120 dB. | [API 2500+](https://apiaudio.com/product/2500-stereo-bus-compressor/) |
-| `greg_api_sr22` | API SR22 | Circuito nato nella console ATI Paragon; due canali, link stereo con somma RMS, THRUST, knee hard/soft; threshold -40..+15 dBu, ratio 1:1..10:1, attack adattivo 10–40 ms, release 30–400 ms, makeup 0..+20 dB. | [API SR22](https://apiaudio.com/product/sr22-compressor/) |
+| Plugin accorpato | Modelli accorpati | Specifica utile alla fedelta' (pagina costruttore) | Fonte |
+| --- | --- | --- | --- |
+| `greg_api_2500` | API 2500 e API 2500+ | Dual-channel; threshold -20..+10 dBu; THRUST con filtro prima del detector RMS; feedback ("Old") oppure feed-forward ("New"); knee soft/medium/hard; auto/manual makeup; sidechain bilanciata; output clipping a +28 dBu. La versione 2500+ aggiunge il controllo Mix/Blend (OFF, crossfade o compressione parallela), max output +32 dBu bilanciato a trasformatore e risposta 20 Hz–50 kHz ±0.5 dB. | [API 2500](https://apiaudio.com/product/2500-stereo-compressor/), [API 2500+](https://apiaudio.com/product/2500-stereo-bus-compressor/) |
+| `greg_api_sr22` | API SR22 e API Select SV12 | Circuito nato nella console ATI Paragon; due canali, link stereo con somma RMS, THRUST, knee hard/soft; threshold -40..+15 dBu, ratio 1:1..10:1, attack adattivo 10–40 ms, release 30–400 ms, makeup 0..+20 dB. Accorpa la versione rack SR22 e il modulo serie 500 SV12 con selettore di formato. | [API SR22](https://apiaudio.com/product/sr22-compressor/), [API SV12](https://apiaudio.com/product/api-select-sv12-compressor/) |
 | `greg_api_225l` | API 225L | Modulo VCA della serie 200; feedback/feed-forward, hard/soft, auto makeup, sidechain e link stereo; threshold +10..-20 dBu, ratio 1:1..infinito, attack 1–25 ms, release 0.3–3 s. | [API 225L](https://apiaudio.com/product/225l-compressor/) |
 | `greg_api_t25` | API T25 | Due canali, FET feedback, uscita Class A a valvole e trasformatore; ratio 2/4/8/20:1, attack 20 µs..0.8 ms, release 50 ms..1.2 s, 11 posizioni per ciascun tempo, THRUST e D-S. | [API T25](https://apiaudio.com/product/t25-tube-compressor/) |
-| `greg_api_525` | API 525 | Peak-detecting feedback; attacco fisso 15 µs, ratio 2:1 oppure limit 20:1, quattro release mode, Ceiling accoppiato fra quantità di compressione e output, de-ess dedicato, collegamento di piu' unita'. | [API 525](https://apiaudio.com/product/525-compressor/) |
-| `greg_api_525a` | API 525A | Evoluzione discreta del 525 con attack 15 µs..15 ms, sette release 0.05..2 s, ratio Compress 2:1 / Limit 20:1, Ceiling, 2510/2520 e trasformatore d'uscita. | [API 525A](https://apiaudio.com/product/525a-fet-compressor/) |
-| `greg_api_527` | API 527 (fuori produzione) | VCA con threshold +10..-20 dBu, ratio 1:1..infinito, attack 1–25 ms, release 0.3–3 s, feed-forward/feedback, hard/soft, THRUST e link multi-unit. | [API 527](https://apiaudio.com/product/527-compressor-limiter/) |
-| `greg_api_527a` | API 527A | VCA discreto; feed-forward/feedback, hard/soft, THRUST e bypass; attack 1–25 ms, release 0.3–3 s, ratio 1:1..infinito, output fader -infinito..+10 dB, link stereo. | [API 527A](https://apiaudio.com/product/527a-compressor-limiter/) |
-| `greg_api_529` | API 529 | Compressore stereo dual-slot 500 Series derivato dal 2500; old/new, THRUST, tre knee, auto/variable makeup; ratio 1.5:1..infinito, attack <1..50 ms, release 0.05..4 s, threshold +10..-20 dBu. | [API 529](https://apiaudio.com/product/529-stereo-compressor/) |
-| `greg_api_sv12` | API Select SV12 | Circuito ATI Paragon in modulo 500; due canali e stereo-link con somma RMS, THRUST, hard/soft; threshold -40..+15 dBu, ratio 1:1..10:1, attack adattivo 10–40 ms, release 30–400 ms. | [API SV12](https://apiaudio.com/product/api-select-sv12-compressor/) |
+| `greg_api_525` | API 525 e API 525A | Peak-detecting feedback; ratio 2:1 oppure limit 20:1, Ceiling accoppiato tra compressione e output, De-Ess dedicato. La versione vintage 525 ha attack fisso 15 µs e 4 release frequency-dependent; la versione 525A estende attack variabile 15 µs..15 ms e 7 release discreti (0.05..2 s). Selettore di versione 525 / 525A. | [API 525](https://apiaudio.com/product/525-compressor/), [API 525A](https://apiaudio.com/product/525a-fet-compressor/) |
+| `greg_api_527` | API 527 e API 527A | VCA discreto con 2510/2520 e trasformatore; threshold +10..-20 dBu, ratio 1:1..infinito, attack 1–25 ms, release 0.3–3 s, feed-forward/feedback, hard/soft, THRUST e link multi-unit. Accorpa 527 e 527A con selettore di versione. | [API 527](https://apiaudio.com/product/527-compressor-limiter/), [API 527A](https://apiaudio.com/product/527a-compressor-limiter/) |
+| `greg_api_529` | API 529 | Compressore stereo dual-slot 500 Series derivato dal 2500; old/new, THRUST, tre knee, auto/variable makeup; ratio 1.5:1..infinito, attack \<1..50 ms, release 0.05..4 s, threshold +10..-20 dBu. | [API 529](https://apiaudio.com/product/529-stereo-compressor/) |
 
-**Regola di modellazione:** non condividere una singola curva API generica. 525/525A sono FET peak-detecting con caratteristiche temporali e Ceiling differenti; 527/527A/225L sono varianti VCA con controlli e detector specifici; 2500/2500+ e 529 hanno routing e opzioni stereo; SR22/SV12 sono basati su un circuito ATI Paragon ma differiscono nel formato e nelle specifiche pubblicate; T25 aggiunge un percorso FET/valvolare a due canali. Riutilizzare codice non deve cancellare queste differenze.
+**Regola di modellazione:** non condividere una singola curva API generica. 525/525A sono FET peak-detecting con caratteristiche temporali e Ceiling differenti; 527/527A/225L sono varianti VCA con controlli e detector specifici; 2500/2500+ e 529 hanno routing e opzioni stereo; SR22/SV12 sono basati sul circuito ATI Paragon; T25 aggiunge un percorso FET/valvolare a due canali. Il selettore di versione interno permette di passare fedelmente tra le revisioni storiche dell'hardware.
 
 ## Lacune di specifiche e riferimenti non assegnati
 
 | Plugin | Riferimento selezionato | Informazioni mancanti prima di scrivere un modello circuitale |
-|---|---|---|
+| --- | --- | --- |
 | `greg_harrison_pre`, `greg_harrison_comp`, `greg_harrison_eq` | Harrison 32C | Reperire manuale/revisione; documentare guadagni, curve EQ, topologia e tempi del compressore. |
 | `greg_tape` | Studer A800 Mk III, 2-inch multitrack | Velocita' (15/30 IPS), formulazione nastro, flusso, EQ NAB/IEC, bias e allineamento. |
 | `greg_exciter` | Aphex Aural Exciter Type C | Manuale Type C, revisione, generazione armoniche, frequenze e livelli. |
@@ -266,3 +262,81 @@ Le macchine confermate hanno ora un'identita' hardware di progetto; i parametri 
 4. Aggiornare le schede `docs/plugins/` con i dati verificati e separare i controlli estesi dagli originali hardware.
 
 Fino a questi passaggi, le implementazioni alpha restano modelli ispirati alla topologia, non emulazioni hardware validate.
+
+\### \`greg\_leveler\` — Vocal / Level Auto-Fader (Utility Dinamica)
+
+\* \*\*Crate / ID CLAP:\*\* \`plugins/greg-leveler\` (\`com.greg.audio.greg\_leveler\`)
+
+\* \*\*Natura:\*\* Processore di livellamento automatico del guadagno (Auto-Fader / Gain Rider) trasparente, privo di compressione non lineare, progettato per mantenere voci, dialoghi o strumenti solisti costanti rispetto a un livello Target senza alterare i transienti.
+
+\* \*\*Topologia DSP (\`core-dsp\`):\*\*
+
+\* \*\*Detector Sillabico:\*\* Misurazione RMS / pesata K-weighting con finestra di integrazione rapida (30–80 ms) preceduta da filtri bandpass (HPF/LPF) per isolare il corpo vocale da sibilanti ("S") e sub-armoniche.
+
+\* \*\*Silence / Breath Gate (\`Floor\`):\*\* Sotto la soglia impostata, il fader torna dolcemente a \`0.0 dB\` evitando di amplificare respiri o rumore di fondo nelle pause.
+
+\* \*\*Lookahead (\`LatencyDelay\`):\*\* Anticipo configurabile (0–20 ms) con latenza esatta dichiarata all'host CLAP/VST3 per muovere il fader sull'attacco della sillaba.
+
+\* \*\*Music Sidechain (Dynamic Target):\*\* L'ingresso \*External Sidechain\* (base musicale/mix) modula dinamicamente il Target, alzando la voce nei ritornelli densi e riabbassandola nelle strofe intime.
+
+\* \*\*Zero Colorazione (Default):\*\* Guadagno puro line-level smoothed in \`f64\`, zero saturazione o rumore aggiunto di default; bypass compensato con crossfade 5 ms e \`PanicProtection\`.
+
+\* \*\*Controlli Main Panel (\`greg\_gui\_core\`):\*\*
+
+\* \`Target\` (\`-36.0 .. -6.0 dBFS\`): livello di riferimento desiderato.
+
+\* \`Range Up / Max Boost\` (\`0.0 .. +12.0 dB\`): escursione massima in positivo.
+
+\* \`Range Down / Max Cut\` (\`-12.0 .. 0.0 dB\`): escursione massima in negativo.
+
+\* \`Speed\` (\`Slow\` .. \`Fast\` / \`10 .. 250 ms\`): inerzia del fader virtuale.
+
+\* \`Floor / Sensitivity\` (\`-60.0 .. -18.0 dBFS\`): soglia di rilevamento voce vs silenzio/respiri.
+
+\* \*\*Controlli Advanced Panel (\`+ ADV\`):\*\*
+
+\* \`Music SC Amount\` (\`0 .. 100%\`): influenza della sidechain esterna sul Target.
+
+\* \`Lookahead\` (\`0.0 .. 20.0 ms\`): anticipo del detector (aggiorna la latenza dichiarata all'host).
+
+\* \`Detector HPF\` (\`80 .. 500 Hz\`) e \`Detector LPF\` (\`2.0 .. 12.0 kHz\`): isolamento frequenziale del rilevatore.
+
+\* \*\*Telemetria GUI (\`metering.rs\`):\*\* Espone Input/Output multicanale, Phase Correlation e l'escursione netta del fader (\`-12 dB .. 0 dB .. +12 dB\`).
+
+\### \`greg\_eq\_match\` — Spectrum Matcher / EQ Curve Cloning (Mastering \& Tone Matching)
+
+\* \*\*Crate / ID CLAP:\*\* \`plugins/greg-eq-match\` (\`com.greg.audio.greg-eq-match\`)
+
+\* \*\*Natura:\*\* Equalizzatore di matching spettrale (EQ Matching) a fase lineare o minima che cattura il profilo tonale medio (LTAS) di una sorgente di riferimento e genera una curva di correzione smussata per adattare una traccia o un master.
+
+\* \*\*Topologia DSP (\`core-dsp\`):\*\*
+
+  \* \*\*Analisi LTAS (Long-Term Average Spectrum):\*\* Finestre FFT da 4096 campioni (Hann, overlap 75%) calcolate su thread dedicato/non-RT o buffer pre-allocati per mediare lo spettro senza picchi transitori.
+
+  \* \*\*Sorgente Reference:\*\* Cattura interna (\*Learn Reference\*) oppure confronto dinamico continuo tramite \*External Sidechain\*.
+
+  \* \*\*Smoothing Psicoacustico \& Cap:\*\* Media mobile logaritmica (da 1/12 d'ottava fino a 1 ottava) e limitazione dell'escursione massima (\`Max Boost/Cut\`) per prevenire artefatti risonanti (\*ringing\*).
+
+  \* \*\*Motore di Convoluzione (\`realfft\` / FIR):\*\* Sintesi del filtro FIR a fase lineare (512/1024 tap con latenza dichiarata all'host) o conversione a fase minima (zero latenza) per transienti percussivi.
+
+  \* \*\*Persistenza Stato:\*\* La curva catturata viene salvata nello stato del progetto (\`#\[persist = "matched\_curve"\]\`).
+
+\* \*\*Controlli Main Panel (\`greg\_gui\_core\`):\*\*
+
+  \* \`Learn Reference\` \& \`Learn Source\` (pulsanti di cattura spettrale) + \`Match\` (calcola e blocca la curva).
+
+  \* \`Amount\` (\`0.0 .. 100.0%\`): intensità della curva applicata (scala proporzionalmente i dB di correzione).
+
+  \* \`Smoothing\` (\`1 .. 100%\` / \`1/12 oct .. 1 oct\`): morbidezza della curva di EQ.
+
+  \* \`Output Trim\` (\`-12.0 .. +12.0 dB\`): compensazione del volume post-match.
+
+\* \*\*Controlli Advanced Panel (\`+ ADV\`):\*\*
+
+  \* \`Phase Mode\` (\`Linear Phase\` / \`Minimum Phase\`).
+
+  \* \`Range Low\` (\`20 .. 500 Hz\`) \& \`Range High\` (\`2.0 .. 20.0 kHz\`): limita l'intervento del match solo a una porzione dello spettro (es. lasciando intatti i sub-bassi).
+
+  \* \`Max Boost / Cut\` (\`±3 .. ±18 dB\`) e \`Live Sidechain Match\` (on/off).
+
+  \* \`GregSpectrum\` (obbligatorio): mostra sovrapposte in tempo reale la curva Reference, la curva Source e la curva di correzione risultante.

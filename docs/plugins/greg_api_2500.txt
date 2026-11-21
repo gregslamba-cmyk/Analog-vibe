@@ -1,16 +1,20 @@
 ID: greg_api_2500
 Nome plugin: Greg 2500
 Categoria: compressore stereo VCA da bus
-Stato: pianificato; riferimento API fuori produzione
-Riferimento hardware: API 2500 Stereo Bus Compressor originale, non la versione 2500+.
+Stato: implementato; accorpa le versioni API 2500 e API 2500+ con selettore di versione
+Riferimento hardware: API 2500 e API 2500+ Stereo Bus Compressor:
+- Profilo 2500: classico compressore stereo da bus a due canali; topologia Old (feedback) o New (feed-forward); filtro brevettato THRUST; knee Soft, Medium, Hard; auto o manual makeup gain; soglia -20..+10 dBu; link stereo regolabile a percentuale.
+- Profilo 2500+: aggiunge il circuito Mix/Blend con selettore per Crossfade o Compressione Parallela, headroom estesa a +32 dBu bilanciata a trasformatore e risposta 20 Hz–50 kHz.
 
-Caratteristiche documentate:
-- Due canali, impiego stereo linkato o indipendente; opzioni variabili di link.
-- Soglia -20..+10 dBu, ratio/attack/release selezionabili.
-- Detector THRUST con filtro prima del rilevatore RMS; selezione feedback "Old" o feed-forward "New".
-- Knee soft/medium/hard, makeup automatico o manuale, ingressi sidechain bilanciati da 1/4".
-- Output clipping dichiarato a +28 dBu.
+Caratteristiche e controlli:
+- Selettore di versione: 2500 Classic vs 2500+.
+- Controllo Mix/Blend (attivo su profilo 2500+): OFF, Crossfade (Dry/Wet lineare), Parallel (somma dry + wet).
+- THRUST: Normal, Med, Loud (filtro pre-detector ad enfasi delle alte e protezione delle basse).
+- Tone Type: Old (feedback smooth stile vintage) vs New (feed-forward punchy e preciso).
+- Knee: Soft, Medium, Hard.
+- Ratio: 1.5:1, 2:1, 3:1, 4:1, 6:1, 10:1, infinito:1.
+- Attack: 0.03, 0.1, 0.3, 1, 3, 10, 30 ms. Release: 0.05, 0.1, 0.2, 0.5, 1, 2 s e Auto.
 
-Da recuperare dal manuale della revisione: valori di ogni posizione ratio/attack/release, curva THRUST, modalità di link e specifiche elettriche complete.
-Fonte primaria: https://apiaudio.com/product/2500-stereo-compressor/
-Non condividere indiscriminatamente il DSP con 2500+ o 529: controlli, revisioni e percorso differiscono.
+Fonti primarie:
+- API 2500: https://apiaudio.com/product/2500-stereo-compressor/
+- API 2500+: https://apiaudio.com/product/2500-stereo-bus-compressor/

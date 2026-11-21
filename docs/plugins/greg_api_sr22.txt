@@ -1,15 +1,19 @@
 ID: greg_api_sr22
 Nome plugin: Greg SR22
 Categoria: compressore analogico dual-channel
-Stato: pianificato
-Riferimento hardware: API SR22, circuito derivato dalla console ATI Paragon.
+Stato: pianificato; accorpa le versioni rack SR22 e modulo serie 500 Select SV12 con selettore di formato
+Riferimento hardware: compressore VCA derivato dal circuito della console live ATI Paragon:
+- Profilo SR22: unità rackmount da 2 canali con stereo-link basato su somma RMS true-power, threshold -40..+15 dBu, ratio 1:1..10:1, makeup 0..+20 dB, attacco adattivo 10–40 ms e rilascio adattivo 30–400 ms.
+- Profilo Select SV12: versione serie 500 dello stesso circuito con headroom calibrata a +24 dBu e risposta in frequenza ottimizzata per moduli compatti.
 
-Caratteristiche hardware:
-- Due canali, stereo link con somma di potenza RMS reale.
-- Threshold -40..+15 dBu; ratio 1:1..10:1; makeup 0..+20 dB.
-- Attack adattivo a programma/controllo 10..40 ms; release adattivo 30..400 ms.
-- Knee hard/soft e sidechain flat/THRUST.
-- Risposta ±0.5 dB 20 Hz–50 kHz; THD+N <0.005% a 1 kHz/+4 dBu; livello massimo +19 dBu.
+Caratteristiche e controlli:
+- Selettore di versione/formato: SR22 Rack vs Select SV12 (500 Series).
+- Canali: Dual Mono o Stereo Link con somma di potenza RMS.
+- Threshold: -40..+15 dBu; Ratio: 1:1..10:1; Makeup: 0..+20 dB.
+- Inviluppo dinamico adattivo: attack 10..40 ms e release 30..400 ms dipendenti dal segnale.
+- Knee: Hard / Soft.
+- Sidechain: Flat vs THRUST brevettato.
 
-Non sostituire gli inviluppi adattivi con tempi fissi impostati ai limiti del range. L'esposizione del detector deve essere misurata.
-Fonte primaria: https://apiaudio.com/product/sr22-compressor/
+Fonti primarie:
+- API SR22: https://apiaudio.com/product/sr22-compressor/
+- API Select SV12: https://apiaudio.com/product/api-select-sv12-compressor/

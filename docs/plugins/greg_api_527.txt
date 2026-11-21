@@ -1,15 +1,20 @@
 ID: greg_api_527
 Nome plugin: Greg 527
-Categoria: compressore/limiter VCA
-Stato: pianificato; hardware fuori produzione
-Riferimento hardware: API 527 Compressor/Limiter.
+Categoria: compressore/limiter VCA serie 500
+Stato: pianificato; accorpa le versioni API 527 e API 527A con selettore di versione
+Riferimento hardware: API 527 e API 527A serie 500:
+- Profilo 527: modello classico VCA discreto con 2510/2520 e trasformatore, controllo continui con scatti, feed-forward o feedback ("Old" / "New"), hard o soft knee, filtro THRUST.
+- Profilo 527A: revisione aggiornata con bypass hardware/relay avanzato, ottimizzazione op-amp discreti e stadio d'uscita ad alta headroom (+30 dBu).
 
-Caratteristiche hardware:
-- Threshold +10..-20 dBu; ratio 1:1..infinito; output fader -infinito..+10 dB.
-- Attack 1..25 ms e release 0.3..3 s, controlli continui a scatti.
-- Feed-forward/feedback, hard/soft knee, THRUST, link a piu' unita' e bypass a rele'.
-- Op-amp discreti 2510/2520 e trasformatore d'uscita; max output +26 dBu.
-- Filtro THRUST: pendenza -10 dB/decade, unity a 1 kHz.
+Caratteristiche e controlli:
+- Selettore di versione: 527 vs 527A.
+- Threshold da +10 a -20 dBu; Ratio continuo da 1:1 a infinito:1.
+- Attack continuo/a scatti da 1 a 25 ms; Release continuo/a scatti da 0.3 a 3 s.
+- Tone: Old (feedback) vs New (feed-forward).
+- Knee: Hard vs Soft.
+- THRUST: In/Out (filtro pre-detector -10 dB/decade).
+- Output fader da -infinito a +10 dB.
 
-La pagina ufficiale distingue il 527 dal 527A; mantenere i due modelli separati.
-Fonte primaria: https://apiaudio.com/product/527-compressor-limiter/
+Fonti primarie:
+- API 527: https://apiaudio.com/product/527-compressor-limiter/
+- API 527A: https://apiaudio.com/product/527a-compressor-limiter/

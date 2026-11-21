@@ -1,0 +1,29 @@
+ID: greg_dbx_160
+Nome plugin: Greg 160
+Categoria: compressore/limiter VCA
+Stato: implementato (CLAP + VST3), test 5/5 passanti; compila senza errori
+Riferimento hardware: famiglia DBX 160 con commutazione di versione hardware:
+- Profilo 160 VU: modello vintage originale non-OverEasy, VCA discreto Blackmer, curve decise, attacco/rilascio fissi.
+- Profilo 160X: modello con selezione OverEasy / Hard Knee, ratio 1:1 fino a infinito e Infinity+ (-1:1), uscita single-ended 22 ohm standard o bilanciata opzionale, tempi di attacco/rilascio program-dependent.
+- Profilo 160A: evoluzione moderna con uscite elettronicamente bilanciate, OverEasy / Hard Knee, range soglia -40..+20 dBu, ratio continuo fino a Infinity+, stadio d'uscita a basso rumore (+24 dBm).
+
+Caratteristiche implementate:
+- Selettore di versione: 160 VU, 160X, 160A.
+- Detector RMS con soft-knee OverEasy (12 dB) / Hard Knee (1.5 dB).
+- Threshold da -40 a +20 dB; ratio 1:1, 2:1, 4:1, 8:1, 12:1, 20:1, infinity:1, Infinity+ (-1:1).
+- Infinity+ disponibile solo su 160X e 160A; espande sotto soglia.
+- Output gain -20..+20 dB.
+- Tempi di attacco (0.1..50 ms) e rilascio (10..2000 ms) program-dependent su 160X/A (scalabilità dinamica basata sul livello), fissi su 160 VU.
+- Stereo Link (rilevazione condivisa max) o Dual Mono.
+- Inversione di polarità Left/Right.
+- Ingresso sidechain esterno con routing L/R, filtri HPF/LPF/Bell/Low-Shelf/High-Shelf, SC Listen.
+- Bypass click-free con micro-crossfade e compensazione latenza oversampling (dry delay).
+- Panic protection con sanitizzazione NaN/Inf, metering lock-free I/O peak/RMS e gain reduction.
+- Oversampling 1x/2x/4x/8x con latenza dichiarata all'host.
+
+Formati: CLAP + VST3 nativi via export_greg_plugin!
+Latenza: 0 campioni a 1x, pari alla latenza del filtro polifase oversampling a 2x/4x/8x.
+
+Fonti primarie:
+- DBX 160A: https://dbxpro.com/en/products/160a (manuale: https://dbxpro.com/en/product_documents/dbx160a-18-2040v-cpdf)
+- DBX 160X: manuale d'archivio https://tcfurlong.com/wp-content/uploads/dbx-160X-Rental-Manual.pdf

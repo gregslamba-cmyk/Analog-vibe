@@ -68,7 +68,21 @@
 ## Prossimo plugin pianificato: `greg_bus_comp`
 - [COMPLETATO] Specificare topologia VCA, curve e controlli hardware essenziali.
 - [COMPLETATO] Implementare sidechain opzionale e scelta Stereo Link/Dual Mono.
-- [IN CORSO] Validare DSP, latenza e comportamento in host CLAP; documentare limiti di fedelta'.
+- [COMPLETATO] Validare DSP, latenza e comportamento in host CLAP; documentare limiti di fedelta'.
+
+## Plugin completato: `greg_dbx_160` (DBX 160 VCA Compressor/Limiter)
+- [COMPLETATO] Specificare topologia VCA, versione 160 VU / 160X / 160A con selettore.
+- [COMPLETATO] Implementare ratio 1:1/2:1/4:1/8:1/12:1/20:1/infinity:1 e Infinity+ (-1:1) per 160X/160A.
+- [COMPLETATO] Implementare soft-knee OverEasy (12 dB) / Hard Knee (1.5 dB) con selettore.
+- [COMPLETATO] Implementare attacco/rilascio program-dependent per 160X/160A, fissi per 160 VU.
+- [COMPLETATO] Implementare Stereo Link / Dual Mono, inversione polarità L/R, sidechain esterno con filtri HP/LP/Bell/LS/HS e SC Listen.
+- [COMPLETATO] Implementare bypass click-free con micro-crossfade, compensazione latenza oversampling (dry delay).
+- [COMPLETATO] Integrata metering lock-free I/O peak/RMS, gain reduction, phase correlation.
+- [COMPLETATO] Integrata PanicProtection con sanitizzazione NaN/Inf.
+- [COMPLETATO] Oversampling 1x/2x/4x/8x con latenza dichiarata all'host.
+- [COMPLETATO] Formati CLAP + VST3 nativi via export_greg_plugin! con ID `com.greg.audio.greg-db-x-160`.
+- [COMPLETATO] 5 test unitari passanti, cargo check pulito, 0 clippy warning per il crate.
+- [COMPLETATO] Documentazione scheda tecnica aggiornata (docs/plugins/greg_dbx_160.txt).
 
 ## Nuovo modulo condiviso: metering
 - [COMPLETATO] Definire un'API DSP real-time per input/output peak e RMS e gain reduction.

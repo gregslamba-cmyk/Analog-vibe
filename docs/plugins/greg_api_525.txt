@@ -1,15 +1,19 @@
 ID: greg_api_525
 Nome plugin: Greg 525
 Categoria: compressore/limiter FET peak-detecting
-Stato: pianificato; un solo ID per il modello 525 attraverso le revisioni documentate
-Riferimento hardware: API 525 originale e reissue 525 attuale.
+Stato: pianificato; accorpa le versioni API 525 (vintage/reissue) e API 525A con selettore di versione
+Riferimento hardware: famiglia API 525:
+- Profilo 525: modello vintage e reissue con circuito feedback peak-detecting, attack fisso ultra-veloce di 15 µs, quattro release modes frequency-dependent (0.1, 0.5, 2.0, 2.5 s nominali), Ceiling multifunzione e funzione De-Ess dedicata.
+- Profilo 525A: evoluzione discreta moderna con controllo di attacco esteso variabile da 15 µs a 15 ms, sette posizioni di rilascio discrete (0.05, 0.1, 0.2, 0.3, 0.5, 1, 2 s), op-amp discreti 2510/2520 e trasformatore d'uscita proprietario.
 
-Caratteristiche hardware:
-- Topologia feedback peak-detecting, attack fisso nominale di 15 us.
-- Ratio 2:1 oppure Limit 20:1; quattro release modes con rilascio dipendente dalla frequenza.
-- Threshold, Output e Ceiling multifunzione; De-Ess inserisce una curva inversa nel detector.
-- Link multi-unit, ingresso/uscita bilanciati attivi e bypass hardwire.
-- Massima riduzione dichiarata 25 dB; risposta ±0.5 dB 20 Hz–40 kHz.
+Caratteristiche e controlli:
+- Selettore di versione: 525 Vintage vs 525A Discrete.
+- Ratio: Compress 2:1 / Limit 20:1.
+- Ceiling: regola simultaneamente threshold e guadagno di compensazione makeup mantenendo il livello d'uscita costante.
+- Attack: fisso 15 µs (in modo 525) oppure regolabile da 15 µs a 15 ms (in modo 525A).
+- Release: 4 posizioni su 525; 7 scatti detent su 525A.
+- Filtro De-Ess su curva detector.
 
-Attenzione: la pagina API riporta release mode diversi fra descrizione e tabella specifiche. Non fissare i quattro valori finche' la discrepanza non viene verificata sul manuale. Unita' e reissue che mantengono il modello esatto confluiscono in questo plugin come profili; il 525A resta distinto perche' e' un altro modello.
-Fonte primaria: https://apiaudio.com/product/525-compressor/
+Fonti primarie:
+- API 525: https://apiaudio.com/product/525-compressor/
+- API 525A: https://apiaudio.com/product/525a-fet-compressor/

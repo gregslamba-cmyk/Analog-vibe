@@ -1,0 +1,18 @@
+ID: greg_dbx_165
+Nome plugin: Greg 165
+Categoria: compressore/limiter VCA
+Stato: implementato; accorpa le versioni DBX 165 e DBX 165A con selettore di versione
+Riferimento hardware: DBX 165 e DBX 165A:
+- Profilo 165: compressore OverEasy mono con detector RMS true e VCA feed-forward, controlli di attacco/rilascio manuali o automatici.
+- Profilo 165A: identico al Model 165 con l'aggiunta a valle del limiter/clipper istantaneo PeakStop controllato in tensione con arrotondamento progressivo dei picchi.
+
+Caratteristiche e controlli:
+- Selettore di versione: 165 (senza PeakStop) vs 165A (con PeakStop attivabile/regolabile).
+- Threshold (-40..+10 dB, rif. 0.775 V RMS), Ratio (1:1..infinito:1).
+- Modalità tempi: Auto Attack/Release oppure regolazione manuale (Attack 1..400 dB/ms, Release 10..4000 dB/s).
+- Output Gain (-20..+20 dB).
+- Sezione PeakStop (solo profilo 165A): soglia regolabile da -2 a +24 dBm con saturazione soft per contenimento dei transienti.
+- Metering completo: Input, Output, Gain Change. Ingresso detector ausiliario per filtri/sidechain.
+
+Fonti primarie:
+- Manuale combinato DBX 165/165A: https://dbxpro.com/en/products/165a

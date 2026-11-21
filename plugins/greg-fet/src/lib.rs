@@ -504,7 +504,7 @@ impl Plugin for GregFet {
                     );
                     // Record sidechain input for metering
                     self.metering.record_sidechain_input(key);
-                    
+
                     if self.params.sidechain_listen.value() {
                         *sample = key;
                         self.metering.record_sample(input_sample, *sample, 0.0);
@@ -535,7 +535,8 @@ impl Plugin for GregFet {
                 // Record stereo pair for phase correlation (channels 0 and 1)
                 let frame_channel_count = channel_samples.len();
                 if frame_channel_count >= 2 {
-                    self.metering.record_stereo_sample(stereo_samples[0], stereo_samples[1]);
+                    self.metering
+                        .record_stereo_sample(stereo_samples[0], stereo_samples[1]);
                 }
                 frame_index += 1;
             }

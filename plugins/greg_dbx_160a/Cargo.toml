@@ -11,4 +11,6 @@ crate-type = ["cdylib"]
 core-dsp = { path = "../../core-dsp" }
 plugin-support = { path = "../../plugin-support" }
 nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", default-features = false, features = ["assert_process_allocs", "vst3"] }
+greg_gui_core = { path = "../../crates/greg_gui_core" }
+vizia = "0.4"
 num-traits = "0.2"

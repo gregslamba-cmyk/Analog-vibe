@@ -3,12 +3,16 @@
 use std::sync::Arc;
 
 use nih_plug::prelude::*;
+use nih_plug_vizia::vizia::prelude::*;
+use nih_plug_vizia::widgets::ParamSlider;
 
 use core_dsp::core_dsp_modules::{
     metering::Metering,
     panic_protection::{PanicProtection, ProtectionResult},
     realtime_controls::BypassCrossfade,
 };
+
+use greg_gui_core::{GregGuiData, GuiTelemetry, create_greg_editor};
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
 enum FetRatio {
@@ -63,33 +67,51 @@ impl Default for Fet76Params {
             input: FloatParam::new(
                 "Input",
                 1.0,
-                FloatRange::Linear { min: 0.0, max: 10.0 },
+                FloatRange::Linear {
+                    min: 0.0,
+                    max: 10.0,
+                },
             ),
             output: FloatParam::new(
                 "Output",
                 0.0,
-                FloatRange::Linear { min: -12.0, max: 12.0 },
+                FloatRange::Linear {
+                    min: -12.0,
+                    max: 12.0,
+                },
             ),
             ratio: EnumParam::new("Ratio", FetRatio::R4),
             threshold: FloatParam::new(
                 "Threshold",
                 -10.0,
-                FloatRange::Linear { min: -40.0, max: 20.0 },
+                FloatRange::Linear {
+                    min: -40.0,
+                    max: 20.0,
+                },
             ),
             attack: FloatParam::new(
                 "Attack",
                 0.005,
-                FloatRange::Linear { min: 0.001, max: 10.0 },
+                FloatRange::Linear {
+                    min: 0.001,
+                    max: 10.0,
+                },
             ),
             release: FloatParam::new(
                 "Release",
                 0.1,
-                FloatRange::Linear { min: 0.01, max: 10.0 },
+                FloatRange::Linear {
+                    min: 0.01,
+                    max: 10.0,
+                },
             ),
             output_gain: FloatParam::new(
                 "Output Gain",
                 0.0,
-                FloatRange::Linear { min: -12.0, max: 12.0 },
+                FloatRange::Linear {
+                    min: -12.0,
+                    max: 12.0,
+                },
             ),
             bypass: BoolParam::new("Bypass", false),
         }
@@ -105,11 +127,13 @@ struct GregFet76 {
     panic_protection: PanicProtection,
     metering: Metering,
     sample_rate: f32,
+    telemetry: Arc<GuiTelemetry>,
 }
 
 impl Default for GregFet76 {
     fn default() -> Self {
         let sample_rate = 48_000.0;
+        let telemetry = GuiTelemetry::new(true);
         Self {
             params: Arc::new(Fet76Params::default()),
             routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix::default(),
@@ -119,6 +143,7 @@ impl Default for GregFet76 {
             panic_protection: PanicProtection::default(),
             metering: Metering::default(),
             sample_rate,
+            telemetry,
         }
     }
 }
@@ -148,8 +173,10 @@ impl Plugin for GregFet76 {
         _buffer_config: &BufferConfig,
         _context: &mut impl InitContext<Self>,
     ) -> bool {
-        self.routing_matrix
-            .configure(2, core_dsp::core_dsp_modules::routing_matrix::RoutingMode::Stereo);
+        self.routing_matrix.configure(
+            2,
+            core_dsp::core_dsp_modules::routing_matrix::RoutingMode::Stereo,
+        );
         self.bypass_ramp_samples = (_buffer_config.sample_rate as f64 * 0.005) as u32;
         self.last_bypassed = self.params.bypass.value();
         self.bypass_crossfade.set_bypassed(self.last_bypassed, 0);
@@ -172,7 +199,8 @@ impl Plugin for GregFet76 {
 
         let bypassed = self.params.bypass.value();
         if bypassed != self.last_bypassed {
-            self.bypass_crossfade.set_bypassed(bypassed, self.bypass_ramp_samples);
+            self.bypass_crossfade
+                .set_bypassed(bypassed, self.bypass_ramp_samples);
             self.last_bypassed = bypassed;
         }
 
@@ -199,6 +227,9 @@ impl Plugin for GregFet76 {
                 *right = out_right.clamp(-2.0, 2.0);
                 self.metering
                     .record_sample(input_abs, out_left.abs(), gain_reduction.abs());
+                self.telemetry.push_in_peak(0, input_abs);
+                self.telemetry.push_out_peak(0, out_left.abs());
+                self.telemetry.set_gr_and_phase(-gain_reduction.abs(), 1.0);
             }
         });
 
@@ -238,14 +269,15 @@ mod tests {
             &mut nih_plug::host::InfallibleInitContext,
         ));
     }
+
+    #[allow(unused)]
+    fn editor(&mut self, _cx: &mut vizia::prelude::Ctx) -> Option<vizia::prelude::Node> {
+        create_greg_editor(self, _cx)
+    }
 }
 
 fn finite(sample: f32) -> f32 {
-    if sample.is_finite() {
-        sample
-    } else {
-        0.0
-    }
+    if sample.is_finite() { sample } else { 0.0 }
 }
 
 fn silence_buffer(buffer: &mut Buffer) {
