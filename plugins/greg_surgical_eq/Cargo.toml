@@ -1,0 +1,6 @@
+[dependencies]
+core-dsp = { path = "../../core-dsp" }
+plugin-support = { path = "../../plugin-support" }
+nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", default-features = false, features = ["assert_process_allocs", "vst3"] }
+nih_plug_vizia = { git = "https://github.com/robbert-vdh/nih-plug.git" }
+greg_gui_core = { path = "../../crates/greg_gui_core" }

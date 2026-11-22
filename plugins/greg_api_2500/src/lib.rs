@@ -10,7 +10,9 @@ use core_dsp::core_dsp_modules::{
     resampler_bitdepth::{Oversampler, OversamplingFactor},
     sidechain_processor::{SidechainFilter, SidechainProcessor},
 };
-use greg_gui_core::{GuiTelemetry, create_greg_editor};
+use nih_plug_vizia::vizia::prelude::*;
+use greg_gui_core::{GuiTelemetry, create_greg_editor, param_control};
+use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
@@ -342,6 +344,13 @@ impl Default for GregApi2500Params {
     }
 }
 
+#[derive(Clone, Lens)]
+struct EditorData {
+    params: Arc<GregApi2500Params>,
+}
+
+impl Model for EditorData {}
+
 struct GregApi2500 {
     params: Arc<GregApi2500Params>,
     routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix,
@@ -519,11 +528,41 @@ impl Plugin for GregApi2500 {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
+        let params_main = self.params.clone();
+        let params_adv = self.params.clone();
         create_greg_editor(
             "Greg API 2500",
             self.telemetry.clone(),
-            |_cx| {},
-            |_cx| {},
+            move |cx| {
+                let editor_data = EditorData { params: params_main.clone() };
+                editor_data.build(cx);
+                ParamSlider::new(cx, EditorData::params, |p| &p.input).width(Pixels(115.0)).height(Pixels(24.0));
+                ParamSlider::new(cx, EditorData::params, |p| &p.threshold).width(Pixels(115.0)).height(Pixels(24.0));
+                ParamSlider::new(cx, EditorData::params, |p| &p.ratio).width(Pixels(115.0)).height(Pixels(24.0));
+                ParamSlider::new(cx, EditorData::params, |p| &p.knee).width(Pixels(115.0)).height(Pixels(24.0));
+                ParamSlider::new(cx, EditorData::params, |p| &p.attack).width(Pixels(115.0)).height(Pixels(24.0));
+                ParamSlider::new(cx, EditorData::params, |p| &p.release).width(Pixels(115.0)).height(Pixels(24.0));
+                ParamSlider::new(cx, EditorData::params, |p| &p.makeup_gain).width(Pixels(115.0)).height(Pixels(24.0));
+                ParamSlider::new(cx, EditorData::params, |p| &p.version).width(Pixels(115.0)).height(Pixels(24.0));
+                ParamSlider::new(cx, EditorData::params, |p| &p.tone_type).width(Pixels(115.0)).height(Pixels(24.0));
+                ParamSlider::new(cx, EditorData::params, |p| &p.thrust).width(Pixels(115.0)).height(Pixels(24.0));
+                ParamSlider::new(cx, EditorData::params, |p| &p.stereo_link).width(Pixels(115.0)).height(Pixels(24.0));
+                ParamSlider::new(cx, EditorData::params, |p| &p.oversampling).width(Pixels(115.0)).height(Pixels(24.0));
+            },
+            move |cx| {
+                let editor_data = EditorData { params: params_adv.clone() };
+                editor_data.build(cx);
+                ParamSlider::new(cx, EditorData::params, |p| &p.bypass).width(Pixels(115.0)).height(Pixels(24.0));
+                ParamSlider::new(cx, EditorData::params, |p| &p.invert_left).width(Pixels(115.0)).height(Pixels(24.0));
+                ParamSlider::new(cx, EditorData::params, |p| &p.invert_right).width(Pixels(115.0)).height(Pixels(24.0));
+                ParamSlider::new(cx, EditorData::params, |p| &p.external_sidechain).width(Pixels(115.0)).height(Pixels(24.0));
+                ParamSlider::new(cx, EditorData::params, |p| &p.sc_enable).width(Pixels(115.0)).height(Pixels(24.0));
+                ParamSlider::new(cx, EditorData::params, |p| &p.sc_listen).width(Pixels(115.0)).height(Pixels(24.0));
+                ParamSlider::new(cx, EditorData::params, |p| &p.sc_filter).width(Pixels(115.0)).height(Pixels(24.0));
+                ParamSlider::new(cx, EditorData::params, |p| &p.sc_freq).width(Pixels(115.0)).height(Pixels(24.0));
+                ParamSlider::new(cx, EditorData::params, |p| &p.sc_q).width(Pixels(115.0)).height(Pixels(24.0));
+                ParamSlider::new(cx, EditorData::params, |p| &p.sc_gain).width(Pixels(115.0)).height(Pixels(24.0));
+            },
         )
     }
 

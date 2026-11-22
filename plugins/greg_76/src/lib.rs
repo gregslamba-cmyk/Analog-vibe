@@ -15,7 +15,9 @@ use core_dsp::core_dsp_modules::{
     sidechain_processor::{SidechainFilter, SidechainProcessor},
     transformer_hysteresis::TransformerHysteresis,
 };
-use greg_gui_core::{GuiTelemetry, create_greg_editor};
+use nih_plug_vizia::vizia::prelude::*;
+use greg_gui_core::{GuiTelemetry, create_greg_editor, param_control};
+use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
@@ -111,6 +113,13 @@ struct SidechainSettings {
     q: f32,
     gain: f32,
 }
+
+#[derive(Clone, Lens)]
+struct EditorData {
+    params: Arc<GregFet76Params>,
+}
+
+impl Model for EditorData {}
 
 #[derive(Params)]
 struct GregFet76Params {
@@ -462,13 +471,50 @@ impl Plugin for GregFet76 {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
+        let params_main = self.params.clone();
+        let params_adv = self.params.clone();
         create_greg_editor(
             "Greg 76",
             self.telemetry.clone(),
-            |_cx| {},
-            |_cx| {},
+            move |cx| {
+                let editor_data = EditorData { params: params_main.clone() };
+                editor_data.build(cx);
+                VStack::new(cx, |cx| {
+                    Label::new(cx, "Main Parameters").font_size(12.0).color(Color::rgb(210, 215, 225)).bottom(Pixels(6.0));
+                    ParamSlider::new(cx, EditorData::params, |p| &p.input).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, EditorData::params, |p| &p.output).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, EditorData::params, |p| &p.ratio).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, EditorData::params, |p| &p.threshold).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, EditorData::params, |p| &p.attack).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, EditorData::params, |p| &p.release).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, EditorData::params, |p| &p.output_gain).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, EditorData::params, |p| &p.transformer_iron).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, EditorData::params, |p| &p.analog_drift).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, EditorData::params, |p| &p.oversampling).width(Pixels(115.0)).height(Pixels(24.0));
+                })
+                .child_space(Pixels(10.0));
+            },
+            move |cx| {
+                let editor_data = EditorData { params: params_adv.clone() };
+                editor_data.build(cx);
+                VStack::new(cx, |cx| {
+                    Label::new(cx, "Advanced Parameters").font_size(12.0).color(Color::rgb(210, 215, 225)).bottom(Pixels(6.0));
+                    ParamSlider::new(cx, EditorData::params, |p| &p.bypass).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, EditorData::params, |p| &p.invert_left).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, EditorData::params, |p| &p.invert_right).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, EditorData::params, |p| &p.external_sidechain).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_filter_enabled).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_listen).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_filter).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_frequency).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_q).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_gain).width(Pixels(115.0)).height(Pixels(24.0));
+                })
+                .child_space(Pixels(10.0));
+            },
         )
     }
+
 fn process(
         &mut self,
         buffer: &mut Buffer,

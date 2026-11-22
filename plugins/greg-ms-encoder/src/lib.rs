@@ -8,7 +8,9 @@ use core_dsp::core_dsp_modules::{
     realtime_controls::BypassCrossfade,
     routing_matrix::{RoutingMode, StereoFrame},
 };
-use greg_gui_core::{GuiTelemetry, create_greg_editor};
+use nih_plug_vizia::vizia::prelude::*;
+use greg_gui_core::{GuiTelemetry, create_greg_editor, param_control};
+use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
 
 #[derive(Params)]
@@ -62,6 +64,13 @@ impl Default for MidSideEncoderParams {
         }
     }
 }
+
+#[derive(Clone, Lens)]
+struct EditorData {
+    params: Arc<MidSideEncoderParams>,
+}
+
+impl Model for EditorData {}
 
 struct GregMsEncoder {
     params: Arc<MidSideEncoderParams>,
@@ -143,11 +152,25 @@ impl Plugin for GregMsEncoder {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
+        let params_main = self.params.clone();
+        let params_adv = self.params.clone();
         create_greg_editor(
             "Greg M/S Encoder",
             self.telemetry.clone(),
-            |_cx| {},
-            |_cx| {},
+            move |cx| {
+                let editor_data = EditorData { params: params_main.clone() };
+                editor_data.build(cx);
+                ParamSlider::new(cx, EditorData::params, |p| &p.mid_trim);
+                ParamSlider::new(cx, EditorData::params, |p| &p.side_trim);
+                ParamSlider::new(cx, EditorData::params, |p| &p.balance);
+            },
+            move |cx| {
+                let editor_data = EditorData { params: params_adv.clone() };
+                editor_data.build(cx);
+                ParamSlider::new(cx, EditorData::params, |p| &p.invert_left);
+                ParamSlider::new(cx, EditorData::params, |p| &p.invert_right);
+                ParamSlider::new(cx, EditorData::params, |p| &p.bypass);
+            },
         )
     }
 

@@ -10,7 +10,9 @@ use core_dsp::core_dsp_modules::{
     realtime_controls::{BypassCrossfade, LatencyDelay},
     surgical_eq::{EqBand, EqPhaseMode, SurgicalEq},
 };
-use greg_gui_core::{GuiTelemetry, create_greg_editor};
+use nih_plug_vizia::vizia::prelude::*;
+use greg_gui_core::{GuiTelemetry, create_greg_editor, param_control};
+use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
 
 const BAND_COUNT: usize = 10;
@@ -112,6 +114,13 @@ struct GregSurgicalEqParams {
     #[nested(array, group = "Bands")]
     bands: [EqBandParams; BAND_COUNT],
 }
+
+#[derive(Clone, Lens)]
+struct EditorData {
+    params: Arc<GregSurgicalEqParams>,
+}
+
+impl Model for EditorData {}
 
 impl Default for GregSurgicalEqParams {
     fn default() -> Self {
@@ -294,11 +303,26 @@ impl Plugin for GregSurgicalEq {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
+        let params_main = self.params.clone();
+        let params_adv = self.params.clone();
         create_greg_editor(
             "Greg Surgical EQ",
             self.telemetry.clone(),
-            |_cx| {},
-            |_cx| {},
+            move |cx| {
+                let editor_data = EditorData { params: params_main.clone() };
+                editor_data.build(cx);
+                ParamSlider::new(cx, EditorData::params, |p| &p.phase_mode);
+                ParamSlider::new(cx, EditorData::params, |p| &p.bypass);
+            },
+            move |cx| {
+                let editor_data = EditorData { params: params_adv.clone() };
+                editor_data.build(cx);
+                ParamSlider::new(cx, EditorData::params, |p| &p.bands[0].enabled);
+                ParamSlider::new(cx, EditorData::params, |p| &p.bands[0].filter_type);
+                ParamSlider::new(cx, EditorData::params, |p| &p.bands[0].frequency);
+                ParamSlider::new(cx, EditorData::params, |p| &p.bands[0].gain);
+                ParamSlider::new(cx, EditorData::params, |p| &p.bands[0].q);
+            },
         )
     }
 

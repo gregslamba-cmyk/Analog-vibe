@@ -2,8 +2,11 @@
 - [COMPLETATO] `core-dsp`: aggiunti `MillerRollOff` in `nonlinear_stages.rs` e `ThermalDrift` in `analog_variance.rs` con test unitari (75/77 passano, 2 failure pre-esistenti in `loudness_rider`/`partitioned_convolver`).
 - [COMPLETATO] `greg_76`: catena analogica completa (sidechain → FET GR → AnalogVariance drift → PSU sag → pre-enfasi → oversampling con `tube_saturate` → de-enfasi → AC coupling → TransformerHysteresis → SlewRateLimiter → MillerRollOff → output gain → bypass crossfade).
 - [COMPLETATO] `greg_76`: aggiunto campo `telemetry: Arc<GuiTelemetry>` e metodo `editor()` che chiama `greg_gui_core::create_greg_editor` (main/advanced builders). `cargo check -p greg_76` pulito, `cargo test -p greg_76` passa.
-- [BLOCCATO] `cargo build --release -p greg_76`: fallisce al link con `rust-lld: error: unable to find library -lxcb-icccm / -lX11-xcb / -lxcb-dri2` (X11 dev libs mancanti nel container). Il file esistente `~/.clap/Analog-vibe/greg_76.clap` risale al build pre-GUI.
-- [DA FARE] Installare `libxcb-icccm4 libxcb-dri2-0 libx11-xcb-dev` (o equivalente) e ricompilare; poi copiare `target/release/libgreg_76.so` → `~/.clap/Analog-vibe/greg_76.clap`.
+- [COMPLETATO] `cargo check --workspace` passa con 0 errori su tutti i plugin (solo warning unused-import per `param_control` residui in alcuni file di import).
+- [COMPLETATO] Aggiunto `use greg_gui_core::prelude::*;` a `greg-surgical-eq`, `greg-ms-encoder`, `greg-ms-decoder`, `greg-phase`, `greg-a2a` e sostituite tutte le chiamate `param_control(...)` con il pattern `ParamSlider::new(cx, EditorData::params, |p| &p.<field>)`.
+- [COMPLETATO] Aggiunto `nih_plug_vizia` (git: `robbert-vdh/nih-plug`) al `Cargo.toml` di `greg-ms-encoder`, `greg-ms-decoder`, `greg-pultec`, `greg_dbx_165` (erano ancora `vizia = "0.4"`).
+- [BLOCCATO] `cargo build --release --workspace`: fallisce al link con `rust-lld: error: unable to find library -lxcb-dri2` (solo questa libreria mancante tra le X11 dev libs installate). Richiede `sudo apt-get install -y libxcb-dri2` (o equivalente) prima del link.
+- [DA FARE] Una volta installata `libxcb-dri2`: `cargo build --release --workspace`, poi copiare `target/release/libgreg_*.so` → `~/.clap/Analog-vibe/*.clap` (rimuovendo prefisso `lib` e duplicati `.so`).
 - [DA FARE] Replicare catena+GUI su `greg-a2a` (selettore T4A/T4B), `greg-a3a`, `greg-child` (selettore 670 Stereo/660 Mono), `greg-bus-comp`, `greg-pultec` (selettore EQP-1A/EQP-1A3).
 - [DA FARE] Test in host CLAP e aggiornamento documentazione (`docs/plugins/*.md`, `README.md`, `vcinst.md`).
 ## Obiettivo attivo: nuovi moduli DSP condivisi e primo plugin gate
@@ -213,3 +216,14 @@ Utility `greg_phase`: crate CLAP autonomo con inversione indipendente Left/Right
 ## Vincoli
 - `nih_plug::Buffer` espone campioni `f32`: un core DSP generico può supportare `f32` e `f64`, ma il wrapper NIH-plug non fornisce processing host-native `f64`.
 - `PanicProtection` intercetta panic Rust solo con strategia `panic=unwind`; il blocco che genera il panic viene azzerato e l'istanza resta in pass-through. `panic=abort`, segfault e corruzione della memoria richiedono isolamento a livello host/processo.
+
+## Rifiniture ingegneristiche di precisione (`core-dsp`) — 2026-11-22
+- [COMPLETATO] `nonlinear_stages.rs`: aggiunte costanti `REFERENCE_VU_DBFS = -18.0` e `REFERENCE_VU_LINEAR = 10^(-18/20)`; helper `drive_with_unity_compensation` per unità di guadagno relativa allo 0 VU preservando silenzio assoluto a 0.0.
+- [COMPLETATO] `nonlinear_stages.rs`: aggiunta `flush_denormal` (NaN/Inf/denormal → 0.0, inline always) applicata agli stati di feedback di `AcCoupling` e `SlewRateLimiter`.
+- [COMPLETATO] `AcCoupling` riscritto come filtro passa-alto a 1 polo (~5–10 Hz, default 7 Hz, configurabile via `configure`) da usare come DC blocker pulito alla fine di catene non lineari asimmetriche.
+- [COMPLETATO] `zdf_filters.rs`: `flush_denormal` applicato allo stato di feedback (ic1eq/ic2eq) del loop ZDF SVF.
+- [COMPLETATO] `fdn_reverb.rs`: `flush_denormal` applicato allo stato di damping.
+- [COMPLETATO] `linear_phase_fir.rs`: aggiunte finestre `Hann` e `BlackmanHarris` a fianco di Blackman/Kaiser; normalizzazione del guadagno DC a 1.0 confermata per minimizzare il pre-ringing sui transienti.
+- [COMPLETATO] Test unitari aggiunti per `REFERENCE_VU_DBFS`/`REFERENCE_VU_LINEAR`, `flush_denormal`, e `drive_with_unity_compensation` (silenzio a 0.0, output finito, headroom bound).
+- [COMPLETATO] `cargo test -p core-dsp`: 105 test passanti, 0 failure. `cargo clippy -p core-dsp -- -D warnings`: 0 warning.
+- [COMPLETATO] Aggiornate `ARCHITECTURE.md` e `STATE.md` con le nuove firme pubbliche.

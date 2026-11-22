@@ -15,7 +15,10 @@ use core_dsp::core_dsp_modules::{
     sidechain_processor::{SidechainFilter, SidechainProcessor},
     transformer_hysteresis::TransformerHysteresis,
 };
-use greg_gui_core::{GuiTelemetry, create_greg_editor};
+use nih_plug_vizia::vizia::prelude::*;
+use greg_gui_core::{GuiTelemetry, create_greg_editor, param_control};
+use greg_gui_core::prelude::*;
+use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
@@ -228,6 +231,13 @@ impl Default for GregA2aParams {
     }
 }
 
+#[derive(Clone, Lens)]
+struct EditorData {
+    params: Arc<GregA2aParams>,
+}
+
+impl Model for EditorData {}
+
 impl Default for GregA2a {
     fn default() -> Self {
         Self {
@@ -404,11 +414,35 @@ impl Plugin for GregA2a {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
+        let params_main = self.params.clone();
+        let params_adv = self.params.clone();
         create_greg_editor(
             "Greg A2A",
             self.telemetry.clone(),
-            |_cx| {},
-            |_cx| {},
+            move |cx| {
+                let editor_data = EditorData { params: params_main.clone() };
+                editor_data.build(cx);
+                ParamSlider::new(cx, EditorData::params, |p| &p.peak_reduction);
+                ParamSlider::new(cx, EditorData::params, |p| &p.gain);
+                ParamSlider::new(cx, EditorData::params, |p| &p.mode);
+                ParamSlider::new(cx, EditorData::params, |p| &p.tube_drive);
+                ParamSlider::new(cx, EditorData::params, |p| &p.oversampling);
+            },
+            move |cx| {
+                let editor_data = EditorData { params: params_adv.clone() };
+                editor_data.build(cx);
+                ParamSlider::new(cx, EditorData::params, |p| &p.bypass);
+                ParamSlider::new(cx, EditorData::params, |p| &p.invert_left);
+                ParamSlider::new(cx, EditorData::params, |p| &p.invert_right);
+                ParamSlider::new(cx, EditorData::params, |p| &p.external_sidechain);
+                ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_filter_enabled);
+                ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_listen);
+                ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_filter);
+                ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_frequency);
+                ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_q);
+                ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_gain);
+                ParamSlider::new(cx, EditorData::params, |p| &p.analog_drift);
+            },
         )
     }
 

@@ -5,9 +5,17 @@ use core_dsp::core_dsp_modules::{
     realtime_controls::BypassCrossfade,
 };
 use greg_gui_core::{GuiTelemetry, create_greg_editor};
+use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
+
+#[derive(Clone, Lens)]
+struct GregGateGuiData {
+    params: Arc<GregGateParams>,
+}
+
+impl Model for GregGateGuiData {}
 
 #[derive(Params)]
 struct GregGateParams {
@@ -139,11 +147,34 @@ impl Plugin for GregGate {
         }
     }
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
+        let params_arc_main = self.params.clone();
+        let params_arc_adv = self.params.clone();
         create_greg_editor(
             "Greg Gate",
             self.telemetry.clone(),
-            |_cx| {},
-            |_cx| {},
+            move |cx| {
+                let gui_data = GregGateGuiData { params: params_arc_main.clone() };
+                gui_data.build(cx);
+                VStack::new(cx, |cx| {
+                    Label::new(cx, "Greg Gate").font_size(14.0).color(Color::rgb(255, 255, 255));
+                    Label::new(cx, "Main Parameters").font_size(12.0).color(Color::rgb(210, 215, 225));
+                    ParamSlider::new(cx, GregGateGuiData::params, |p| &p.threshold).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, GregGateGuiData::params, |p| &p.ratio).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, GregGateGuiData::params, |p| &p.attack).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, GregGateGuiData::params, |p| &p.release).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, GregGateGuiData::params, |p| &p.mix).width(Pixels(115.0)).height(Pixels(24.0));
+                    ParamSlider::new(cx, GregGateGuiData::params, |p| &p.bypass).width(Pixels(115.0)).height(Pixels(24.0));
+                })
+                .height(Pixels(268.0)).background_color(Color::rgb(34, 37, 42)).child_space(Pixels(10.0));
+            },
+            move |cx| {
+                let gui_data = GregGateGuiData { params: params_arc_adv.clone() };
+                gui_data.build(cx);
+                VStack::new(cx, |cx| {
+                    Label::new(cx, "Advanced Parameters").font_size(12.0).color(Color::rgb(210, 215, 225));
+                })
+                .height(Pixels(200.0)).background_color(Color::rgb(28, 30, 35)).child_space(Pixels(10.0));
+            },
         )
     }
     fn process(

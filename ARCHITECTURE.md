@@ -60,52 +60,24 @@ impl TransformerHysteresis {
 Nonlinear saturation modes, dynamic mirror pre/de-emphasis, physical slew-rate limiting, and inter-stage AC coupling.
 
 ```rust
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum NonlinearMode {
-    SoftClip,
-    HardClip,
-    Asymmetric,
-    WaveFold,
-    FullWaveRectify,
-    TubeTriode,
-    TubePentode,
-    SolidStateClassA,
-    SolidStateFet,
-    DiscreteOpAmp,
-}
+pub const REFERENCE_VU_DBFS: f64 = -18.0;
+pub const REFERENCE_VU_LINEAR: f64 = 0.125_892_541_179_416_7; // 10^(-18/20)
 
-pub struct SlewRateLimiter {
-    // ...
-}
-impl SlewRateLimiter {
-    pub fn new() -> Self;
-    pub fn reset(&mut self);
-    pub fn process(&mut self, sample: f64, max_v_per_sec: f64, sample_rate: f64) -> f64;
-}
-
-pub struct AcCoupling {
-    // ...
-}
-impl AcCoupling {
-    pub fn new() -> Self;
-    pub fn reset(&mut self);
-    pub fn process(&mut self, sample: f64) -> f64;
-}
-
-pub struct DynamicMirrorPreEmphasis {
-    // ...
-}
-impl DynamicMirrorPreEmphasis {
-    pub fn new() -> Self;
-    pub fn reset(&mut self);
-    pub fn pre_emphasis(&mut self, sample: f64, emphasis: f64) -> f64;
-    pub fn de_emphasis(&mut self, sample: f64, emphasis: f64) -> f64;
-}
-
+pub fn flush_denormal(x: f64) -> f64; // NaN/Inf/sfdenormal → 0.0
+pub fn drive_with_unity_compensation(sample: f64, drive: f64, mode: NonlinearMode) -> f64;
 pub fn process_nonlinear(sample: f64, drive: f64, mode: NonlinearMode) -> f64;
 pub fn soft_clip<T: Float>(sample: T, drive: T) -> T;
 pub fn tube_saturate<T: Float>(sample: T, drive: T) -> T;
+
+pub struct SlewRateLimiter { /* ... */ }
+pub struct AcCoupling { /* 1-pole HPF DC blocker ~5–10 Hz */ }
+impl AcCoupling {
+    pub fn configure(&mut self, sample_rate: f64, cutoff_hz: Option<f64>) -> bool;
+    pub fn reset(&mut self);
+    pub fn process(&mut self, sample: f64) -> f64;
+}
 ```
+`AcCoupling` is a clean one-pole high-pass (DC blocker) with a sample-rate-dependent cutoff (default ~7 Hz) and must be configured via `configure` before processing; call it at the end of any asymmetric non-linear chain to avoid DC-offset accumulation. `flush_denormal` is applied to feedback states throughout the core-dsp loop (ZDF SVF, transformer/AC-coupling states, FDN damping states).
 
 ### 4. `psu_sag` (`psu_sag.rs`)
 Power supply voltage sag under heavy load transients with zero noise/ripple by default.
