@@ -120,12 +120,26 @@ Componenti preamp/EQ/dinamica esistenti non vengono rimossi. Un modello per ID; 
 | `greg_space` | Ampiezza e immagine stereo, con attenzione alla correlazione/fase. |
 | `greg_pingpong` | Delay ping-pong sincronizzato alla DAW con routing/tap configurabili. |
 | `greg_ir_reverb` | Riverbero a convoluzione; specificare formati supportati e latenza. |
+| greg\_verb | Riverbero classico in stile lexicon con I classicii template (es: room, chamber, hall) dal suono pulito. Con parametri completi. |
 | `greg_bus_summer` | Sommatore non lineare con modelli di mixer selezionabili; fase successiva e riferimenti da identificare. |
+| greg\_plate | Simulazione di plate reverrb che possa simulare diversi magneti e diverse piastre metalliche, magneti posti a diverse distanze e con tutti I parametri |
 | `greg_denoiser`, `greg_declipper`, `greg_dehummer`, `greg_declicker` | Restauro: riduzione rumore, ricostruzione clipping, rimozione ronzio e riparazione click senza danneggiare il programma. |
 
 ### Moduli DSP condivisi
 
-Riusa i moduli disponibili in `core-dsp`; verifica la scheda prima di aggiungere logica duplicata: `routing_matrix`, `phase_inversion`, `filters`, `sidechain_processor`, `resampler_bitdepth`, `nonlinear_stages`, `transformer_hysteresis`, `psu_sag`, `analog_variance`, `realtime_controls`, `metering`, `surgical_eq`, `panic_protection`, `opto_compressor`, `vari_mu`.
+Riusa i moduli disponibili in `core-dsp`; verifica la scheda prima di aggiungere logica duplicata: `routing_matrix`, `phase_inversion`, `filters`, `sidechain_processor`, `resampler_bitdepth`, `nonlinear_stages`, `transformer_hysteresis`, `psu_sag`, `analog_variance`, `realtime_controls`, `metering`, `surgical_eq`, `panic_protection`, `opto_compressor`, `vari_mu`.  Trasformatori d’ingresso. Delay per creare riverberi e delay
+
+\### Nuovi Moduli DSP Condivisi Pianificati (\`core-dsp\`)
+
+\- \`delay\_lines\`: linee di ritardo pre-allocate con lettura frazionaria (interpolazione All-Pass / Cubica) e modulazione LFO senza perdita di alte frequenze (base per riverberi, chorus, echo).
+
+\- \`fdn\_reverb\`: motore riverbero algoritmico con diffusori All-Pass, matrice di feedback ortogonale (Hadamard/Householder 8x8–16x16), damping in frequenza ZDF e modulazione multi-fase (per Plate EMT-style e Hall/Room Lexicon/Valhalla-style).
+
+\- \`partitioned\_convolver\`: convoluzione partizionata a blocchi (Overlap-Save via \`realfft\`, pre-allocata in \`initialize()\`) per risposte impulsive lunghe a latenza zero (\`greg\_ir\_reverb\`).
+
+\- \`loudness\_rider\`: detector di loudness sillabica K-weighted, gate con isteresi per silenzio/respiri (\`Floor\`) e smoother a rampa in \`dB/sec\` con lookahead (\`greg\_leveler\`, \`greg\_deesser\`, \`greg\_depop\`).
+
+\- \`spectral\_analyzer\`: calcolo FFT finestrato su ring-buffer lock-free con smoothing logaritmico a frazioni d'ottava per telemetria grafica (\`GregSpectrum\`).
 
 ## Fedelta': riferimenti correnti e regole di accorpamento
 
@@ -142,7 +156,7 @@ Riusa i moduli disponibili in `core-dsp`; verifica la scheda prima di aggiungere
     - `greg_manley_comp`: accorpa Variable Mu Standard e Variable Mu Mastering con selettore di versione.
 - **Modelli intrinsecamente distinti:** restano plugin separati i dispositivi che presentano topologie hardware, controlli e percorsi di segnale totalmente differenti (es. Neve 1073 vs 1081 vs 1084 vs 88RS; API 525 FET vs 527 VCA vs 225L vs 2500 bus vs T25 tube; Harrison 32C banco analogico vs Mixbus strip software).
 - Non usare caratteristiche di un channel strip moderno come se descrivessero tutte le revisioni vintage. Per console modulari/API Vision documenta la configurazione dei moduli.
-- Le specifiche non bastano a provare una replica. Per ogni dichiarazione di fedelta' servono revisione identificata e misure ripetibili (risposta, livelli, transienti/recovery, curva I/O, spettro/THD, rumore, carico e setup).
+- Le specifiche non bastano a provare una replica. Per ogni dichiarazione di fedelta' servono revisione identificata e misure ripetibili (risposta, livelli, transienti/recovery, curva I/O, spettro/THD, rumore, carico e setup) da effettuare con clap host.
 
 \## STANDARD OBBLIGATORIO DI COMMENTO DEL CODICE (RUSTDOC \& DSP)
 
@@ -155,3 +169,41 @@ Ogni file \`.rs\` creato o modificato deve essere documentato chiaramente second
 3\. \*\*Commenti matematici DSP (\`//\`):\*\* Ogni blocco di calcolo in \`initialize()\` o \`process()\` (es. coefficienti filtri, costanti di tempo attack/release, curve di saturazione, hysteresis, crosstalk) deve spiegare la formula fisica/matematica applicata e il motivo acustico della scelta.
 
 4\. \*\*Divieto di commenti ovvi:\*\* Non commentare operazioni banali (es. \`x += 1; // incrementa x\`), commenta sempre il \*\*perché fisico, circuitale o acustico\*\* (es. \`// Compensazione guadagno post-tanh per mantenere unity gain\`).
+
+5\. \*\* il codice deve essere commentato in inglese anche quando necessario tra le righe del codice per facilitare la lettura umana di potenziali collaboratori
+
+Obbligatorio per tutte le emulazioni analogiche
+
+\- \*\*Catena Analogica \& Trasformatori Obbligatori (\`core-dsp\`):\*\* Ogni plugin che emula hardware analogico (compressori, EQ, channel strip, preamp, saturatori, nastro) DEVE integrare obbligatoriamente nello stadio di \*\*Input\*\* e nello stadio di \*\*Output\*\* (e negli stadi intermedi dove previsto dalla topologia originale, es. interstage/sidechain) il modello fisico \*\*\`TransformerHysteresis\`\*\* + \*\*\`AcCoupling\`\*\* + \*\*\`AnalogVariance\`\*\* di \`core-dsp\` (eseguiti dentro l'oversampler anti-alias), affiancati dagli stadi non lineari appropriati (\`TubeTriode\`/\`Pentode\`, \`SolidStateClassA\`, \`SolidStateFet\`, \`DiscreteOpAmp\`, \`PsuSag\`).
+
+\- \*Controllo utente:\* Esporre nel pannello \`+ ADV\` il parametro \*\*\`Transformer / Iron\`\*\* (calibrato di default sul carattere nominalmente fedele all'unità originale, scalabile da \`0%\` bypass trasformatore fino a \`100%+\` saturazione spinta) e \*\*\`Analog Drift\`\*\* (con rumore/ripple rigorosamente \`OFF\` di default).
+
+\- \*Eccezione:\* Le utility digitali pure (\`greg\_phase\`, \`greg\_ms\_encoder\`, \`greg\_ms\_decoder\`, \`greg\_surgical\_eq\`, \`greg\_leveler\`, \`greg\_limiter\`) restano trasparenti di default, con eventuale colorazione solo se attivata esplicitamente dall'utente.
+
+\- \*\*Catena Analogica \& Trasformatori Obbligatori (\`core-dsp\`):\*\* Ogni plugin che emula hardware analogico (compressori, EQ, channel strip, preamp, saturatori, nastro) DEVE integrare obbligatoriamente nello stadio di \*\*Input\*\* e nello stadio di \*\*Output\*\* (e negli stadi intermedi dove previsto dalla topologia originale) il modello fisico \*\*\`TransformerHysteresis\`\*\* + \*\*\`AcCoupling\`\*\* + \*\*\`AnalogVariance\`\*\* di \`core-dsp\` (eseguiti dentro l'oversampler anti-alias), affiancati dagli stadi non lineari appropriati (\`TubeTriode\`/\`Pentode\`, \`SolidStateClassA\`, \`SolidStateFet\`, \`DiscreteOpAmp\`, \`PsuSag\`):
+
+\- \*\*Effetto Miller (\`nonlinear\_stages\`):\*\* Roll-off dinamico delle altissime frequenze (filtro passa-basso a 1 polo che scende dolcemente proporzionalmente al drive) per arrotondare gli acuti come nei tubi a vuoto e nei transistor discreti.
+
+\- \*\*Bias Shift Asimmetrico (\`AcCoupling\`):\*\* Spostamento temporaneo del punto di lavoro DC sotto transienti forti per generare compressione armonica naturale di 2ª armonica.
+
+\- \*\*Deriva Termica Lenta (\`AnalogVariance\`):\*\* Aggiornata \*\*una sola volta per blocco audio\*\* (\*block-rate\*, zero \`sin()\` per campione) con due oscillatori asincroni L/R (\~17.3 s e \~23.7 s) inizializzati dal seed deterministico \`instance\_id\` e scalati da \`analog\_drift\`. Modula di ±0.2% bias DC e costanti di tempo senza alterare pitch, CPU o ripetibilità dei test (rumore/ripple rigorosamente \`OFF\` di default).
+
+\- \*Controlli utente (\`+ ADV\`):\* Esporre \*\*\`Transformer / Iron\`\*\* (calibrato di default sull'unità originale, scalabile \`0% .. 100%+\`) e \*\*\`Analog Drift\`\*\*. Le utility digitali pure (\`greg\_phase\`, \`greg\_ms\_encoder\`, \`greg\_ms\_decoder\`, \`greg\_surgical\_eq\`, \`greg\_leveler\`, \`greg\_limiter\`) restano trasparenti di default.
+
+\### Nuovi Moduli DSP Condivisi Pianificati (\`core-dsp\`)
+
+\- \`delay\_lines\`: linee di ritardo pre-allocate con lettura frazionaria (interpolazione All-Pass / Cubica) e modulazione LFO senza perdita di alte frequenze (base per riverberi, chorus, echo).
+
+\- \`fdn\_reverb\`: motore riverbero algoritmico con diffusori All-Pass, matrice di feedback ortogonale (Hadamard/Householder 8x8–16x16), damping in frequenza ZDF e modulazione multi-fase (per \`greg\_plate\_reverb\` EMT-style e \`greg\_algo\_reverb\` Lexicon/Valhalla-style).
+
+\- \`partitioned\_convolver\`: convoluzione partizionata a blocchi (Overlap-Save via \`realfft\`, pre-allocata in \`initialize()\`) per risposte impulsive lunghe a latenza zero (\`greg\_ir\_reverb\`).
+
+\- \`loudness\_rider\`: detector di loudness sillabica K-weighted, gate con isteresi per silenzio/respiri (\`Floor\`) e smoother a rampa in \`dB/sec\` con lookahead (\`greg\_leveler\`, \`greg\_deesser\`, \`greg\_depop\`).
+
+\- \`spectral\_analyzer\`: calcolo FFT finestrato su ring-buffer lock-free con smoothing logaritmico a frazioni d'ottava per telemetria grafica (\`GregSpectrum\`).
+
+\- \*\*GUI Temporanea Minimale 2D Obbligatoria (Fase Beta/Test Ergonomico):\*\* Ogni plugin del workspace DEVE includere obbligatoriamente una GUI 2D leggera e funzionale tramite \`greg\_gui\_core::create\_greg\_editor\` (controlli principali nel Main Panel + estensioni in \`+ ADV\`, meter IN/OUT, Phase e GR), pensata esclusivamente per testare l'ergonomia, i parametri e il suono in DAW senza rallentare lo sviluppo; la grafica definitiva ad alta fedeltà verrà realizzata in una fase successiva.
+
+Obbligatorio:
+
+\- \*\*GUI Temporanea Minimale 2D Obbligatoria (Fase Beta/Test Ergonomico):\*\* Ogni plugin del workspace DEVE includere obbligatoriamente una GUI 2D leggera e funzionale tramite \`greg\_gui\_core::create\_greg\_editor\` (controlli principali nel Main Panel + estensioni in \`+ ADV\`, meter IN/OUT, Phase e GR), pensata esclusivamente per testare l'ergonomia, i parametri e il suono in DAW senza rallentare lo sviluppo; la grafica definitiva ad alta fedeltà verrà realizzata in una fase successiva.

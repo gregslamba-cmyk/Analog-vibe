@@ -7,6 +7,7 @@ members = [
     "plugins/greg-a3a",
     "plugins/greg-child",
     "plugins/greg-bus-comp",
+    "plugins/greg-gate",
     "plugins/greg-limiter",
     "plugins/greg-surgical-eq",
     "plugins/greg-ms-encoder",

@@ -1,3 +1,20 @@
+## Stato aggiornato (2026-11-22) — Analog chain + GUI su `greg_76`
+- [COMPLETATO] `core-dsp`: aggiunti `MillerRollOff` in `nonlinear_stages.rs` e `ThermalDrift` in `analog_variance.rs` con test unitari (75/77 passano, 2 failure pre-esistenti in `loudness_rider`/`partitioned_convolver`).
+- [COMPLETATO] `greg_76`: catena analogica completa (sidechain → FET GR → AnalogVariance drift → PSU sag → pre-enfasi → oversampling con `tube_saturate` → de-enfasi → AC coupling → TransformerHysteresis → SlewRateLimiter → MillerRollOff → output gain → bypass crossfade).
+- [COMPLETATO] `greg_76`: aggiunto campo `telemetry: Arc<GuiTelemetry>` e metodo `editor()` che chiama `greg_gui_core::create_greg_editor` (main/advanced builders). `cargo check -p greg_76` pulito, `cargo test -p greg_76` passa.
+- [BLOCCATO] `cargo build --release -p greg_76`: fallisce al link con `rust-lld: error: unable to find library -lxcb-icccm / -lX11-xcb / -lxcb-dri2` (X11 dev libs mancanti nel container). Il file esistente `~/.clap/Analog-vibe/greg_76.clap` risale al build pre-GUI.
+- [DA FARE] Installare `libxcb-icccm4 libxcb-dri2-0 libx11-xcb-dev` (o equivalente) e ricompilare; poi copiare `target/release/libgreg_76.so` → `~/.clap/Analog-vibe/greg_76.clap`.
+- [DA FARE] Replicare catena+GUI su `greg-a2a` (selettore T4A/T4B), `greg-a3a`, `greg-child` (selettore 670 Stereo/660 Mono), `greg-bus-comp`, `greg-pultec` (selettore EQP-1A/EQP-1A3).
+- [DA FARE] Test in host CLAP e aggiornamento documentazione (`docs/plugins/*.md`, `README.md`, `vcinst.md`).
+## Obiettivo attivo: nuovi moduli DSP condivisi e primo plugin gate
+- [COMPLETATO] Aggiunti i moduli condivisi `delay_lines`, `fdn_reverb`, `loudness_rider`, `spectral_analyzer` in `core-dsp/src/core_dsp_modules/`.
+- [COMPLETATO] `delay_lines`: DelayLine con interpolazione cubica e AllPassDelayLine.
+- [COMPLETATO] `fdn_reverb`: FdnReverb con delay lines e feedback Hadamard.
+- [COMPLETATO] `loudness_rider`: LoudnessRider con attacco/rilascio/gain reduction.
+- [COMPLETATO] `spectral_analyzer`: SpectralAnalyzer alias a StftAnalyzer.
+- [COMPLETATO] Creato il primo plugin nuovo `greg_gate` con parametri Threshold/Ratio/Attack/Release/Mix e bypass.
+- [COMPLETATO] Macro `export_greg_plugin!` e `cargo check --workspace` superati (0 errori).
+
 ## Obiettivo completato: Doppia Licenza (GPLv3 + Commerciale) e Compatibilità Multi-Formato (CLAP, VST3, LV2, AU)
 - [COMPLETATO] `LICENSE`: creato file di licenza root con intestazione chiara di Dual Licensing (GPLv3 per derivati open-source e licenza commerciale a basso costo per prodotti commerciali/chiusi) e testo integrale GNU GPLv3.
 - [COMPLETATO] `README.md`: aggiunta sezione "License & Commercial Use".

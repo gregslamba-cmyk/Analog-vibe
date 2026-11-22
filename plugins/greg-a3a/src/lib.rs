@@ -1,16 +1,23 @@
 #![allow(unknown_lints, semicolon_in_expressions_from_non_local_macros)]
 
 use std::{array, sync::Arc};
+use std::sync::atomic::Ordering;
 
 use core_dsp::core_dsp_modules::{
+    analog_variance::{AnalogVariance, ThermalDrift},
     metering::Metering,
-    nonlinear_stages,
+    nonlinear_stages::{
+        AcCoupling, DynamicMirrorPreEmphasis, MillerRollOff, SlewRateLimiter,
+    },
     opto_compressor::{OptoCell, OptoMode, target_solid_state_reduction_db},
     panic_protection::{PanicProtection, ProtectionResult},
+    psu_sag::PsuSag,
     realtime_controls::{BypassCrossfade, LatencyDelay},
     resampler_bitdepth::{Oversampler, OversamplingFactor},
     sidechain_processor::{SidechainFilter, SidechainProcessor},
+    transformer_hysteresis::TransformerHysteresis,
 };
+use greg_gui_core::{GuiTelemetry, create_greg_editor};
 use nih_plug::prelude::*;
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
@@ -209,6 +216,16 @@ struct GregA3a {
     bypass_ramp_samples: u32,
     panic_protection: PanicProtection,
     metering: Metering,
+    telemetry: Arc<GuiTelemetry>,
+    transformers_in: [TransformerHysteresis; plugin_support::MAX_AUDIO_CHANNELS],
+    transformers_out: [TransformerHysteresis; plugin_support::MAX_AUDIO_CHANNELS],
+    ac_couplings: [AcCoupling; plugin_support::MAX_AUDIO_CHANNELS],
+    slew_limiters: [SlewRateLimiter; plugin_support::MAX_AUDIO_CHANNELS],
+    miller_rolloffs: [MillerRollOff; plugin_support::MAX_AUDIO_CHANNELS],
+    pre_emphases: [DynamicMirrorPreEmphasis; plugin_support::MAX_AUDIO_CHANNELS],
+    power_sags: [PsuSag<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    analog_variance: AnalogVariance,
+    thermal_drift: ThermalDrift,
 }
 
 impl Default for GregA3a {
@@ -233,6 +250,16 @@ impl Default for GregA3a {
             bypass_ramp_samples: 1,
             panic_protection: PanicProtection::default(),
             metering: Metering::default(),
+            telemetry: GuiTelemetry::new(true),
+            transformers_in: [TransformerHysteresis::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            transformers_out: [TransformerHysteresis::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            ac_couplings: [AcCoupling::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            slew_limiters: [SlewRateLimiter::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            miller_rolloffs: [MillerRollOff::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            pre_emphases: [DynamicMirrorPreEmphasis::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            power_sags: [PsuSag::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            analog_variance: AnalogVariance::from_seed(0x41_33_41_33, 0.02, 0.001, 0.0),
+            thermal_drift: ThermalDrift::new(),
         }
     }
 }
@@ -331,6 +358,32 @@ impl Plugin for GregA3a {
             }
             context.set_latency_samples(latency_samples);
         }
+
+        // Initialize analog stages
+        self.thermal_drift.configure(self.sample_rate as f64);
+        for sag in &mut self.power_sags {
+            sag.initialize(self.sample_rate, 0.1, 0.3);
+        }
+        for t in &mut self.transformers_in {
+            t.reset();
+        }
+        for t in &mut self.transformers_out {
+            t.reset();
+        }
+        for ac in &mut self.ac_couplings {
+            ac.reset();
+        }
+        for sl in &mut self.slew_limiters {
+            sl.reset();
+        }
+        for m in &mut self.miller_rolloffs {
+            m.reset();
+            m.configure(self.sample_rate as f64);
+        }
+        for pe in &mut self.pre_emphases {
+            pe.reset();
+        }
+
         initialized && sidechains_initialized && delays_initialized
     }
 
@@ -351,6 +404,15 @@ impl Plugin for GregA3a {
         for crossfade in &mut self.bypass_crossfades {
             crossfade.set_bypassed(self.last_bypassed, 0);
         }
+    }
+
+    fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
+        create_greg_editor(
+            "Greg A3A",
+            self.telemetry.clone(),
+            |_cx| {},
+            |_cx| {},
+        )
     }
 
     fn process(
@@ -449,7 +511,7 @@ impl Plugin for GregA3a {
                     let drive = util::db_to_gain(self.params.output_drive.value());
                     let oversampler = &mut self.oversamplers[channel];
                     let wet = oversampler.process(finite(compressed), factor, |value| {
-                        nonlinear_stages::soft_clip(value, drive)
+                        core_dsp::core_dsp_modules::nonlinear_stages::soft_clip(value, drive)
                     });
                     *sample = finite(self.bypass_crossfades[channel].process(dry, wet));
                     self.metering.record_sample(input, *sample, reduction);
@@ -458,6 +520,18 @@ impl Plugin for GregA3a {
             }
         });
         self.metering.publish_block();
+        // Update GUI telemetry with per-block meter values
+        self.telemetry.num_channels.store(2, Ordering::Relaxed);
+        let snap = self.metering.snapshot();
+        // Convert dBFS peak to linear sample value for telemetry
+        let to_linear = |dbfs: f32| -> f32 { 10.0_f32.powf(dbfs * 0.05) };
+        if snap.input_peak_dbfs.is_finite() {
+            self.telemetry.push_in_peak(0, to_linear(snap.input_peak_dbfs));
+        }
+        if snap.output_peak_dbfs.is_finite() {
+            self.telemetry.push_out_peak(0, to_linear(snap.output_peak_dbfs));
+        }
+        self.telemetry.set_gr_and_phase(snap.gain_reduction_db, snap.phase_correlation);
         if protection_result == ProtectionResult::Tripped {
             silence_buffer(buffer);
         }

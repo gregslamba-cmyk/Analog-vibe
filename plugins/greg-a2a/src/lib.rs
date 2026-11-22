@@ -1,6 +1,7 @@
 #![allow(unknown_lints, semicolon_in_expressions_from_non_local_macros)]
 
 use std::{array, sync::Arc};
+use std::sync::atomic::Ordering;
 
 use core_dsp::core_dsp_modules::{
     analog_variance::AnalogVariance,
@@ -14,6 +15,7 @@ use core_dsp::core_dsp_modules::{
     sidechain_processor::{SidechainFilter, SidechainProcessor},
     transformer_hysteresis::TransformerHysteresis,
 };
+use greg_gui_core::{GuiTelemetry, create_greg_editor};
 use nih_plug::prelude::*;
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
@@ -111,6 +113,7 @@ struct GregA2a {
     bypass_ramp_samples: u32,
     panic_protection: PanicProtection,
     metering: Metering,
+    telemetry: Arc<GuiTelemetry>,
 }
 
 #[derive(Params)]
@@ -252,6 +255,7 @@ impl Default for GregA2a {
             bypass_ramp_samples: 1,
             panic_protection: PanicProtection::default(),
             metering: Metering::default(),
+            telemetry: GuiTelemetry::new(true),
         }
     }
 }
@@ -399,6 +403,15 @@ impl Plugin for GregA2a {
         }
     }
 
+    fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
+        create_greg_editor(
+            "Greg A2A",
+            self.telemetry.clone(),
+            |_cx| {},
+            |_cx| {},
+        )
+    }
+
     fn process(
         &mut self,
         buffer: &mut Buffer,
@@ -520,7 +533,16 @@ impl Plugin for GregA2a {
             }
         });
         self.metering.publish_block();
-
+        self.telemetry.num_channels.store(2, Ordering::Relaxed);
+        let snap = self.metering.snapshot();
+        let to_linear = |dbfs: f32| -> f32 { 10.0_f32.powf(dbfs * 0.05) };
+        if snap.input_peak_dbfs.is_finite() {
+            self.telemetry.push_in_peak(0, to_linear(snap.input_peak_dbfs));
+        }
+        if snap.output_peak_dbfs.is_finite() {
+            self.telemetry.push_out_peak(0, to_linear(snap.output_peak_dbfs));
+        }
+        self.telemetry.set_gr_and_phase(snap.gain_reduction_db, snap.phase_correlation);
         if protection_result == ProtectionResult::Tripped {
             silence_buffer(buffer);
         }

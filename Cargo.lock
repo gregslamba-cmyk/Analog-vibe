@@ -2147,6 +2147,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "greg-gate"
+version = "0.1.0"
+dependencies = [
+ "core-dsp",
+ "greg_gui_core",
+ "nih_plug",
+ "plugin-support",
+]
+
+[[package]]
 name = "greg-limiter"
 version = "0.1.0"
 dependencies = [
@@ -2195,6 +2205,7 @@ name = "greg-pultec"
 version = "0.1.0"
 dependencies = [
  "core-dsp",
+ "greg_gui_core",
  "nih_plug",
  "plugin-support",
 ]

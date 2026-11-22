@@ -1,5 +1,5 @@
 [package]
-name = "greg_dbx_160a"
+name = "greg-gate"
 version = "0.1.0"
 edition = "2024"
 license = "GPL-3.0-or-later"
@@ -12,5 +12,3 @@ core-dsp = { path = "../../core-dsp" }
 plugin-support = { path = "../../plugin-support" }
 nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", default-features = false, features = ["assert_process_allocs", "vst3"] }
 greg_gui_core = { path = "../../crates/greg_gui_core" }
-vizia = "0.4"
-num-traits = "0.2"
