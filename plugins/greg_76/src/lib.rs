@@ -16,7 +16,7 @@ use core_dsp::core_dsp_modules::{
     transformer_hysteresis::TransformerHysteresis,
 };
 use nih_plug_vizia::vizia::prelude::*;
-use greg_gui_core::{GuiTelemetry, create_greg_editor, param_control};
+use greg_gui_core::{GuiTelemetry, create_greg_editor};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
 
@@ -481,16 +481,16 @@ impl Plugin for GregFet76 {
                 editor_data.build(cx);
                 VStack::new(cx, |cx| {
                     Label::new(cx, "Main Parameters").font_size(12.0).color(Color::rgb(210, 215, 225)).bottom(Pixels(6.0));
-                    ParamSlider::new(cx, EditorData::params, |p| &p.input).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, EditorData::params, |p| &p.output).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, EditorData::params, |p| &p.ratio).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, EditorData::params, |p| &p.threshold).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, EditorData::params, |p| &p.attack).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, EditorData::params, |p| &p.release).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, EditorData::params, |p| &p.output_gain).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, EditorData::params, |p| &p.transformer_iron).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, EditorData::params, |p| &p.analog_drift).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, EditorData::params, |p| &p.oversampling).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.input).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.output).width(Pixels(115.0)).height(Pixels(24.0));
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.ratio).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.threshold).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.attack).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.release).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.output_gain).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.transformer_iron).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.analog_drift).width(Pixels(115.0)).height(Pixels(24.0));
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.oversampling).width(Pixels(115.0)).height(Pixels(24.0));
                 })
                 .child_space(Pixels(10.0));
             },
@@ -499,16 +499,16 @@ impl Plugin for GregFet76 {
                 editor_data.build(cx);
                 VStack::new(cx, |cx| {
                     Label::new(cx, "Advanced Parameters").font_size(12.0).color(Color::rgb(210, 215, 225)).bottom(Pixels(6.0));
-                    ParamSlider::new(cx, EditorData::params, |p| &p.bypass).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, EditorData::params, |p| &p.invert_left).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, EditorData::params, |p| &p.invert_right).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, EditorData::params, |p| &p.external_sidechain).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_filter_enabled).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_listen).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_filter).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_frequency).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_q).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_gain).width(Pixels(115.0)).height(Pixels(24.0));
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.bypass).width(Pixels(115.0)).height(Pixels(24.0));
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_left).width(Pixels(115.0)).height(Pixels(24.0));
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_right).width(Pixels(115.0)).height(Pixels(24.0));
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.external_sidechain).width(Pixels(115.0)).height(Pixels(24.0));
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.sidechain_filter_enabled).width(Pixels(115.0)).height(Pixels(24.0));
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.sidechain_listen).width(Pixels(115.0)).height(Pixels(24.0));
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.sidechain_filter).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.sidechain_frequency).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.sidechain_q).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.sidechain_gain).width(Pixels(115.0)).height(Pixels(24.0));
                 })
                 .child_space(Pixels(10.0));
             },
@@ -641,6 +641,8 @@ fn process(
 
                     *sample = finite(self.bypass_crossfades[channel].process(dry, wet as f32));
                     self.metering.record_sample(input, *sample, gr);
+                    self.telemetry.push_in_peak(channel, input);
+                    self.telemetry.push_out_peak(channel, *sample);
                 }
                 frame_index += 1;
             }

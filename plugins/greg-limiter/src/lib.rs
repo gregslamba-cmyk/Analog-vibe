@@ -475,13 +475,13 @@ impl Plugin for GregLimiter {
                 VStack::new(cx, |cx| {
                     Label::new(cx, "Greg Limiter").font_size(14.0).color(Color::rgb(255, 255, 255));
                     Label::new(cx, "Main Parameters").font_size(12.0).color(Color::rgb(210, 215, 225));
-                    ParamSlider::new(cx, GregLimiterGuiData::params, |p| &p.input).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, GregLimiterGuiData::params, |p| &p.ceiling).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, GregLimiterGuiData::params, |p| &p.release).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, GregLimiterGuiData::params, |p| &p.lookahead).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, GregLimiterGuiData::params, |p| &p.oversampling).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, GregLimiterGuiData::params, |p| &p.stereo_link).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, GregLimiterGuiData::params, |p| &p.bypass).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, GregLimiterGuiData::params, |p| &p.input).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, GregLimiterGuiData::params, |p| &p.ceiling).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, GregLimiterGuiData::params, |p| &p.release).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, GregLimiterGuiData::params, |p| &p.lookahead).width(Pixels(115.0)).height(Pixels(24.0));
+                    EnumSwitch::new(cx, GregLimiterGuiData::params, |p| &p.oversampling).width(Pixels(115.0)).height(Pixels(24.0));
+                    ToggleSwitch::new(cx, GregLimiterGuiData::params, |p| &p.stereo_link).width(Pixels(115.0)).height(Pixels(24.0));
+                    ToggleSwitch::new(cx, GregLimiterGuiData::params, |p| &p.bypass).width(Pixels(115.0)).height(Pixels(24.0));
                 })
                 .height(Pixels(268.0)).background_color(Color::rgb(34, 37, 42)).child_space(Pixels(10.0));
             },
@@ -490,12 +490,12 @@ impl Plugin for GregLimiter {
                 gui_data.build(cx);
                 VStack::new(cx, |cx| {
                     Label::new(cx, "Advanced Parameters").font_size(12.0).color(Color::rgb(210, 215, 225));
-                    ParamSlider::new(cx, GregLimiterGuiData::params, |p| &p.external_sidechain).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, GregLimiterGuiData::params, |p| &p.sidechain_listen).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, GregLimiterGuiData::params, |p| &p.sidechain_filter).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, GregLimiterGuiData::params, |p| &p.sidechain_frequency).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, GregLimiterGuiData::params, |p| &p.sidechain_q).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, GregLimiterGuiData::params, |p| &p.sidechain_gain).width(Pixels(115.0)).height(Pixels(24.0));
+                    ToggleSwitch::new(cx, GregLimiterGuiData::params, |p| &p.external_sidechain).width(Pixels(115.0)).height(Pixels(24.0));
+                    ToggleSwitch::new(cx, GregLimiterGuiData::params, |p| &p.sidechain_listen).width(Pixels(115.0)).height(Pixels(24.0));
+                    EnumSwitch::new(cx, GregLimiterGuiData::params, |p| &p.sidechain_filter).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, GregLimiterGuiData::params, |p| &p.sidechain_frequency).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, GregLimiterGuiData::params, |p| &p.sidechain_q).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, GregLimiterGuiData::params, |p| &p.sidechain_gain).width(Pixels(115.0)).height(Pixels(24.0));
                 })
                 .height(Pixels(200.0)).background_color(Color::rgb(28, 30, 35)).child_space(Pixels(10.0));
             },
@@ -606,9 +606,16 @@ impl Plugin for GregLimiter {
                     );
                 }
                 if stereo_link && channel_count >= 2 {
-                    let linked = keys[0].abs().max(keys[1].abs());
-                    keys[0] = linked;
-                    keys[1] = linked;
+                    // Link all active channels: find max key across all channels
+                    let mut max_key = 0.0_f32;
+                    for &k in &keys[0..channel_count] {
+                        if k > max_key {
+                            max_key = k;
+                        }
+                    }
+                    for ch in 0..channel_count {
+                        keys[ch] = max_key;
+                    }
                 }
 
                 for (channel, sample) in channel_samples.iter_mut().enumerate() {
@@ -644,13 +651,15 @@ impl Plugin for GregLimiter {
                             processed[channel],
                             gain_reduction_db,
                         );
+                    self.telemetry.push_in_peak(channel, raw_values[channel]);
+                    self.telemetry.push_out_peak(channel, processed[channel]);
                     }
                     *sample = processed[channel];
                 }
             }
         });
         self.metering.publish_block();
-        self.telemetry.num_channels.store(2, Ordering::Relaxed);
+        self.telemetry.num_channels.store(self.routing_matrix.channel_count() as u32, Ordering::Relaxed);
         let snap = self.metering.snapshot();
         let to_linear = |dbfs: f32| -> f32 { 10.0_f32.powf(dbfs * 0.05) };
         if snap.input_peak_dbfs.is_finite() {

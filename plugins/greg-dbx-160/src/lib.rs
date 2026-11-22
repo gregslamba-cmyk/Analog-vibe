@@ -1,0 +1,1 @@
+self.telemetry.num_channels.store(self.routing_matrix.channel_count() as u32, Ordering::Relaxed);

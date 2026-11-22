@@ -515,13 +515,15 @@ impl Plugin for GregA3a {
                     });
                     *sample = finite(self.bypass_crossfades[channel].process(dry, wet));
                     self.metering.record_sample(input, *sample, reduction);
+                    self.telemetry.push_in_peak(channel, input);
+                    self.telemetry.push_out_peak(channel, *sample);
                 }
                 frame_index += 1;
             }
         });
         self.metering.publish_block();
         // Update GUI telemetry with per-block meter values
-        self.telemetry.num_channels.store(2, Ordering::Relaxed);
+        self.telemetry.num_channels.store(self.routing_matrix.channel_count() as u32, Ordering::Relaxed);
         let snap = self.metering.snapshot();
         // Convert dBFS peak to linear sample value for telemetry
         let to_linear = |dbfs: f32| -> f32 { 10.0_f32.powf(dbfs * 0.05) };

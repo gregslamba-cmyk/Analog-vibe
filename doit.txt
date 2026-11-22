@@ -1,0 +1,78 @@
+
+fai questo
+
+Leggi `vcinst.md`, `ARCHITECTURE.md` e `core-dsp/src/core_dsp_modules/mod.rs`.
+
+Obiettivo: espandere `core-dsp` con gli ultimi mattoni per mix/mastering avanzato e con un motore completo per **campionatori hardware vintage stile Akai MPC60 / MPC3000 / S950 / SP-1200** (`mpc_sampler_engine`), mantenendo tassativamente `#![forbid(unsafe_code)]`, elaborazione interna `f64`, zero allocazioni/lock nel path real-time `process()` e lo standard di commenti Rustdoc/DSP di `vcinst.md`:
+
+1. **Estensione Filtri Digitali nei file esistenti (`zdf_filters.rs`):**
+   - Aggiungi **Tilt EQ** (curva basculante simmetrica attorno a `pivot_hz`), **Cascata IIR multi-ordine** (`Butterworth` / `Bessel` con pendenze `12, 24, 36, 48, 96 dB/oct`), **Comb Filter** (feedforward/feedback con damping) e **Natural-Phase EQ** (filtro Bell/Shelf ZDF con oversampling interno 2x per eliminare il cramping vicino a Nyquist senza pre-ringing).
+
+2. **Nuovo modulo `mix_mastering_fx.rs` (esportato in `mod.rs` e `lib.rs`):**
+   - **`MultibandCrossover`:** Split Linkwitz-Riley LR4 (24 dB/oct) e LR8 (48 dB/oct) a 2, 3 e 4 bande con somma piatta a `0.0 dB`.
+   - **`TruePeakLimiter`:** Detector con oversampling 4x (ITU-R BS.1770-4 inter-sample peak), buffer lookahead pre-allocato in `initialize()` e rilascio adattivo a 2 stadi.
+   - **`TransientShaper`:** Doppio inviluppo differenziale (veloce vs lento, indipendente dalla soglia) con controllo indipendente di `attack_db` e `sustain_db`.
+   - **`DynamicEqBand`:** Banda ZDF (`Bell` / `Shelf`) modulata dinamicamente da un detector passa-banda dedicato (`threshold_db`, `ratio`, `range_db`, `attack_ms`, `release_ms`).
+   - **`StereoSpatializer`:** Haas micro-delay + decorrelatore All-Pass stereo 100% mono-compatibile.
+
+3. **Nuovo modulo `mpc_sampler_engine.rs` (Motore Campionatore Hardware Akai MPC / Vintage Sampler, esportato in `mod.rs` e `lib.rs`):**
+   - **`SampleBuffer` & WAV I/O:** Buffer audio immutabile condivisibile (`Arc<SampleBuffer>`) in `f64` con sample rate nativo, decoder/encoder WAV PCM puro (16-bit, 24-bit, 32-bit float) senza allocazioni nel thread audio, e supporto **Slice / Chop points** (fino a 64 slice per traccia/loop con fade-in/fade-out anti-click).
+   - **`VintageConverterStage` (Emulazione Convertitori MPC60 / MPC3000 / S950 / SP-1200):**
+     - **MPC60 (12-bit / 40 kHz):** Quantizzazione non-lineare a 12-bit con enfasi pre-ADC e de-enfasi analogica post-DAC.
+     - **SP-1200 (12-bit / 26.04 kHz):** Decimazione Zero-Order Hold (ZOH) a 26.04 kHz senza filtro anti-alias in ingresso (aliasing musicale sui piatti/alti) + filtro analogico di ricostruzione SSM2044 (4-pole ZDF resonant low-pass) in uscita.
+     - **MPC3000 (16-bit / 44.1 kHz):** Convertitore 16-bit caldo con leggero soft-clipping dello stadio d'ingresso e filtro di ricostruzione morbido.
+     - **S950 Filter:** Filtro passa-basso risonante stile Akai S950 con tracking della frequenza sul pitch del campione.
+   - **`MpcVoicePool` (Campionatore Polifonico a 32 Voci / 16 Pad Banks, zero allocazioni in `process()`):**
+     - 32 voci pre-allocate con **Polyphony Modes** (`Mono`, `Poly`, `Note-Off / Gate` vs `One-Shot`), **Voice Stealing** (ruba la voce più vecchia sullo stesso pad per evitare tagli bruschi su hi-hat/rullanti veloci) e **Mute / Choke Groups** (es. Open Hi-Hat tagliato dal Closed Hi-Hat).
+     - **Pitch-Shift & Variable-Rate Resampling** (interpolazione lineare ZOH sporca stile vintage vs cubica Hermite pulita) + **Envelope AHDSR** e **Velocity-to-Volume / Velocity-to-Filter** tipici dell'MPC.
+   - **`MpcSwingClock` (Timing & Groove Sequencer MPC):**
+     - Generatore di clock e **MPC Swing** (50%..75% sul 16°/8° pari) + calcolo sub-campione del ritardo di trigger per ricreare il feeling ritmico hardware di Roger Linn.
+
+4. **Verifica:**
+   - Aggiungi test unitari deterministici per ogni nuovo componente (inclusi decoder/encoder WAV, choke groups, voice stealing, convertitori MPC60/SP1200/MPC3000, MPC swing timing, crossover flat sum, true-peak limiter).
+Leggi `vcinst.md`, `ARCHITECTURE.md` e `core-dsp/src/core_dsp_modules/mod.rs`.
+
+Obiettivo: espandere `core-dsp` con gli ultimi mattoni per mix/mastering avanzato e con un motore completo per **campionatori hardware vintage stile Akai MPC60 / MPC3000 / S950 / SP-1200** (`mpc_sampler_engine`), mantenendo tassativamente `#![forbid(unsafe_code)]`, elaborazione interna `f64`, zero allocazioni/lock nel path real-time `process()` e lo standard di commenti Rustdoc/DSP di `vcinst.md`:
+
+1. **Estensione Filtri Digitali nei file esistenti (`zdf_filters.rs`):**
+   - Aggiungi **Tilt EQ** (curva basculante simmetrica attorno a `pivot_hz`), **Cascata IIR multi-ordine** (`Butterworth` / `Bessel` con pendenze `12, 24, 36, 48, 96 dB/oct`), **Comb Filter** (feedforward/feedback con damping) e **Natural-Phase EQ** (filtro Bell/Shelf ZDF con oversampling interno 2x per eliminare il cramping vicino a Nyquist senza pre-ringing).
+
+2. **Nuovo modulo `mix_mastering_fx.rs` (esportato in `mod.rs` e `lib.rs`):**
+   - **`MultibandCrossover`:** Split Linkwitz-Riley LR4 (24 dB/oct) e LR8 (48 dB/oct) a 2, 3 e 4 bande con somma piatta a `0.0 dB`.
+   - **`TruePeakLimiter`:** Detector con oversampling 4x (ITU-R BS.1770-4 inter-sample peak), buffer lookahead pre-allocato in `initialize()` e rilascio adattivo a 2 stadi.
+   - **`TransientShaper`:** Doppio inviluppo differenziale (veloce vs lento, indipendente dalla soglia) con controllo indipendente di `attack_db` e `sustain_db`.
+   - **`DynamicEqBand`:** Banda ZDF (`Bell` / `Shelf`) modulata dinamicamente da un detector passa-banda dedicato (`threshold_db`, `ratio`, `range_db`, `attack_ms`, `release_ms`).
+   - **`StereoSpatializer`:** Haas micro-delay + decorrelatore All-Pass stereo 100% mono-compatibile.
+
+3. **Nuovo modulo `mpc_sampler_engine.rs` (Motore Campionatore Hardware Akai MPC / Vintage Sampler, esportato in `mod.rs` e `lib.rs`):**
+   - **`SampleBuffer` & Loader WAV Universale (16-bit fino a 64-bit Integer & Float):**
+     - Buffer audio immutabile condivisibile (`Arc<SampleBuffer>`) memorizzato internamente in `f64` nativo con sample rate originale e metadati di **Slice / Chop points** (fino a 64 slice per traccia/loop con fade-in/fade-out anti-click).
+     - Decoder/Encoder WAV PCM puro (senza allocazioni nel thread audio, conversione eseguita una tantum al caricamento) con supporto completo a tutti i formati standard e ad alta risoluzione: **16-bit PCM Integer**, **24-bit PCM Integer**, **32-bit PCM Integer**, **32-bit IEEE Float** e **64-bit IEEE Float** (incluso header `WAVE_FORMAT_EXTENSIBLE`), tutti convertiti e resamplati in `f64`.
+   - **`VintageConverterStage` (Emulazione Convertitori MPC60 / MPC3000 / S950 / SP-1200):**
+     - **MPC60 (12-bit / 40 kHz):** Quantizzazione non-lineare a 12-bit con enfasi pre-ADC e de-enfasi analogica post-DAC.
+     - **SP-1200 (12-bit / 26.04 kHz):** Decimazione Zero-Order Hold (ZOH) a 26.04 kHz senza filtro anti-alias in ingresso (aliasing musicale sui piatti/alti) + filtro analogico di ricostruzione SSM2044 (4-pole ZDF resonant low-pass) in uscita.
+     - **MPC3000 (16-bit / 44.1 kHz):** Convertitore 16-bit caldo con leggero soft-clipping dello stadio d'ingresso e filtro di ricostruzione morbido.
+     - **S950 Filter:** Filtro passa-basso risonante stile Akai S950 con tracking della frequenza sul pitch del campione.
+   - **`MpcVoicePool` (Campionatore Polifonico a 32 Voci / 16 Pad Banks, zero allocazioni in `process()`):**
+     - 32 voci pre-allocate con **Polyphony Modes** (`Mono`, `Poly`, `Note-Off / Gate` vs `One-Shot`), **Voice Stealing** (ruba la voce più vecchia sullo stesso pad per evitare tagli bruschi su hi-hat/rullanti veloci) e **Mute / Choke Groups** (es. Open Hi-Hat tagliato dal Closed Hi-Hat).
+     - **Resampling & Pitch-Shift multi-qualità** in `f64` (interpolazione lineare/ZOH sporca stile vintage vs cubica Hermite / sinc pulita) + **Envelope AHDSR** e **Velocity-to-Volume / Velocity-to-Filter** tipici dell'MPC.
+   - **`MpcSwingClock` (Timing & Groove Sequencer MPC):**
+     - Generatore di clock e **MPC Swing** (50%..75% sul 16°/8° pari) + calcolo sub-campione del ritardo di trigger per ricreare il feeling ritmico hardware di Roger Linn.
+
+4. **Verifica:**
+   - Aggiungi test unitari deterministici per ogni nuovo componente (inclusi round-trip WAV 16/24/32-int e 32/64-float, choke groups, voice stealing, convertitori MPC60/SP1200/MPC3000, MPC swing timing, crossover flat sum, true-peak limiter).
+   - Aggiorna `ARCHITECTURE.md` e `STATE.md`.
+   - Esegui `cargo test -p core-dsp` e `cargo clippy -p core-dsp -- -D warnings` finché tutto passa con 0 errori e 0 warning.
+   
+   
+ da qui in poi ignora
+ 
+ 
+Leggi `crates/plugin-support/src/lib.rs`, `core-dsp/src/core_dsp_modules/sidechain_processor.rs` e `plugins/greg_api_2500/src/lib.rs`.
+
+Obiettivo: esporre l'ingresso **Sidechain (`aux_input_ports`)** fino a **7.1 (8 canali)** su tutti i plugin dinamici (compressori, gate, limiter) e assicurarsi che l'elaborazione sidechain lavori su tutti i canali presenti fino a 8 canali:
+1. In `crates/plugin-support/src/lib.rs` (e negli `AUDIO_IO_LAYOUTS` dei plugin dinamici), aggiungi una porta aux sidechain opzionale che supporti dinamicamente da Mono (1 ch) fino a 7.1 (8 ch) in abbinamento ai layout principali (Stereo, Mono, Quad, 5.1, 7.1).
+2. In `SidechainProcessor` (o nel loop `process()` dei plugin con sidechain), supporta fino a `MAX_AUDIO_CHANNELS = 8` canali sidechain indipendenti (inclusi filtri sidechain HPF/LPF/Bell per-canale fino a 8 canali), gestendo in sicurezza il caso in cui l'aux abbia meno canali del main bus (es. sidechain mono/stereo su traccia 7.1).
+3. Verifica con `cargo check --workspace` e `cargo test --workspace` finché tutto compila con 0 errori.
+
+

@@ -324,7 +324,7 @@ impl Plugin for GregPultec {
     const URL: &'static str = core_dsp::core_dsp_modules::plugin_export::URL;
     const EMAIL: &'static str = core_dsp::core_dsp_modules::plugin_export::EMAIL;
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
-    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &plugin_support::DYNAMICS_IO_LAYOUTS;
+    const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &plugin_support::SURROUND_IO_LAYOUTS;
     const MIDI_INPUT: MidiConfig = MidiConfig::None;
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
     type SysExMessage = ();
@@ -574,7 +574,7 @@ impl Plugin for GregPultec {
         });
 
         self.metering.publish_block();
-        self.telemetry.num_channels.store(2, Ordering::Relaxed);
+        self.telemetry.num_channels.store(self.routing_matrix.channel_count() as u32, Ordering::Relaxed);
         let snap = self.metering.snapshot();
         let to_linear = |dbfs: f32| -> f32 { 10.0_f32.powf(dbfs * 0.05) };
         if snap.input_peak_dbfs.is_finite() {

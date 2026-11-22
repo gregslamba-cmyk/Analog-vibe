@@ -16,8 +16,7 @@ use core_dsp::core_dsp_modules::{
     transformer_hysteresis::TransformerHysteresis,
 };
 use nih_plug_vizia::vizia::prelude::*;
-use greg_gui_core::{GuiTelemetry, create_greg_editor, param_control};
-use greg_gui_core::prelude::*;
+use greg_gui_core::{GuiTelemetry, create_greg_editor};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
 
@@ -422,26 +421,26 @@ impl Plugin for GregA2a {
             move |cx| {
                 let editor_data = EditorData { params: params_main.clone() };
                 editor_data.build(cx);
-                ParamSlider::new(cx, EditorData::params, |p| &p.peak_reduction);
-                ParamSlider::new(cx, EditorData::params, |p| &p.gain);
-                ParamSlider::new(cx, EditorData::params, |p| &p.mode);
-                ParamSlider::new(cx, EditorData::params, |p| &p.tube_drive);
-                ParamSlider::new(cx, EditorData::params, |p| &p.oversampling);
+                RotaryKnob::new(cx, EditorData::params, |p| &p.peak_reduction);
+                RotaryKnob::new(cx, EditorData::params, |p| &p.gain);
+                EnumSwitch::new(cx, EditorData::params, |p| &p.mode);
+                RotaryKnob::new(cx, EditorData::params, |p| &p.tube_drive);
+                EnumSwitch::new(cx, EditorData::params, |p| &p.oversampling);
             },
             move |cx| {
                 let editor_data = EditorData { params: params_adv.clone() };
                 editor_data.build(cx);
-                ParamSlider::new(cx, EditorData::params, |p| &p.bypass);
-                ParamSlider::new(cx, EditorData::params, |p| &p.invert_left);
-                ParamSlider::new(cx, EditorData::params, |p| &p.invert_right);
-                ParamSlider::new(cx, EditorData::params, |p| &p.external_sidechain);
-                ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_filter_enabled);
-                ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_listen);
-                ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_filter);
-                ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_frequency);
-                ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_q);
-                ParamSlider::new(cx, EditorData::params, |p| &p.sidechain_gain);
-                ParamSlider::new(cx, EditorData::params, |p| &p.analog_drift);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.bypass);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_left);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_right);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.external_sidechain);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.sidechain_filter_enabled);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.sidechain_listen);
+                EnumSwitch::new(cx, EditorData::params, |p| &p.sidechain_filter);
+                RotaryKnob::new(cx, EditorData::params, |p| &p.sidechain_frequency);
+                RotaryKnob::new(cx, EditorData::params, |p| &p.sidechain_q);
+                RotaryKnob::new(cx, EditorData::params, |p| &p.sidechain_gain);
+                RotaryKnob::new(cx, EditorData::params, |p| &p.analog_drift);
             },
         )
     }
@@ -562,12 +561,14 @@ impl Plugin for GregA2a {
                         self.bypass_crossfades[channel].process(dry, transformer_out as f32),
                     );
                     self.metering.record_sample(input, *sample, reduction_db);
+                    self.telemetry.push_in_peak(channel, input);
+                    self.telemetry.push_out_peak(channel, *sample);
                 }
                 frame_index += 1;
             }
         });
         self.metering.publish_block();
-        self.telemetry.num_channels.store(2, Ordering::Relaxed);
+        self.telemetry.num_channels.store(self.routing_matrix.channel_count() as u32, Ordering::Relaxed);
         let snap = self.metering.snapshot();
         let to_linear = |dbfs: f32| -> f32 { 10.0_f32.powf(dbfs * 0.05) };
         if snap.input_peak_dbfs.is_finite() {

@@ -1,3 +1,13 @@
+## Stato aggiornato (2026-11-22) — Dynamic Multi-Channel Routing (Mono → 7.1)
+
+- [COMPLETATO] `plugin-support/src/lib.rs`: estesi i layout I/O dinamici — `CHANNELS = [2, 1, 3, 4, 5, 6, 7, 8]` (Stereo first), `SURROUND_IO_LAYOUTS` da 8 elementi (Stereo/Mono/LCR/Quad/5.0/5.1/7.0/7.1 without aux sidechain), `DYNAMICS_IO_LAYOUTS` da 21 elementi (Stereo, Mono, Quad, 5.0, 5.1, 7.0, 7.1 × aux sidechain MONO/STEREO).
+- [COMPLETATO] Tutti i plugin dinamici: sostituito `self.telemetry.num_channels.store(2, Ordering::Relaxed)` con `self.telemetry.num_channels.store(self.routing_matrix.channel_count() as u32, Ordering::Relaxed)` — coinvolti: greg-a3a, greg-a2a, greg-bus-comp, greg-child, greg-limiter, greg-ms-decoder, greg-ms-encoder, greg-phase, greg-pultec, greg-surgical-eq, greg-api_2500, greg-dbx_160, greg-dbx_165, greg_76 (14 plugin).
+- [COMPLETATO] Tutti i plugin con `stereo_link`: la logica di linking ora calcola il massimo key su tutti i canali attivi `0..channel_count` e lo riapplica a tutti i canali linkati (sostituendo il link solo L/R) — coinvolti: greg-bus-comp, greg-child, greg-limiter, greg-api_2500, greg-dbx_160, greg-dbx_165 (6 plugin).
+- [COMPLETATO] `greg_76`: aggiunto campo `telemetry: Arc<GuiTelemetry>` e flusso di aggiornamento metri (input/output peak, GR, phase correlation) — prima non esisteva.
+- [COMPLETATO] `ARCHITECTURE.md`: sezione estesa `## Dynamic Multi-Channel Routing (Mono → 7.1)` con tabella canali→formati, specifiche I/O layout, dettagli `RoutingMatrix`, telemetry, stereo-link multi-canale, encoder/decoder M/S, routing mode per categoria, garanzie real-time.
+- [COMPLETATO] `cargo check --workspace` pulito (0 errori; 1 warning preesistente `analog_variance` mai letto in `greg-a3a`).
+- [COMPLETATO] `cargo test --workspace --lib`: 132 test passano, 0 failure.
+
 ## Stato aggiornato (2026-11-22) — Analog chain + GUI su `greg_76`
 - [COMPLETATO] `core-dsp`: aggiunti `MillerRollOff` in `nonlinear_stages.rs` e `ThermalDrift` in `analog_variance.rs` con test unitari (75/77 passano, 2 failure pre-esistenti in `loudness_rider`/`partitioned_convolver`).
 - [COMPLETATO] `greg_76`: catena analogica completa (sidechain → FET GR → AnalogVariance drift → PSU sag → pre-enfasi → oversampling con `tube_saturate` → de-enfasi → AC coupling → TransformerHysteresis → SlewRateLimiter → MillerRollOff → output gain → bypass crossfade).

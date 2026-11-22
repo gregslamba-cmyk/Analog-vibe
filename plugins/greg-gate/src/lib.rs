@@ -158,12 +158,12 @@ impl Plugin for GregGate {
                 VStack::new(cx, |cx| {
                     Label::new(cx, "Greg Gate").font_size(14.0).color(Color::rgb(255, 255, 255));
                     Label::new(cx, "Main Parameters").font_size(12.0).color(Color::rgb(210, 215, 225));
-                    ParamSlider::new(cx, GregGateGuiData::params, |p| &p.threshold).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, GregGateGuiData::params, |p| &p.ratio).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, GregGateGuiData::params, |p| &p.attack).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, GregGateGuiData::params, |p| &p.release).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, GregGateGuiData::params, |p| &p.mix).width(Pixels(115.0)).height(Pixels(24.0));
-                    ParamSlider::new(cx, GregGateGuiData::params, |p| &p.bypass).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, GregGateGuiData::params, |p| &p.threshold).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, GregGateGuiData::params, |p| &p.ratio).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, GregGateGuiData::params, |p| &p.attack).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, GregGateGuiData::params, |p| &p.release).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, GregGateGuiData::params, |p| &p.mix).width(Pixels(115.0)).height(Pixels(24.0));
+                    ToggleSwitch::new(cx, GregGateGuiData::params, |p| &p.bypass).width(Pixels(115.0)).height(Pixels(24.0));
                 })
                 .height(Pixels(268.0)).background_color(Color::rgb(34, 37, 42)).child_space(Pixels(10.0));
             },
@@ -224,10 +224,14 @@ impl Plugin for GregGate {
                 *right_sample = right_out;
                 self.metering.record_sample(left_input, left_out, 0.0);
                 self.metering.record_sample(right_input, right_out, 0.0);
+                self.telemetry.push_in_peak(0, left_input);
+                self.telemetry.push_out_peak(0, left_out);
+                self.telemetry.push_in_peak(1, right_input);
+                self.telemetry.push_out_peak(1, right_out);
             }
         });
         self.metering.publish_block();
-        self.telemetry.num_channels.store(2, Ordering::Relaxed);
+        self.telemetry.num_channels.store(self.routing_matrix.channel_count() as u32, Ordering::Relaxed);
         let snap = self.metering.snapshot();
         let to_linear = |dbfs: f32| -> f32 { 10.0_f32.powf(dbfs * 0.05) };
         if snap.input_peak_dbfs.is_finite() {

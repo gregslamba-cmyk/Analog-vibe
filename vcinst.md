@@ -80,6 +80,8 @@ Gli ID sono canonici. La descrizione e' un obiettivo di prodotto, non prova che 
 | `greg_surgical_eq` | EQ parametrico a bande configurabili, filtri Bell/Shelf/HP/LP/Notch/Band-Pass e modalita' minima o lineare con latenza dichiarata. |
 | `greg_eq_match` | Eq in grado di replicare una curva di equalizzazione di un segnale esterno ricevuto tramite una sidechain |
 | `greg_gate` | Gate con detector interno/esterno, threshold, range, attack/hold/release, isteresi e filtri sidechain. |
+| greg\_expander | Expander con detector interno/esterno, threshold, range, attack/hold/release, isteresi e filtri sidechain. |
+| greg\_ducking | Duck processor con detector interno/esterno, threshold, range, attack/hold/release, isteresi e filtri sidechain. |
 | `greg_lin_eq`, `greg_lin_comp` | EQ e compressore multibanda a fase lineare; dichiarare latenza e pre-ringing. |
 
 ### Channel strip completi di console

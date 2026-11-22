@@ -11,7 +11,7 @@ use core_dsp::core_dsp_modules::{
     sidechain_processor::{SidechainFilter, SidechainProcessor},
 };
 use nih_plug_vizia::vizia::prelude::*;
-use greg_gui_core::{GuiTelemetry, create_greg_editor, param_control};
+use greg_gui_core::{GuiTelemetry, create_greg_editor};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
 
@@ -536,32 +536,32 @@ impl Plugin for GregApi2500 {
             move |cx| {
                 let editor_data = EditorData { params: params_main.clone() };
                 editor_data.build(cx);
-                ParamSlider::new(cx, EditorData::params, |p| &p.input).width(Pixels(115.0)).height(Pixels(24.0));
-                ParamSlider::new(cx, EditorData::params, |p| &p.threshold).width(Pixels(115.0)).height(Pixels(24.0));
-                ParamSlider::new(cx, EditorData::params, |p| &p.ratio).width(Pixels(115.0)).height(Pixels(24.0));
-                ParamSlider::new(cx, EditorData::params, |p| &p.knee).width(Pixels(115.0)).height(Pixels(24.0));
-                ParamSlider::new(cx, EditorData::params, |p| &p.attack).width(Pixels(115.0)).height(Pixels(24.0));
-                ParamSlider::new(cx, EditorData::params, |p| &p.release).width(Pixels(115.0)).height(Pixels(24.0));
-                ParamSlider::new(cx, EditorData::params, |p| &p.makeup_gain).width(Pixels(115.0)).height(Pixels(24.0));
-                ParamSlider::new(cx, EditorData::params, |p| &p.version).width(Pixels(115.0)).height(Pixels(24.0));
-                ParamSlider::new(cx, EditorData::params, |p| &p.tone_type).width(Pixels(115.0)).height(Pixels(24.0));
-                ParamSlider::new(cx, EditorData::params, |p| &p.thrust).width(Pixels(115.0)).height(Pixels(24.0));
-                ParamSlider::new(cx, EditorData::params, |p| &p.stereo_link).width(Pixels(115.0)).height(Pixels(24.0));
-                ParamSlider::new(cx, EditorData::params, |p| &p.oversampling).width(Pixels(115.0)).height(Pixels(24.0));
+                RotaryKnob::new(cx, EditorData::params, |p| &p.input).width(Pixels(115.0)).height(Pixels(24.0));
+                RotaryKnob::new(cx, EditorData::params, |p| &p.threshold).width(Pixels(115.0)).height(Pixels(24.0));
+                EnumSwitch::new(cx, EditorData::params, |p| &p.ratio).width(Pixels(115.0)).height(Pixels(24.0));
+                EnumSwitch::new(cx, EditorData::params, |p| &p.knee).width(Pixels(115.0)).height(Pixels(24.0));
+                RotaryKnob::new(cx, EditorData::params, |p| &p.attack).width(Pixels(115.0)).height(Pixels(24.0));
+                RotaryKnob::new(cx, EditorData::params, |p| &p.release).width(Pixels(115.0)).height(Pixels(24.0));
+                RotaryKnob::new(cx, EditorData::params, |p| &p.makeup_gain).width(Pixels(115.0)).height(Pixels(24.0));
+                EnumSwitch::new(cx, EditorData::params, |p| &p.version).width(Pixels(115.0)).height(Pixels(24.0));
+                EnumSwitch::new(cx, EditorData::params, |p| &p.tone_type).width(Pixels(115.0)).height(Pixels(24.0));
+                EnumSwitch::new(cx, EditorData::params, |p| &p.thrust).width(Pixels(115.0)).height(Pixels(24.0));
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.stereo_link).width(Pixels(115.0)).height(Pixels(24.0));
+                EnumSwitch::new(cx, EditorData::params, |p| &p.oversampling).width(Pixels(115.0)).height(Pixels(24.0));
             },
             move |cx| {
                 let editor_data = EditorData { params: params_adv.clone() };
                 editor_data.build(cx);
-                ParamSlider::new(cx, EditorData::params, |p| &p.bypass).width(Pixels(115.0)).height(Pixels(24.0));
-                ParamSlider::new(cx, EditorData::params, |p| &p.invert_left).width(Pixels(115.0)).height(Pixels(24.0));
-                ParamSlider::new(cx, EditorData::params, |p| &p.invert_right).width(Pixels(115.0)).height(Pixels(24.0));
-                ParamSlider::new(cx, EditorData::params, |p| &p.external_sidechain).width(Pixels(115.0)).height(Pixels(24.0));
-                ParamSlider::new(cx, EditorData::params, |p| &p.sc_enable).width(Pixels(115.0)).height(Pixels(24.0));
-                ParamSlider::new(cx, EditorData::params, |p| &p.sc_listen).width(Pixels(115.0)).height(Pixels(24.0));
-                ParamSlider::new(cx, EditorData::params, |p| &p.sc_filter).width(Pixels(115.0)).height(Pixels(24.0));
-                ParamSlider::new(cx, EditorData::params, |p| &p.sc_freq).width(Pixels(115.0)).height(Pixels(24.0));
-                ParamSlider::new(cx, EditorData::params, |p| &p.sc_q).width(Pixels(115.0)).height(Pixels(24.0));
-                ParamSlider::new(cx, EditorData::params, |p| &p.sc_gain).width(Pixels(115.0)).height(Pixels(24.0));
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.bypass).width(Pixels(115.0)).height(Pixels(24.0));
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_left).width(Pixels(115.0)).height(Pixels(24.0));
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_right).width(Pixels(115.0)).height(Pixels(24.0));
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.external_sidechain).width(Pixels(115.0)).height(Pixels(24.0));
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.sc_enable).width(Pixels(115.0)).height(Pixels(24.0));
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.sc_listen).width(Pixels(115.0)).height(Pixels(24.0));
+                EnumSwitch::new(cx, EditorData::params, |p| &p.sc_filter).width(Pixels(115.0)).height(Pixels(24.0));
+                RotaryKnob::new(cx, EditorData::params, |p| &p.sc_freq).width(Pixels(115.0)).height(Pixels(24.0));
+                RotaryKnob::new(cx, EditorData::params, |p| &p.sc_q).width(Pixels(115.0)).height(Pixels(24.0));
+                RotaryKnob::new(cx, EditorData::params, |p| &p.sc_gain).width(Pixels(115.0)).height(Pixels(24.0));
             },
         )
     }
@@ -654,9 +654,16 @@ impl Plugin for GregApi2500 {
                 }
 
                 if stereo_link && channel_count >= 2 {
-                    let linked = keys[0].abs().max(keys[1].abs());
-                    keys[0] = linked;
-                    keys[1] = linked;
+                    // Link all active channels: find max key across all channels
+                    let mut max_key = 0.0_f32;
+                    for &k in &keys[0..channel_count] {
+                        if k > max_key {
+                            max_key = k;
+                        }
+                    }
+                    for ch in 0..channel_count {
+                        keys[ch] = max_key;
+                    }
                 }
 
                 for (channel, sample) in frame.iter_mut().enumerate() {
@@ -704,7 +711,7 @@ impl Plugin for GregApi2500 {
         });
 
         self.metering.publish_block();
-        self.telemetry.num_channels.store(2, Ordering::Relaxed);
+        self.telemetry.num_channels.store(self.routing_matrix.channel_count() as u32, Ordering::Relaxed);
         let snap = self.metering.snapshot();
         let to_linear = |dbfs: f32| -> f32 { 10.0_f32.powf(dbfs * 0.05) };
         if snap.input_peak_dbfs.is_finite() {

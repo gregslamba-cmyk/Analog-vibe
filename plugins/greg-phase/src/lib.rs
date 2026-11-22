@@ -9,7 +9,7 @@ use core_dsp::core_dsp_modules::{
     routing_matrix::StereoFrame,
 };
 use nih_plug_vizia::vizia::prelude::*;
-use greg_gui_core::{GuiTelemetry, create_greg_editor, param_control};
+use greg_gui_core::{GuiTelemetry, create_greg_editor};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
 
@@ -131,14 +131,14 @@ impl Plugin for GregPhase {
             move |cx| {
                 let editor_data = EditorData { params: params_main.clone() };
                 editor_data.build(cx);
-                ParamSlider::new(cx, EditorData::params, |p| &p.invert_left);
-                ParamSlider::new(cx, EditorData::params, |p| &p.invert_right);
-                ParamSlider::new(cx, EditorData::params, |p| &p.invert_both);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_left);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_right);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_both);
             },
             move |cx| {
                 let editor_data = EditorData { params: params_adv.clone() };
                 editor_data.build(cx);
-                ParamSlider::new(cx, EditorData::params, |p| &p.bypass);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.bypass);
             },
         )
     }
@@ -192,7 +192,7 @@ impl Plugin for GregPhase {
             }
         });
         self.metering.publish_block();
-        self.telemetry.num_channels.store(2, Ordering::Relaxed);
+        self.telemetry.num_channels.store(self.routing_matrix.channel_count() as u32, Ordering::Relaxed);
         let snap = self.metering.snapshot();
         let to_linear = |dbfs: f32| -> f32 { 10.0_f32.powf(dbfs * 0.05) };
         if snap.input_peak_dbfs.is_finite() {

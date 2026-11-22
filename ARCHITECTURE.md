@@ -9,9 +9,90 @@ This document details the public API signatures, architectural design, and guara
 
 ---
 
+## Dynamic Multi-Channel Routing (Mono → 7.1)
+
+This document describes the dynamic channel-count handling across all plugins in the suite, enabling upgrade from **Mono (1)** to **7.1 (8 channels)**.
+
+### Supported channel counts
+
+| Count | Format | Typical use | Sidechain aux |
+|-------|--------|-------------|---------------|
+| 1 | Mono | Single channel processing | MONO |
+| 2 | Stereo L/R | Stereo processing | MONO / STEREO |
+| 3 | LCR | Left / Center / Right | MONO / STEREO |
+| 4 | Quad / 4.0 | L / R / Ls / Rs | MONO / STEREO |
+| 5 | 5.0 | L / R / C / Ls / Rs | MONO / STEREO |
+| 6 | 5.1 / 6.0 | L / R / C / LFE / Ls / Rs | MONO / STEREO |
+| 7 | 7.0 | L / R / C / Ls / Rs / Lrs / Rrs | MONO / STEREO |
+| 8 | 7.1 | L / R / C / LFE / Ls / Rs / Lrs / Rrs | MONO / STEREO |
+
+Channel position mapping follows the standard film/TV surround convention where position `0` = Left, `1` = Right, `2` = Center, `3` = LFE, `4` = Left Surround, `5` = Right Surround, `6` = Left Rear Surround, `7` = Right Rear Surround.
+
+### `plugin-support/src/lib.rs` — I/O layout constants
+
+- **`CHANNELS = [2, 1, 3, 4, 5, 6, 7, 8]`** — Stereo first, then Mono, LCR, Quad, 5.0, 5.1, 7.0, 7.1.
+- **`SURROUND_IO_LAYOUTS`**: 8 layouts (Stereo/Mono/LCR/Quad/5.0/5.1/7.0/7.1) without aux sidechain. Used by utility plugins without sidechain (Phase, M/S Encoder/Decoder, Surgical EQ, Pultec).
+- **`DYNAMICS_IO_LAYOUTS`**: 21 layouts (Stereo, Mono, Quad, 5.0, 5.1, 7.0, 7.1 × each aux sidechain MONO or STEREO). Used by dynamics plugins (compressors, limiters, gates). Every layout declares the aux `Sidechain` port, so sidechain is always exposed when the plugin has it.
+
+Each layout declares `main_input_channels`, `main_output_channels`, and optionally `aux_input_ports` with port name `"Sidechain"`. The host negotiates one layout per plugin instance.
+
+### `core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix`
+
+- `configure(channel_count: usize, mode: RoutingMode) -> bool` — validates `1 ≤ channel_count ≤ 8` and stores mode.
+- `mode() -> RoutingMode`: `Mono` | `Stereo` | `DualMono` | `MidSide` | `Multichannel`.
+- `channel_count() -> usize` — active channel count reported to telemetry.
+- `accepts_frame(channels) -> bool` — true iff `channels.len() == channel_count`.
+- `encode_input(channels) -> bool` — orthonormal L/R→M/S encoding when mode=MidSide on 2 channels.
+- `decode_output(channels) -> bool` — orthonormal M/S→L/R decoding when mode=MidSide on 2 channels.
+- `route_channels(channels, mode)` — applies routing across all channels in-place.
+- `decode_mid_side_channels(channels)` — decodes all stereo pairs from M/S to L/R.
+- `sidechain_channel(audio_channel, sidechain_channels) -> Option<usize>` — maps each audio channel to a sidechain channel index:
+  - `sidechain_channels == 0` → `None` (no sidechain)
+  - `sidechain_channels == 1` → `Some(0)` (mono sidechain feeds all channels)
+  - `audio_channel < sidechain_channels` → `Some(audio_channel)` (stereo sidechain mirrors channels)
+  - otherwise → `None`
+
+### Telemetry (per plugin `process()`)
+
+Every plugin now reports the actual channel count to the GUI telemetry instead of a hardcoded `2`:
+
+```rust
+self.telemetry.num_channels.store(self.routing_matrix.channel_count() as u32, Ordering::Relaxed);
+```
+
+The telemetry snapshots (`input_peak_dbfs`, `output_peak_dbfs`, `gain_reduction_db`, `phase_correlation`) are published once per block after `metering.publish_block()`.
+
+### Multi-channel stereo-link
+
+For plugins exposing `stereo_link` (Bus Comp, Child, Limiter, API 2500, DBX 160/165), linking no longer binds only channels 0 and 1. Instead it:
+
+1. Computes `max_key = max(keys[0..channel_count])` across all active channels.
+2. Writes `max_key` back to every channel `0..channel_count`.
+
+This guarantees shared gain reduction across every channel when Stereo Link is enabled, preserving stereo image integrity in 5.1 / 7.1 configurations.
+
+### MS Encoder/Decoder
+
+`[BypassCrossfade<f32>; 2]` arrays replaced with `Vec<BypassCrossfade<f32>>` sized to `channel_count` in `initialize()`. Mono input passes through unchanged; stereo input applies full M/S encoding/decoding.
+
+### Routing modes by plugin category
+
+| Plugin category | Default `RoutingMode` | Reason |
+|-----------------|----------------------|--------|
+| Dynamics (compressors/limiters/gates) | `DualMono` | Independent detector per channel; optional stereo-link couples keys. |
+| Utility (Phase, M/S, Surgical EQ) | `Multichannel` / `MidSide` | Transparent passthrough or explicit M/S transform on channel pairs. |
+
+### Real-time safety guarantees
+
+- All channel arrays sized `MAX_AUDIO_CHANNELS = 8` — no per-block allocation.
+- `process()` iterates `buffer.iter_samples()`; inner loops use `0..channel_count` derived from `routing_matrix.channel_count()`.
+- No `.unwrap()`, `.expect()`, `Vec::push`, or `Box::new` in the audio path.
+- NaN/Inf sanitized per sample via `finite()` before DSP and post-processing.
+
+
 ## Public Signatures & Modules
 
-### 1. `zdf_filters` (`zdf_filters.rs`)
+### 1. `zdf_filters` (`zdf_filters.rs`) ...
 Topology-Preserving Transform (TPT / Zero-Delay Feedback) State Variable Filter with integrated `tanh` feedback saturation solved via Newton-Raphson iterations (1-2 iterations).
 
 ```rust

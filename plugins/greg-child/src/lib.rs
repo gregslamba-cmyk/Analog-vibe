@@ -520,9 +520,16 @@ impl Plugin for GregChild {
                     );
                 }
                 if stereo_link && channel_count >= 2 {
-                    let linked = keys[0].max(keys[1]);
-                    keys[0] = linked;
-                    keys[1] = linked;
+                    // Link all active channels: find max key across all channels
+                    let mut max_key = 0.0_f32;
+                    for &k in &keys[0..channel_count] {
+                        if k > max_key {
+                            max_key = k;
+                        }
+                    }
+                    for ch in 0..channel_count {
+                        keys[ch] = max_key;
+                    }
                 }
 
                 for (channel, sample) in frame.iter_mut().enumerate() {
@@ -543,11 +550,13 @@ impl Plugin for GregChild {
                     *sample = finite(self.bypass_crossfades[channel].process(dry, wet));
                     self.metering
                         .record_sample(raw[channel], *sample, reduction);
+                    self.telemetry.push_in_peak(channel, raw[channel]);
+                    self.telemetry.push_out_peak(channel, *sample);
                 }
             }
         });
         self.metering.publish_block();
-        self.telemetry.num_channels.store(2, Ordering::Relaxed);
+        self.telemetry.num_channels.store(self.routing_matrix.channel_count() as u32, Ordering::Relaxed);
         let snap = self.metering.snapshot();
         let to_linear = |dbfs: f32| -> f32 { 10.0_f32.powf(dbfs * 0.05) };
         if snap.input_peak_dbfs.is_finite() {
