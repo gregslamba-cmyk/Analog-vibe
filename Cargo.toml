@@ -20,6 +20,7 @@ members = [
     "plugins/greg-pultec",
     "crates/greg_gui_core",
     "tools/clap-signal-host",
+    "tools/clap-validator-host",
 ]
 
 [workspace.package]

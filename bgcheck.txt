@@ -1,0 +1,34 @@
+Voglio eseguire una revisione matematica, logica e di stabilità su tutta la libreria `core-dsp`, lavorando STRICTLY UN FILE ALLA VOLTA. Non passare al file successivo finché il file corrente non è stato analizzato, corretto, verificato con unit test dedicati e validato da `cargo test` e `cargo clippy` senza warning.
+
+### Regole di revisione per ogni singolo file
+Per ogni file che esamini, controlla rigorosamente questi punti:
+1. **Formule DSP e Filtri:**
+   - Verifica che i filtri bilineari/TPT usino `PI` (`tan(PI * fc / sr)`) e NON `TAU` (`2 * PI`).
+   - Verifica che passa-basso, passa-alto e DC blocker abbiano il giusto guadagno in banda passante (es. 1 kHz non deve essere attenuato da un DC blocker) e frequenze di taglio reali coerenti con i parametri.
+   - Verifica l'oversampling: controlla che l'upsampling mantenga esattamente il guadagno unitario (0 dB, nessuna perdita di -6 dB nello zero-stuffing) e che le latenze dichiarate siano esatte e senza sfasamenti frazionari non compensati.
+2. **Supporto Multicanale (1–8 canali):**
+   - Elimina ogni stato limitato a 2 canali (`state_l`, `state_r`): ogni modulo stateful deve supportare fino a 8 canali indipendenti (`[f64; 8]` o slice).
+3. **Range dei Parametri e Gain Staging:**
+   - Verifica che tutte le curve (drive, ratio, attack, release, knee, sag, hysteresis) siano continue, monotone e rispettino i commenti/specifiche senza zone morte o clipping involontari.
+4. **Silenzio, Denormali e Stabilità Real-Time:**
+   - Ingresso `0.0` deve dare uscita `0.0` (nessun DC offset residuo).
+   - `flush_denormal` applicato in tutti i loop di feedback (IIR, riverberi, delay, inviluppi, isteresi).
+   - Input `NaN` o `Inf` non devono bloccare lo stato interno.
+   - Zero allocazioni heap (`Vec`, `String`, `Box`, ecc.) nelle funzioni di processing audio.
+
+### Procedura Operativa (Obbligatoria)
+1. Parti subito dal **Batch 1** (i 4 moduli più critici):
+   - File 1: `core-dsp/src/core_dsp_modules/nonlinear_stages.rs`
+   - File 2: `core-dsp/src/core_dsp_modules/resampler_bitdepth.rs`
+   - File 3: `core-dsp/src/core_dsp_modules/zdf_filters.rs`
+   - File 4: `core-dsp/src/core_dsp_modules/filters.rs`
+2. Per il **File 1**, leggilo tutto, elencami i bug trovati, applica le correzioni e aggiungi unit test nel file stesso che testino:
+   - Guadagno unitario / risposta in frequenza
+   - Stabilità a 44.1 kHz e 192 kHz
+   - Indipendenza su 8 canali
+   - Silenzio in -> silenzio out e resistenza a `NaN`
+3. Esegui `cargo test -p core-dsp` e `cargo clippy -p core-dsp --all-targets -- -D warnings`.
+4. Solo dopo che il File 1 compila e supera tutti i test al 100%, passa al **File 2**, poi al **File 3**, poi al **File 4**.
+5. Al termine del Batch 1, fermati e mostrami un riepilogo sintetico dei bug trovati e risolti in ciascuno dei 4 file prima di procedere con i moduli successivi.
+
+

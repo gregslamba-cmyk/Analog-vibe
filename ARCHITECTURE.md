@@ -235,3 +235,121 @@ macro_rules! export_greg_plugin {
 - **LV2 & AUv2**: Packaged via `scripts/package_all_formats.sh` conforming to `clap-wrapper` (MIT) specifications into standard `.lv2` (Linux) and `.component` (macOS) bundles.
 - **Licensing**: Dual-licensed under GNU GPLv3 or later (open-source) and low-cost proprietary commercial license on request.
 
+---
+
+## 40. `spatial_3d` (`spatial_3d.rs`)
+
+3D spatial positioning with binaural HRIR rendering, first-order Ambisonics, and VBAP panning.
+
+```rust
+pub struct SpeakerPosition { azimuth: f64, elevation: f64 }
+pub struct HrtfCoefficients { gain_l: f64, gain_r: f64, itd_sec: f64, ild_db: f64 }
+pub struct AmbisonicCoefficients { w: f64, x: f64, y: f64, z: f64 }
+pub struct VbapState { positions: [SpeakerPosition; 64], num_speakers: usize, ... }
+
+pub struct Spatial3dConfig {
+    pub ambi_norm: bool,
+    pub binaural: bool,
+    pub sample_rate: f64,
+    pub global_gain: f64,
+}
+
+impl Spatial3dConfig {
+    pub fn new(sample_rate: f64) -> Self;
+    pub fn defaults() -> Self;
+}
+
+pub struct Spatial3d {
+    // private
+}
+
+impl Spatial3d {
+    pub fn new() -> Self;
+    pub fn configure(&mut self, config: Spatial3dConfig) -> bool;
+    pub fn reset(&mut self);
+    pub fn set_sample_rate(&mut self, sr: f64);
+
+    pub fn process_sample(&mut self, input: f64, az: f64, el: f64, dist_m: f64) -> f64;
+    pub fn process_stereo(&mut self, left: f64, right: f64, az: f64, el: f64, dist_m: f64) -> (f64, f64);
+    pub fn process_ambisonic(&mut self, w: f64, x: f64, y: f64, z: f64) -> (f64, f64);
+
+    pub fn hrtf_coefficients(az: f64, el: f64, dist_m: f64) -> HrtfCoefficients;
+    pub fn ambisonic_from_direction(az: f64, el: f64) -> AmbisonicCoefficients;
+    pub fn ambisonic_to_stereo(coeffs: AmbisonicCoefficients) -> (f64, f64);
+}
+
+impl VbapState {
+    pub fn new() -> Self;
+    pub fn configure_speakers(&mut self, speakers: &[SpeakerPosition]);
+    pub fn vbap_weights(&mut self, az: f64, el: f64) -> (Option<[usize; 3]>, Vec<f64>);
+}
+```
+
+Zero allocations in `process_*` after `configure()`. All f64 internal; NaN/Inf sanitized to 0.0.
+
+---
+
+## 41. `loudness_metering` (`loudness_metering.rs`)
+
+EBU R128 / ITU-R BS.1770-4 loudness metering with K-weighting filter bank, momentary/short-term/integrated LUFS, absolute (-70 LUFS) and relative (-10 LU) gating, LRA, true-peak dBTP estimation (1.25× inter-sample factor), goniometer ring buffer, and lock-free `MasteringTelemetrySnapshot` publisher.
+
+```rust
+pub const REF_LUFS: f64 = -23.0;
+pub const ABSOLUTE_GATE_LUFS: f64 = -70.0;
+pub const RELATIVE_GATE_OFFSET_LU: f64 = -10.0;
+pub const MOMENTARY_BLOCK_SEC: f64 = 0.4;
+pub const SHORTTERM_BLOCK_SEC: f64 = 3.0;
+
+pub struct KWeightHighShelf;
+impl KWeightHighShelf { pub fn configure(&mut self, sample_rate: f64); pub fn process(&mut self, x: f64) -> f64; pub fn reset(&mut self); }
+
+pub struct KWeightHighPass; // same API as KWeightHighShelf
+
+pub struct KWeightFilter { hs: KWeightHighShelf, hp: KWeightHighPass };
+impl KWeightFilter { pub fn configure(&mut self, sample_rate: f64); pub fn process(&mut self, x: f64) -> f64; pub fn reset(&mut self); }
+
+pub struct GoniometerRing;
+impl GoniometerRing { pub fn new(capacity: usize) -> Self; pub fn push(&mut self, left: f64, right: f64); pub fn snapshot(&self) -> (Vec<f64>, Vec<f64>); }
+
+pub struct TruePeakDetector;
+impl TruePeakDetector { pub fn new() -> Self; pub fn reset(&mut self); pub fn process(&mut self, x: f64); pub fn true_peak_amplitude(&self) -> f64; }
+
+pub struct LoudnessEngine {
+    k_weight: KWeightFilter,
+    true_peak: TruePeakDetector,
+    goniometer: GoniometerRing,
+    /* sliding-window sums + integrated block history */
+}
+
+impl LoudnessEngine {
+    pub fn new(sample_rate: f64, goniometer_capacity: usize) -> Self;
+    pub fn configure_sample_rate(&mut self, sample_rate: f64);
+    pub fn reset(&mut self);
+    pub fn process_sample(&mut self, left: f64, right: f64);
+    pub fn add_block(&mut self, ms_sum_sq: f64);
+    pub fn momentary_lufs(&self) -> f64;
+    pub fn short_term_lufs(&self) -> f64;
+    pub fn integrated_lufs(&self) -> f64;
+    pub fn lra(&self) -> f64;
+    pub fn true_peak_dbtp(&self) -> f64;
+    pub fn goniometer_snapshot(&self) -> (Vec<f64>, Vec<f64>);
+}
+
+pub struct MasteringTelemetrySnapshot {
+    pub momentary_lufs: f64, pub short_term_lufs: f64, pub integrated_lufs: f64,
+    pub lra_lu: f64, pub true_peak_dbtp: f64, pub crest_factor_db: f64,
+    pub psr_db: f64, pub phase_correlation: f64, pub dominant_peak_hz: f64,
+}
+
+impl MasteringTelemetrySnapshot { /* publishable atomic snapshot */ }
+
+pub struct MasteringTelemetryPublisher; // atomic [AtomicU64; 9] Relaxed snapshot
+impl MasteringTelemetryPublisher {
+    pub fn new() -> Self;
+    pub fn publish(&self, s: &MasteringTelemetrySnapshot);
+    pub fn snapshot(&self) -> MasteringTelemetrySnapshot;
+}
+```
+
+Thread-safe audio→UI communication via `[AtomicU64; 9]` stores with `Ordering::Relaxed`. Zero locks, zero heap in `process_sample`. Silence-at-rest: all meters read `-120 dBFS` / `-70 LUFS` before signal present.
+
