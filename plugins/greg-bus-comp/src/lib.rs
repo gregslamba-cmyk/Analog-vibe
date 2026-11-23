@@ -11,8 +11,16 @@ use core_dsp::core_dsp_modules::{
     sidechain_processor::{SidechainFilter, SidechainProcessor},
 };
 
-use greg_gui_core::{GuiTelemetry, create_greg_editor};
+use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
+use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
+
+#[derive(Clone, Lens)]
+struct EditorData {
+    params: Arc<GregBusCompParams>,
+}
+
+impl Model for EditorData {}
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
 enum RatioSelection {
@@ -446,11 +454,63 @@ impl Plugin for GregBusComp {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        create_greg_editor(
+        let params_main = self.params.clone();
+        let params_adv = self.params.clone();
+        let param_defs: &'static [greg_gui_core::ParamDef] =
+            Box::leak(vec![
+                greg_gui_core::ParamDef::knob("Input", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.input);
+                })),
+                greg_gui_core::ParamDef::knob("Threshold", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.threshold);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Ratio", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.ratio);
+                })),
+                greg_gui_core::ParamDef::knob("Attack", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.attack);
+                })),
+                greg_gui_core::ParamDef::knob("Release", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.release);
+                })),
+                greg_gui_core::ParamDef::knob("Makeup", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.makeup);
+                })),
+                greg_gui_core::ParamDef::knob("VCA Drive", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.vca_drive);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Oversampling", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.oversampling);
+                })),
+                greg_gui_core::ParamDef::toggle("Stereo Link", Box::new(|cx| {
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.stereo_link);
+                })),
+                greg_gui_core::ParamDef::toggle("Bypass", Box::new(|cx| {
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.bypass);
+                })),
+            ].into_boxed_slice(),
+        );
+        create_greg_editor_with_params(
             "Greg Bus Comp",
             self.telemetry.clone(),
-            |_cx| {},
-            |_cx| {},
+            move |cx| {
+                let editor_data = EditorData { params: params_main.clone() };
+                editor_data.build(cx);
+            },
+            move |cx| {
+                let editor_data = EditorData { params: params_adv.clone() };
+                editor_data.build(cx);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_left);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_right);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.external_sidechain);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.sidechain_filter_enabled);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.sidechain_listen);
+                EnumSwitch::new(cx, EditorData::params, |p| &p.sidechain_filter);
+                RotaryKnob::new(cx, EditorData::params, |p| &p.sidechain_frequency);
+                RotaryKnob::new(cx, EditorData::params, |p| &p.sidechain_q);
+                RotaryKnob::new(cx, EditorData::params, |p| &p.sidechain_gain);
+            },
+            Some(param_defs),
         )
     }
 

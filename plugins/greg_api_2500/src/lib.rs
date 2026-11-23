@@ -11,7 +11,7 @@ use core_dsp::core_dsp_modules::{
     sidechain_processor::{SidechainFilter, SidechainProcessor},
 };
 use nih_plug_vizia::vizia::prelude::*;
-use greg_gui_core::{GuiTelemetry, create_greg_editor};
+use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
 
@@ -530,7 +530,47 @@ impl Plugin for GregApi2500 {
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params_main = self.params.clone();
         let params_adv = self.params.clone();
-        create_greg_editor(
+        let param_defs: &'static [greg_gui_core::ParamDef] =
+            Box::leak(vec![
+                greg_gui_core::ParamDef::knob("Input", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.input);
+                })),
+                greg_gui_core::ParamDef::knob("Threshold", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.threshold);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Ratio", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.ratio);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Knee", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.knee);
+                })),
+                greg_gui_core::ParamDef::knob("Attack", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.attack);
+                })),
+                greg_gui_core::ParamDef::knob("Release", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.release);
+                })),
+                greg_gui_core::ParamDef::knob("Makeup Gain", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.makeup_gain);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Version", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.version);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Tone Type", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.tone_type);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Thrust", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.thrust);
+                })),
+                greg_gui_core::ParamDef::toggle("Stereo Link", Box::new(|cx| {
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.stereo_link);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Oversampling", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.oversampling);
+                })),
+            ].into_boxed_slice(),
+        );
+        create_greg_editor_with_params(
             "Greg API 2500",
             self.telemetry.clone(),
             move |cx| {
@@ -563,6 +603,7 @@ impl Plugin for GregApi2500 {
                 RotaryKnob::new(cx, EditorData::params, |p| &p.sc_q).width(Pixels(115.0)).height(Pixels(24.0));
                 RotaryKnob::new(cx, EditorData::params, |p| &p.sc_gain).width(Pixels(115.0)).height(Pixels(24.0));
             },
+            Some(param_defs),
         )
     }
 

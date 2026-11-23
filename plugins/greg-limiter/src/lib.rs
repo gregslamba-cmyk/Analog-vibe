@@ -10,7 +10,7 @@ use core_dsp::core_dsp_modules::{
     resampler_bitdepth::{Oversampler, OversamplingFactor},
     sidechain_processor::{SidechainFilter, SidechainProcessor},
 };
-use greg_gui_core::{GuiTelemetry, create_greg_editor};
+use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
 
@@ -466,7 +466,32 @@ impl Plugin for GregLimiter {
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params_arc_main = self.params.clone();
         let params_arc_adv = self.params.clone();
-        create_greg_editor(
+        let param_defs: &'static [greg_gui_core::ParamDef] =
+            Box::leak(vec![
+                greg_gui_core::ParamDef::knob("Input", Box::new(|cx| {
+                    RotaryKnob::new(cx, GregLimiterGuiData::params, |p| &p.input);
+                })),
+                greg_gui_core::ParamDef::knob("Ceiling", Box::new(|cx| {
+                    RotaryKnob::new(cx, GregLimiterGuiData::params, |p| &p.ceiling);
+                })),
+                greg_gui_core::ParamDef::knob("Release", Box::new(|cx| {
+                    RotaryKnob::new(cx, GregLimiterGuiData::params, |p| &p.release);
+                })),
+                greg_gui_core::ParamDef::knob("Lookahead", Box::new(|cx| {
+                    RotaryKnob::new(cx, GregLimiterGuiData::params, |p| &p.lookahead);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Oversampling", Box::new(|cx| {
+                    EnumSwitch::new(cx, GregLimiterGuiData::params, |p| &p.oversampling);
+                })),
+                greg_gui_core::ParamDef::toggle("Stereo Link", Box::new(|cx| {
+                    ToggleSwitch::new(cx, GregLimiterGuiData::params, |p| &p.stereo_link);
+                })),
+                greg_gui_core::ParamDef::toggle("Bypass", Box::new(|cx| {
+                    ToggleSwitch::new(cx, GregLimiterGuiData::params, |p| &p.bypass);
+                })),
+            ].into_boxed_slice(),
+        );
+        create_greg_editor_with_params(
             "Greg Limiter",
             self.telemetry.clone(),
             move |cx| {
@@ -499,6 +524,7 @@ impl Plugin for GregLimiter {
                 })
                 .height(Pixels(200.0)).background_color(Color::rgb(28, 30, 35)).child_space(Pixels(10.0));
             },
+            Some(param_defs),
         )
     }
 

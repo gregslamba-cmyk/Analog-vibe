@@ -10,7 +10,7 @@ use core_dsp::core_dsp_modules::{
     resampler_bitdepth::{Oversampler, OversamplingFactor},
     sidechain_processor::{SidechainFilter, SidechainProcessor},
 };
-use greg_gui_core::{GuiTelemetry, create_greg_editor};
+use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
 
@@ -491,7 +491,38 @@ impl Plugin for GregDbx165 {
         let params_arc = self.params.clone();
         let params_arc_main = params_arc.clone();
         let params_arc_adv = params_arc.clone();
-        create_greg_editor(
+        let param_defs: &'static [greg_gui_core::ParamDef] =
+            Box::leak(vec![
+                greg_gui_core::ParamDef::knob("Input", Box::new(|cx| {
+                    RotaryKnob::new(cx, Dbx165GuiData::params, |p| &p.input);
+                })),
+                greg_gui_core::ParamDef::knob("Threshold", Box::new(|cx| {
+                    RotaryKnob::new(cx, Dbx165GuiData::params, |p| &p.threshold);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Ratio", Box::new(|cx| {
+                    EnumSwitch::new(cx, Dbx165GuiData::params, |p| &p.ratio);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Knee", Box::new(|cx| {
+                    EnumSwitch::new(cx, Dbx165GuiData::params, |p| &p.knee);
+                })),
+                greg_gui_core::ParamDef::knob("Attack", Box::new(|cx| {
+                    RotaryKnob::new(cx, Dbx165GuiData::params, |p| &p.attack);
+                })),
+                greg_gui_core::ParamDef::knob("Release", Box::new(|cx| {
+                    RotaryKnob::new(cx, Dbx165GuiData::params, |p| &p.release);
+                })),
+                greg_gui_core::ParamDef::knob("Output Gain", Box::new(|cx| {
+                    RotaryKnob::new(cx, Dbx165GuiData::params, |p| &p.output_gain);
+                })),
+                greg_gui_core::ParamDef::toggle("Stereo Link", Box::new(|cx| {
+                    ToggleSwitch::new(cx, Dbx165GuiData::params, |p| &p.stereo_link);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Oversampling", Box::new(|cx| {
+                    EnumSwitch::new(cx, Dbx165GuiData::params, |p| &p.oversampling);
+                })),
+            ].into_boxed_slice(),
+        );
+        create_greg_editor_with_params(
             "Greg DBX 165",
             self.telemetry.clone(),
             move |cx| {
@@ -529,6 +560,7 @@ impl Plugin for GregDbx165 {
                 })
                 .height(Pixels(200.0)).background_color(Color::rgb(28, 30, 35)).child_space(Pixels(10.0));
             },
+            Some(param_defs),
         )
     }
 

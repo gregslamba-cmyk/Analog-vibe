@@ -1,3 +1,23 @@
+## Stato aggiornato (2026-11-23) — Nuovi moduli fisici: cabinet_speaker e acoustic_room
+- [COMPLETATO] `core-dsp/src/core_dsp_modules/cabinet_speaker.rs`: modulo fisico per emulazione altoparlante/cabinet.
+  - `klippel_bl_kms(x)`: curva chiusura del cono (Bl(x) e Kms(x)) ispirata a Klippel, closed-form f64, senza solver iterativi.
+  - `cone_breakup_soft_clip(x, drive, excursion)`: soft-clip asimmetrica dipendente dall'escursione + compressione termica della bobina voce-coil.
+  - `CabinetResonance` (1-polo risonante per risonanza del mobile) e `HeadBumpShelf` (shelf LF ~90 Hz).
+  - `SpeakerDriver`: tracciamento escursione + breakup + resonance + head bump + PSU sag.
+  - `CabinetSpeaker`: due driver + mic_mix + `render_impulse_response(&mut self, len_samples) -> Vec<f64>` per IR export offline.
+  - Zero heap in `process_sample`, NaN/Inf sanitizzati a 0.0, silenzio assoluto a riposo.
+  - 5 test unitari passanti.
+- [COMPLETATO] `core-dsp/src/core_dsp_modules/acoustic_room.rs`: modulo fisico per acustica di stanza (image-source + diffusion).
+  - Image-source method fino a 2° ordine (30 immagini per canale), pre-allocato in `initialize()`, zero heap in `process()`.
+  - `RoomConfig`: dimensioni, assorbimento pareti, assorbimento aria, posizioni sorgente/ascoltatore.
+  - `DiffusionNetwork`: 4 all-pass nested + feedback delay line per il campo tardo.
+  - `AcousticRoom`: early reflections + late diffusion, process_mono e process_stereo.
+  - 4 test unitari passanti.
+- [COMPLETATO] `DelayLine` in `delay_lines.rs` resa `#[derive(Clone, Debug)]` per permettere l'uso in strutture non-Copy.
+- [COMPLETATO] `cargo check -p core-dsp`: pulito (0 errori, solo 2 warning preesistenti in `nonlinear_stages` e `modulation_engine`).
+- [COMPLETATO] `cargo test -p core-dsp cabinet_speaker`: 5/5 passanti.
+- [COMPLETATO] `cargo test -p core-dsp acoustic_room`: 4/4 passanti.
+
 ## Stato aggiornato (2026-11-22) — Dynamic Multi-Channel Routing (Mono → 7.1)
 
 - [COMPLETATO] `plugin-support/src/lib.rs`: estesi i layout I/O dinamici — `CHANNELS = [2, 1, 3, 4, 5, 6, 7, 8]` (Stereo first), `SURROUND_IO_LAYOUTS` da 8 elementi (Stereo/Mono/LCR/Quad/5.0/5.1/7.0/7.1 without aux sidechain), `DYNAMICS_IO_LAYOUTS` da 21 elementi (Stereo, Mono, Quad, 5.0, 5.1, 7.0, 7.1 × aux sidechain MONO/STEREO).

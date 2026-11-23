@@ -1,342 +1,211 @@
-# Ricerca riferimenti hardware per le emulazioni
+# Riferimenti Hardware e Specifiche di Rimodellazione Circuitale
 
-Ultimo controllo: 2026-11-19
+Ultimo controllo: 2026-11-23
 
-## Scopo e metodo
+## 1. Regole Ingegneristiche di Rimodellazione (`core-dsp`)
 
-Questo documento raccoglie i riferimenti hardware analogici per i plugin del catalogo, come base per lo Step 0 di ricerca. Riporta solo specifiche documentate o caratteristiche circuitali attribuibili al modello indicato; non trasforma descrizioni commerciali in misure DSP. Le specifiche possono cambiare con revisione, versione mono/stereo, alimentazione e ricondizionamento dell'unita'.
+1. **Calibrazione Livelli (`0 VU = -18 dBFS`):** Tutti gli stadi analogici interni devono essere riferiti a `0 VU = +4 dBu = -18.0 dBFS` (headroom nominale `18 dB` prima dello `0 dBFS`).
+2. **Ordine Fisico degli Stadi:** Il segnale audio deve attraversare gli stadi nell'ordine esatto dello schema elettrico reale (es. *Input Transformer → Attenuator/Gain Element → Active Amplification Stage → Output Transformer*), mai con un saturatore generico messo a valle.
+3. **Colorazione a Riposo (Unity / Zero-Action):** Se l'hardware originale non ha un vero *hard-wire bypass* e l'audio attraversa trasformatori e stadi attivi anche con controllo `Gain Reduction = 0 dB` (es. LA-2A, Pultec, Neve 1073), la colorazione passiva/attiva deve restare attiva (disattivabile solo dal pulsante `Bypass` del plugin).
+4. **Separazione Estensioni Moderne:** Controlli come `Dry/Wet Mix`, `External Sidechain`, `Sidechain HPF/LPF`, `Stereo Link` su macchine mono e `Oversampling` sono estensioni del plugin e non devono alterare la risposta quando impostati a riposo.
+5. **Revisioni Hardware Distinte:** Ogni revisione selezionabile nel plugin deve commutare realmente i modelli di componenti (`component_models.rs`), le costanti temporali e le curve di trasferimento.
 
-Ordine di priorita' per completare ciascuna emulazione:
+---
 
-1. Manuale d'uso e service manual della precisa revisione hardware.
-2. Scheda tecnica e documentazione del costruttore.
-3. Misure indipendenti riproducibili, separate dalle specifiche dichiarate.
-4. Misure A/B su hardware identificato, con setup, livelli, carico, sample rate e incertezza annotati.
+## 2. Compressori & Limiter — FET e Elettro-Ottici
 
-Le pagine prodotto citate sotto attestano il modello e le caratteristiche dichiarate; non bastano da sole per ricostruire risposte temporali, curve di trasferimento o spettro armonico. Non dichiarare una replica fedele finche' le misure non sono ripetibili.
+### `greg_76` — UREI / Universal Audio 1176 (Rev A / D / E / F)
+* **Flusso del Segnale Reale:** `Input Attenuator` → `Input Transformer` → `JFET Shunt Gain Reduction (verso massa)` → `Preamp Stage` → `Line Amp Output Stage` → `Output Transformer`. (Sidechain feedback prelevata dopo lo stadio d'uscita).
+* **Meccanica di Controllo & Curve:**
+  * **Soglia Fissa & Ratio-Dependent Threshold:** Non esiste manopola `Threshold`. L'attenuatore `Input` spinge il segnale contro la soglia fissa del rilevatore FET. Cambiando `Ratio` (`4:1`, `8:1`, `12:1`, `20:1`), la tensione di bias del gate del JFET cambia, **alzando progressivamente la soglia effettiva** (a `4:1` inizia a comprimere molto prima che a `20:1`; il ginocchio diventa via via più netto).
+  * **Tempi Inversi (Senso Orario = Più Veloce):**
+    * `Attack`: continuo da `800 µs` (tutto antiorario) a `20 µs` (tutto orario).
+    * `Release`: continuo da `1.1 s` (tutto antiorario) a `50 ms` (tutto orario), con recupero leggermente dipendente dalla durata del picco.
+  * **Modalità "All-Buttons In" (British Mode):** Premendo tutti e 4 i pulsanti ratio contemporaneamente si cortocircuitano le resistenze del partitore di bias: il rapporto sale oltre `20:1`, il ginocchio diventa brutale, l'attacco mostra una caratteristica esitazione iniziale (effetto *suck/pump* sui transienti) e la distorsione armonica aumenta sensibilmente.
+* **Mappatura Componenti `core-dsp` per Revisione:**
+  * **Rev A ("Bluestripe", 1967):** Trasformatore d'ingresso `UtcO12`, JFET `Fet2n5457` con bias più caldo e maggiore 2ª/3ª armonica, stadio finale Class A (`UtcA10`).
+  * **Rev D / E (LN - Low Noise, 1970–73):** Circuito LN a basso rumore con JFET `Fet2n5457` selezionato, trasformatore d'uscita `UtcA10`, suono più pulito e controllato rispetto alla Rev A.
+  * **Rev F (1976):** Stadio d'uscita push-pull **Class AB** (sostituisce il Class A della Rev D/E), maggiore headroom (+24 dBm), slew-rate più veloce e minor calore sulle mediobasse.
 
-## Mappa dei riferimenti
+### `greg_a2a` — Teletronix LA-2A Leveling Amplifier
+* **Flusso del Segnale Reale:** `Input Transformer` → `T4B Photoresistor Shunt Attenuator` → `12AX7 Voltage Amp` → `12AT7 White Cathode Follower Output Stage` → `Output Transformer`. (Sidechain alimentata da un secondo stadio `12AX7` + `6AQ5` pentodo che pilota il pannello elettroluminescente della cella `T4B`).
+* **Meccanica di Controllo & Curve:**
+  * **Controlli Originali:** Solo `Peak Reduction` (guadagno sidechain) e `Gain` (makeup post-attenuatore), più selettore `Compress` (~3:1 soft-knee) vs `Limit` (~10:1+ graduale). Nessun controllo manuale Attack/Release.
+  * **Curva Opto `TeletronixT4b` (Memoria Fotoresistiva):**
+    * *Attack:* ~`10 ms` medi, leggermente dipendente dalla frequenza e dal livello.
+    * *Release Bifasico:* Il primo ~`50%` della gain reduction recupera rapidamente in `40–80 ms`; il restante `50%` decresce lentamente da `0.5 s` fino a `5–15 s` in funzione della durata e dell'intensità della luminanza accumulata dal pannello EL (*effetto memoria*).
+* **Mappatura Componenti `core-dsp`:**
+  * Trasformatore d'ingresso `UtcHa100x` (revisione Teletronix originale) / `UtcA10` (uscita), valvole `Ecc83_12ax7` + `Ecc81_12at7` con Miller roll-off, cella opto `TeletronixT4b`.
 
-| Plugin | Riferimento | Stato del riferimento |
-| --- | --- | --- |
-| `greg_76` | UREI / Universal Audio 1176LN FET Limiting Amplifier | Rev D/E restano profili di revisione dentro lo stesso plugin 1176LN. |
-| `greg_a2a` | Teletronix / Universal Audio LA-2A Leveling Amplifier | Identificato; scegliere revisione/cella di riferimento. |
-| `greg_a3a` | UREI / Universal Audio LA-3A Audio Leveler | Identificato; verificare tempi sulla revisione scelta. |
-| `greg_child` | Fairchild 670 Stereo Limiter | Identificato; le costanti vanno confrontate con il manuale della versione scelta. |
-| `greg_bus_comp` | SSL 4000 G-Series Stereo Bus Compressor | Famiglia identificata; sidechain esterna/filtrata del plugin e' un'estensione. |
-| `greg_pultec` | Pulse Techniques EQP-1A Program Equalizer | Identificato; rete passiva e stadio makeup sono il riferimento. |
-| `greg_ssl_eq` | SSL 4000 E e G Channel EQ | Plugin EQ storico mantenuto per compatibilita'; i nuovi strip completi E e G sono plugin separati. |
-| `greg_neve_eq`, `greg_neve_pre` | Neve 1073 channel module | Plugin preamp/EQ esistenti mantenuti; aggiunto un channel strip completo 1073. |
-| `greg_api_pre` | API 512c Mic Pre | Identificato; modello discreto con op-amp 2520 e trasformatore. |
-| `greg_harrison_pre`, `greg_harrison_comp`, `greg_harrison_eq` | Harrison 32C channel strip | Plugin di sezione mantenuti; aggiunto lo strip completo della 32C. |
-| `greg_manley_eq` | Manley Massive Passive | Identificato. |
-| `greg_manley_comp` | Manley Variable Mu | Identificato; specifiche diverse tra versioni standard e mastering. |
-| `greg_tape` | Studer A800 Mk III | Modello confermato; restano da fissare formulazione nastro, allineamento e velocita' di riferimento. |
-| `greg_exciter` | Aphex Aural Exciter Type C | Modello confermato; revisione e parametri di processo da documentare. |
-| `greg_low_enhancer` | dbx 120A Subharmonic Synthesizer | Modello confermato; tradurre le bande e i controlli dal manuale. |
-| `greg_dbx_160`, `greg_dbx_165` | DBX 160 (160 VU / 160X / 160A) e DBX 165 (165 / 165A) | Versioni differenti dello stesso outboard accorpate con selettore di versione. |
-| `greg_api_2500`, `greg_api_525`, `greg_api_527`, `greg_api_sr22`, `greg_api_225l`, `greg_api_t25`, `greg_api_529` | API 2500, 525, 527, SR22, 225L, T25, 529 | Versioni differenti dello stesso outboard (2500/2500+, 525/525A, 527/527A, SR22/SV12) accorpate con selettore di versione; modelli diversi restano plugin separati. |
+### `greg_a3a` — UREI LA-3A Audio Leveler
+* **Flusso del Segnale Reale:** `Input Attenuator` → `T4B Photoresistor Shunt Attenuator` → `Solid-State Class A Discrete Amplifier` → `Output Transformer`.
+* **Differenze Circuitali Critiche rispetto all'LA-2A:** Non è un LA-2A senza valvole. L'amplificatore a stato solido ha una risposta transitoria più secca e brillante sulle medio-alte (`2–5 kHz`), minore headroom prima del clipping rispetto alle valvole ad alta tensione dell'LA-2A e un attacco percettivo più rapido (`~1.5–3.5 ms`), pur mantenendo il rilascio bifasico della cella `T4B`.
+* **Mappatura Componenti `core-dsp`:** Stadio discreto `Neve2n3055_Bc108` / Classe A, cella opto `TeletronixT4b`, trasformatore d'uscita `UtcA10`.
 
-### Channel strip di console aggiunti
+## 4. Equalizzatori e Preamplificatori Standalone
 
-Ogni modello esatto ha un plugin di channel strip completo, distinto dai plugin di sezione gia' presenti (preamp, EQ e compressori standalone). Le revisioni della stessa sigla/modello sono documentate sotto un unico ID; modelli diversi, anche della stessa serie o dello stesso costruttore, restano plugin separati. La selezione di una revisione o configurazione e' esposta come profilo solo se documentata per quel modello.
+### `greg_pultec` — Pulse Techniques EQP-1A / MEQ-5
+* **Flusso del Segnale Reale:** `Input Transformer (UtcHa100x)` → `Passive RLC Attenuation/Boost Network (PermalloyCore inductors)` → `Push-Pull Tube Makeup Amp (Ecc83_12ax7 + Ecc82_12au7)` → `Output Transformer (UtcA10)`.
+* **Comportamento Circuitale Critico:**
+  * **Interazione "Pultec Trick":** `Low Boost` e `Low Atten` (`20, 30, 60, 100 Hz`) agiscono sulla stessa rete passiva con frequenze d'angolo leggermente sfalsate; alzandoli simultaneamente non si annullano, ma creano un boost profondo sulle sub-basse seguito da un dip stretto intorno a `150–300 Hz`.
+  * **High Boost & Bandwidth:** `Bandwidth` (`Sharp ↔ Broad`) cambia contemporaneamente sia il fattore `Q` sia l'ampiezza effettiva del picco (`3, 4, 5, 8, 10, 12, 16 kHz`), mentre `High Atten` (`5, 10, 20 kHz`) è uno shelf passivo separato a valle.
+  * **Colorazione Passiva a Riposo:** Anche con boost e attenuazione a `0`, il segnale attraversa trasformatori, induttori e valvole.
 
-| ID plugin | Modello/profilo | Natura e perimetro documentale |
-| --- | --- | --- |
-| `greg_neve_1073_strip` | Neve 1073 | Channel module preamp/EQ; le specifiche moderne 1073SPX-D sono marcate come versione specifica, non generalizzate alle revisioni vintage. |
-| `greg_neve_1081_strip` | Neve 1081 | Channel module preamp, EQ a quattro bande e filtri; i dati ufficiali correnti dichiarano il design originale 1972. |
-| `greg_neve_1084_strip` | Neve 1084 | Modello distinto dal 1073; schemi/gamme da trascrivere dal manuale della revisione scelta. |
-| `greg_neve_88rs_strip` | Neve 88RS | Channel strip della console 88RS, generazione distinta dai moduli Class A/AB vintage. |
-| `greg_harrison_32c_strip` | Harrison 32C | Strip analogico completo della console, distinto dai tre plugin di sezione gia' presenti. |
-| `greg_harrison_mixbus_strip` | Harrison Mixbus | Profilo di channel strip software della DAW Mixbus, non un banco analogico; versioni software da accorpare solo dopo confronto documentale. |
-| `greg_ssl_4000e_strip` | SSL 4000 E | Channel strip della console E; non unificare con G. |
-| `greg_ssl_4000g_strip` | SSL 4000 G | Channel strip della console G; non unificare con E. |
-| `greg_ssl_9000j_strip` | SSL 9000 J | Modello distinto della famiglia SSL 9000. |
-| `greg_api_vision_strip` | API Vision | Strip configurabile della console Vision; mantenere esplicite le opzioni di EQ/dinamica installate. |
-| `greg_api_legacy_plus_strip` | API Legacy Plus | Channel strip della console Legacy Plus, distinta da Vision. |
-| `greg_trident_a_range_strip` | Trident A-Range | Strip della console vintage; identificazione di revisione/modulo da confermare sul manuale. |
-| `greg_trident_80b_strip` | Trident Series 80B | Modello separato dall'A-Range; documentare la revisione del modulo. |
-| `greg_amek_9098_strip` | AMEK 9098 | Strip della console 9098; specifiche da legare alla revisione e al modulo. |
-| `greg_mci_jh500_strip` | MCI JH-500 | Strip della console JH-500; specifiche da legare alla revisione e al modulo. |
-
-Le fonti primarie raccolte confermano la natura e alcune caratteristiche di 1073, 1081 e API Vision. Per Harrison, SSL e i modelli in shortlist senza manuale primario accessibile, i documenti individuali indicano le lacune e vietano di inventare controlli, gamme o topologie. La shortlist Trident/AMEK/MCI e' un insieme iniziale di banchi storici da documentare, non una dichiarazione che i manuali siano gia' stati verificati.
-
-Non hanno per ora un outboard analogico univoco nel catalogo: `greg_multiband_comp`, `greg_limiter`, `greg_destroyer`, `greg_pitch_clean`, `greg_pitch_formant`, `greg_space`, `greg_pingpong`, `greg_ir_reverb`, `greg_trans_mono`, `greg_trans_multi`, `greg_gate`, `greg_bus_summer`, `greg_denoiser`, `greg_declipper`, `greg_dehummer`, `greg_declicker`, `greg_lin_eq`, `greg_lin_comp`, `greg_surgical_eq`, `greg_phase`, `greg_ms_encoder` e `greg_ms_decoder`. Non assegnare loro specifiche hardware per analogia estetica.
-
-## Specifiche per modello identificato
-
-### `greg_76` — 1176LN
-
-- **Topologia da riprodurre:** compressore FET con elemento di controllo nel circuito di gain reduction, amplificatore a stato solido e percorso a trasformatori nelle revisioni classiche con trasformatore. Il rapporto e' selezionato con pulsanti distinti; la combinazione simultanea ("all buttons") non e' un quinto rapporto lineare e produce una curva/risposta non standard.
-- **Controlli originali da conservare:** Input, Output, Attack, Release, Ratio 4:1/8:1/12:1/20:1 e selezione stereo-link dove presente. Attacco e rilascio sono regolazioni continue, con comportamento inverso rispetto alla convenzione di molti compressori: senso orario piu' veloce.
-- **Dati del manuale hardware UA 1176LN:** le versioni D/E di riferimento dichiarano attack 20–800 microsecondi, release 50 ms–1.1 s, guadagno 50 dB e risposta ±1 dB da 20 Hz a 20 kHz; la pagina specifica un trasformatore d'uscita custom e interconnessione stereo. Questo identifica le specifiche di famiglia, non risolve quale tra D ed E calibrare.
-- **Punti di fedelta':** rilevatore FET e rete temporale dipendenti dal livello, curve ratio-specifiche, interazione Input/threshold/output stage, modalita' all-buttons distinta; le revisioni differiscono anche per trasformatori e percorso d'uscita.
-- **In attesa:** indicare una revisione (es. Rev D o Rev E) e una sorgente di calibrazione. La specifica presente non giustifica il valore software attuale di knee o la sua mappatura dei controlli.
-- **Stato implementazione:** selettore Rev D/Rev E presente nel plugin, con range attack/release e ratio hardware implementati. Finche' revisione e differenze non sono misurate, i due profili condividono il DSP e non dichiarano caratteristiche circuitali distinte.
-- **Fonti primarie:** [manuale hardware 1176LN e specifiche di Universal Audio](https://help.uaudio.com/hc/en-us/articles/206007816-1176LN-Classic-Limiting-Amplifier); [pagina prodotto 1176LN](https://www.uaudio.com/hardware/compressors/1176ln.html).
-
-### `greg_a2a` — LA-2A
-
-- **Topologia:** attenuatore elettro-ottico T4 (sorgente luminosa e fotoresistore) nel loop di riduzione, amplificatore valvolare e trasformatore in uscita. La memoria del fotoresistore rende release e recupero dipendenti dalla storia del programma, non descrivibili da un solo esponenziale.
-- **Controlli originali:** Peak Reduction e Gain; selettore Compress/Limit sui modelli che lo prevedono. Non esiste un controllo utente Attack/Release indipendente.
-- **Punti di fedelta':** curva opto dipendente dal livello e dal programma; recupero multi-temporale; non linearita' e risposta del circuito valvolare/trasformatore. I valori variano con tipo e stato della cella T4 e con revisione.
-- **Differenza dal codice alpha:** i parametri temporali nominali gia' presenti nel modello sono valori di partenza fenomenologici, non dati calibrati del T4. Non esporli come costanti hardware universali.
-- **In attesa:** identificare revisione LA-2A e specifica cella optica; acquisire tracce di attacco/release a piu' livelli e intervalli di silenzio.
-- **Fonti primarie:** [manuali analogici UA, incluso LA-2A](https://help.uaudio.com/hc/en-us/articles/12264250115476-Analog-Hardware-Manuals); [articolo hardware LA-2A](https://help.uaudio.com/hc/en-us/search?query=LA-2A%20hardware%20manual).
-
-### `greg_a3a` — LA-3A
-
-- **Topologia:** compressore elettro-ottico a stato solido; la cella ottica resta program-dependent, ma il circuito di amplificazione differisce dall'LA-2A e ha una risposta transitoria piu' pronta. Non e' un LA-2A con lo stadio valvolare semplicemente rimosso.
-- **Controlli originali:** Peak Reduction, Gain e selettore Compress/Limit; niente Attack/Release autonomi.
-- **Punti di fedelta':** caratterizzare separatamente attacco, rilascio/memoria ottica, rapporto e knee, distorsione del percorso a stato solido, filtri e risposta in frequenza.
-- **Differenza dal codice alpha:** l'attacco software di circa 3.5 ms e la coda parametrizzata descrivono l'implementazione attuale, non costituiscono una specifica verificata del LA-3A.
-- **In attesa:** consultare il manuale per la revisione presa a riferimento e misurare la cella reale; non concludere che un numero pubblicato per un altro esemplare sia universale.
-- **Fonti primarie:** [manuale LA-3A nella documentazione Universal Audio](https://help.uaudio.com/hc/en-us/articles/206371653-LA-3A); [manuali analogici UA](https://help.uaudio.com/hc/en-us/articles/12264250115476-Analog-Hardware-Manuals).
-
-### `greg_child` — Fairchild 670
-
-- **Topologia:** limiter stereo a valvole con controllo di guadagno Vari-Mu a pendenza variabile; canali e modalita' stereo/dual-channel sono legati al routing originale. Le sei posizioni Time Constant selezionano reti temporali composte; i modi piu' lenti includono recuperi a piu' stadi.
-- **Punti di fedelta':** non tradurre le sei posizioni in sei singoli release esponenziali; riprodurre per ciascuna posizione il profilo completo di attack, recupero iniziale e coda, nonche' il legame tra amount of limiting e rapporto. Le configurazioni mono/stereo e la combinazione dei canali sono parte del comportamento.
-- **Differenza dal codice alpha:** le costanti I–VI gia' annotate in `greg_child` sono valori nominali semplificati; la logica a emivita non rappresenta la rete RC originale. Mantenere esplicita questa limitazione.
-- **In attesa:** trascrivere la tabella completa dei tempi dal manuale della revisione scelta; determinare la curva input/output e il comportamento sidechain con segnali ripetibili.
-- **Fonti reperite:** [manuale Fairchild Tube Limiter Collection di Universal Audio](https://help.uaudio.com/hc/en-us/search?query=Fairchild%20670%20manual). E' documentazione della collezione software ispirata ai 660/670, non il service manual dell'unita' storica; quest'ultimo resta da reperire.
-
-### `greg_bus_comp` — SSL 4000 G-Series Stereo Bus Compressor
-
-- **Topologia:** compressore VCA stereo sul bus di mix. La modalita' storica non equivale a un compressore generico: controllo stereo del detector, soft-knee/curve e auto-release fanno parte del carattere.
-- **Controlli hardware da documentare:** Threshold, Make-up, Ratio, Attack, Release e Auto Release. Annotare gamme e posizioni dalla revisione di manuale scelta.
-- **Fuori modello originale:** detector sidechain esterno, filtri sidechain avanzati, dual mono e oversampling devono essere dichiarati estensioni, non caratteristiche del classico G Bus Compressor.
-- **In attesa:** definire se si emula una scheda console 4000G originale o un outboard/rack moderno e la sua revisione; recuperare manuale, soglie, tempi e schema di link.
-- **Fonti primarie:** [download e documentazione Solid State Logic](https://solidstatelogic.com/support/downloads); [archivio ufficiale SSL](https://solidstatelogic.com/).
-
-### `greg_pultec` — Pulse Techniques EQP-1A
-
-- **Topologia:** filtro passivo con stadio di makeup a valvole e trasformatori custom. Il Low Boost e il Low Atten interagiscono elettricamente sulla rete; non sono due shelf digitali indipendenti. La rete high-peak e l'attenuatore high shelf sono sezioni distinte.
-- **Controlli e frequenze dichiarati dal costruttore:** low boost/attenuation a 20, 30, 60 e 100 CPS; high peak a 3, 4, 5, 8, 10, 12 e 16 KCS; high attenuation shelf a 5, 10 e 20 KCS. La famiglia EQP-1A3 riutilizza il circuito in chassis diverso.
-- **Punti di fedelta':** curve misurate delle reti, sovrapposizione boost/attenuation, impedenze e loading, risposta/fase, saturazione e rumore dello stadio makeup. Non usare filtri bell/shelf indipendenti come sostituto dell'interazione low.
-- **In attesa:** confrontare curve/fase alle impostazioni discrete e documentare la revisione EQP-1A vs EQP-1A3 scelta.
-- **Fonte primaria:** [Pulse Techniques — EQP-1A e principio del Pultec trick](https://pulsetechniques.com/).
-
-### `greg_ssl_eq` — SSL 4000 E / G Channel EQ
-
-- **Riferimento:** il catalogo prevede selezione tra circuitazioni E e G; sono due caratteri/curve, non una singola EQ neutra con un colore aggiunto.
-- **Caratteristiche da documentare dal manuale console:** quattro bande, curve di shelving/bell, Q proporzionale, gamme e frequenze selezionabili; filtri HPF/LPF e differenze E/G. Non fissare frequency ranges finche' non e' scelta la console/revisione precisa.
-- **Punti di fedelta':** acquisire curve di ampiezza e fase per ciascuna banda e posizione, inclusi i cambi di pendenza/Q con il gain. Il requisito plugin di HPF/LPF addizionali non deve modificare la risposta hardware.
-- **In attesa:** bloccare revisione E/G e reperire manuale di servizio della console sorgente.
-- **Fonti primarie:** [documentazione e manuali SSL](https://solidstatelogic.com/support/downloads); [archivio SSL](https://solidstatelogic.com/).
-
-### `greg_neve_eq` e `greg_neve_pre` — Neve 1073
-
-- **Nota di modello:** preamp ed EQ sono funzioni dello stesso modulo channel 1073. I due plugin dovrebbero poter condividere il modello/stato di preamp ed EQ; i due controlli non rappresentano due dispositivi diversi.
-- **Preamplificatore:** circuito discreto Class A con trasformatori Marinair in ingresso/uscita, piu' stadi di guadagno e commutazione a passi di 5 dB. Il clipping e la saturazione dipendono da gain staging e output trim; non sono un semplice soft clipper in uscita.
-- **EQ documentato dalla 1073SPX-D (implementazione attuale del 1073):** HF shelving 12 kHz, ±16 dB; LF shelving 35/60/110/220 Hz, ±16 dB; MF peaking a 360/700/1600/3200/4800/7200 Hz, ±18 dB, Q fisso; HPF 50/80/160/300 Hz con pendenza 18 dB/ottava.
-- **Punti di fedelta':** modellare la revisione EQ scelta, l'interazione di stadi/trasformatori e il percorso di gain; i valori pubblicati dalla versione moderna 1073SPX-D non garantiscono identita' con ogni modulo vintage.
-- **Fonte primaria:** [AMS Neve 1073SPX-D — specifiche ufficiali](https://www.ams-neve.com/outboard/1073-range/1073spx-d/); [AMS Neve 1073DPD — topologia discreta, Class A e trasformatori](https://www.ams-neve.com/outboard/1073-range/1073dpd/).
+### `greg_neve_pre` & `greg_neve_eq` — Neve 1073
+* **Flusso del Segnale Reale:** `Input Transformer (MarinairT1444)` → `Class A Discrete Gain Stages (Neve2n3055_Bc108)` → `Inductor/Cap Passive-Active Feedback EQ` → `Single-Ended Class A 2N3055 Output Stage (DC-biased)` → `Output Transformer (MarinairLo1166)`.
+* **Curve & Frequenze Esatte (1073):**
+  * `HPF`: `18 dB/oct` (`50, 80, 160, 300 Hz`).
+  * `LF Shelf`: `35, 60, 110, 220 Hz` (`±16 dB`), pendenza morbida con leggero *overshoot* analogico.
+  * `MF Bell (Induttore)`: `0.36, 0.7, 1.6, 3.2, 4.8, 7.2 kHz` (`±18 dB`), Q fisso musicale che si stringe leggermente agli estremi di guadagno.
+  * `HF Shelf`: fisso a `12 kHz` (`±16 dB`).
 
 ### `greg_api_pre` — API 512c
-
-- **Topologia dichiarata dal costruttore:** preamp microfonico discreto con op-amp API 2520 e trasformatore d'uscita bilanciato; ingressi mic e Hi-Z/line, selettore, pad -20 dB e inversione di polarita'.
-- **Specifiche 512c pubblicate:** guadagno mic 34–65 dB (14–45 dB con pad); ingresso Hi-Z 14–45 dB; impedenza mic 1.5 kΩ, Hi-Z 400 kΩ; risposta 30 Hz–20 kHz (+0/-0.3 dB); clipping +30 dBu; THD \<0.05% a +4 dBu.
-- **Punti di fedelta':** variare il drive degli stadi 2520/trasformatore in funzione del livello interno; la distorsione non e' solo una funzione statica di tanh.
-- **Fonte primaria:** [API 512c — descrizione e specifiche ufficiali](https://apiaudio.com/product/512c-mic-pre/).
+* **Flusso del Segnale Reale:** `Input Transformer (RE-115K)` → `Pad -20 dB` → `Op-Amp Discreto Api2520` → `Output Transformer (Api2623)`.
+* **Comportamento:** Risposta transitoria ultra-veloce, basso stretto e autoritario, saturazione armonica progressiva dell'op-amp `2520` e del nucleo `2623` al crescere del guadagno mic (`34–65 dB`) o Hi-Z (`14–45 dB`).
 
 ### `greg_manley_eq` — Manley Massive Passive
+* **Flusso del Segnale Reale:** `Input Buffer` → `4-Band Overlapping Passive LC Network (PermalloyCore inductors)` → `All-Tube Differential Makeup Amp (Ecc88_6dj8 / 5751)` → `Output Transformer`.
+* **Comportamento Circuitale:** Le 4 bande (`22 Hz .. 27 kHz`) sono in parallelo/interazione passiva; in modalità `Shelf`, gli induttori generano un caratteristico *overshoot/dip* opposto prima della frequenza di taglio; i filtri `HPF` e `LPF` passivi a `18 dB/oct` hanno una leggera risonanza al ginocchio.
 
-- **Topologia dichiarata:** EQ passivo valvolare con induttori avvolti a mano e stadi valvolari di makeup; quattro bande sovrapposte, selezione shelf/bell e filtri HP/LP passivi. E' un EQ stereo di mastering, non una ricostruzione dell'EQP-1A.
-- **Specifiche pubblicate:** bande distribuite nel range 22 Hz–27 kHz; bandwidth 10 Hz–70 kHz; THD \<0.01%, S/N 116 dB, massimo output +37 dBu (circa +26 dBu nella LF section).
-- **Punti di fedelta':** curve e fattori Q a ogni frequenza/boost-cut, interazione tra bande e filtri, stadio valvolare/makeup. Ottenere dal manuale le posizioni discrete prima di fissare la GUI/API.
-- **Fonte primaria:** [Manley Massive Passive — pagina ufficiale](https://www.manley.com/products/pro-audio/eqs/massive-passive-eq).
+---
 
-### `greg_manley_comp` — Manley Variable Mu
+## 5. Channel Strip di Console (15 Modelli Distinti)
 
-- **Topologia dichiarata:** compressore/limiter stereo all-valve, transformer-coupled, push/pull o remote-cutoff tube gain control; percorso completamente differenziale.
-- **Specifiche pubblicate per la versione Standard corrente:** Compress 1.5:1 soft knee; Limit 4:1–20:1 knee piu' deciso; risposta 20 Hz–25 kHz ±0.1 dB; max output +30 dBu; noise floor -85 dB. La versione Mastering e le revisioni precedenti hanno differenze: non trasferire automaticamente questi valori.
-- **Punti di fedelta':** misurare curva Vari-Mu in entrambe le modalita', costanti temporali, detector stereo, filtri sidechain e armoniche a diversi livelli.
-- **Fonte primaria:** [Manley Variable Mu — pagina ufficiale e specifiche](https://www.manley.com/products/pro-audio/dynamics/variable-mu).
+Ogni modello mantiene architettura, componenti attivi e curve EQ proprie (non condividere mai la stessa curva EQ tra serie diverse):
 
-### `greg_harrison_pre`, `greg_harrison_comp`, `greg_harrison_eq` — Harrison 32C
+### Famiglia Neve
+1. **`greg_neve_1073_strip` (Neve 1073):** Preamp Class A (`Neve2n3055_Bc108` + `MarinairLo1166`), 3 bande EQ (HF fisso `12 kHz`, MF a induttore, LF shelf) + HPF `18 dB/oct`.
+2. **`greg_neve_1081_strip` (Neve 1081, 1972):** Architettura **Class A/B** + `Marinair`, EQ **4 bande** (2 bande medie parametriche con pulsante `Hi-Q`, LF e HF commutabili `Shelf / Bell`) + filtri **HPF e LPF** `18 dB/oct`.
+3. **`greg_neve_1084_strip` (Neve 1084):** Evoluzione Class A del 1073: HF selezionabile a **3 frequenze (`10, 12, 16 kHz`)**, pulsante `Hi-Q` sulla banda media e aggiunta del filtro **LPF** (`10, 14, 18 kHz` a `18 dB/oct`).
+4. **`greg_neve_88rs_strip` (Neve 88RS):** Console moderna ad altissimo headroom (`+26 dBu`), filtri HPF/LPF continui a pendenza variabile, EQ 4 bande completamente parametrico + sezione dinamica VCA (`That2180`) con Gate/Expander e Compressore/Limiter integrati.
 
-- **Riferimento:** channel strip della console Harrison 32C, selezionata come modello per i tre plugin. Non trasferire dati dalla 32Classic moderna o dalla 32C MS senza verificare che corrispondano alla revisione hardware presa a riferimento.
-- **Perimetro hardware:** preamplificatore, compressore ed EQ sono funzioni della stessa channel strip; i plugin separati sono una scelta di catalogo e non indicano tre macchine distinte.
-- **Specifiche non ancora trascritte:** revisione del modulo, guadagno/impedenze del preamp, controlli e curve dell'EQ, topologia/range e tempi del compressore, livelli operativi e risposta/distorsione.
-- **Fonti:** non e' ancora stato reperito un manuale di servizio o una scheda tecnica primaria della specifica 32C. La documentazione commerciale Harrison attualmente reperibile su [Harrison Audio](https://harrisonaudio.com/) non e' sufficiente a confermare i dati elettrici della console storica.
-- **Vincolo di fedelta':** mantenere non confermati i valori software e le curve finche' non sono legati a un manuale/revisione o a misure A/B.
+### Famiglia SSL (Solid State Logic)
+5. **`greg_ssl_4000e_strip` (SSL 4000 E):** Op-amp `Ne5534`, VCA `Dbx202BlackCan`, EQ selezionabile tra **rev. `02` ("Brown Knob")** (curva musicale più morbida) e **rev. `242` ("Black Knob")** (Q costante e chirurgia più decisa, filtri HPF `18 dB/oct` e LPF `12 dB/oct`) + dinamica VCA E-Series.
+6. **`greg_ssl_4000g_strip` (SSL 4000 G):** Op-amp `Ne5534`, VCA `Dbx202GoldCan`, EQ **rev. `292` ("Pink Knob")** con **Proportional Q** (la campana si stringe al crescere del boost/cut) e curve shelf con leggero *undershoot/overshoot* opposto + dinamica VCA G-Series.
+7. **`greg_ssl_9000j_strip` (SSL 9000 J):** Architettura **SuperAnalogue** (accoppiamento in DC privo di condensatori elettrolitici sul percorso audio, banda estesa `5 Hz – 100 kHz`, distorsione quasi nulla, transienti cristallini e sub-basse profondissime) + switch E/G sulla curva EQ.
 
-### Channel strip di console: criteri comuni
+### Famiglia API
+8. **`greg_api_vision_strip` (API Vision):** Catena discreta completa: Preamp `212L` (`Api2520` + `Api2623`), filtri `215L`, compressore `225L` + gate/expander `235L`, EQ selezionabile tra `550L` (4 bande a **Proportional Q** con frequenze discrete) e `560L` (EQ grafico 10 bande a Q proporzionale).
+9. **`greg_api_legacy_plus_strip` (API Legacy Plus):** Console discreta `Api2520` + `Api2623` con EQ `550L` Proportional Q e bus routing analogico classico.
 
-- Ogni strip mantiene il percorso e i controlli documentabili del modello scelto (ingressi e gain staging, filtri, EQ, dinamica, routing e stadi di uscita). Moduli opzionali di console sono configurazioni selezionabili solo se documentate per quello specifico banco.
-- I plugin di preamp/EQ/compressore gia' esistenti restano disponibili come processori di sezione; i nuovi strip sono entita' aggiuntive e non sostituzioni.
-- Un plugin rappresenta un singolo modello esatto. Le revisioni dello stesso modello possono diventare profili selezionabili; non accorpare modelli distinti (per esempio Neve 1073/1081, SSL 4000 E/G, API Vision/Legacy Plus o Trident A-Range/80B).
-- `greg_harrison_mixbus_strip` rappresenta una strip software Harrison Mixbus e non va presentata come hardware analogico. Le versioni della DAW richiedono un confronto specifico, non una selezione automatica di ogni release.
+### Famiglia Harrison, Trident, AMEK & MCI
+10. **`greg_harrison_32c_strip` (Harrison 32C):** EQ 4 bande a Q proporzionale con curve morbide e musicali + celebri filtri **HPF (`25 Hz – 3.1 kHz`) e LPF (`160 Hz – 20 kHz`) continui a `12 dB/oct` con caratteristica risonanza al ginocchio**.
+11. **`greg_harrison_mixbus_strip` (Harrison Mixbus):** Profilo DSP console virtuale (saturation drive progressivo, EQ 3 bande + HPF, compressore/leveler integrato).
+12. **`greg_trident_a_range_strip` (Trident A-Range):** Console discreta vintage a induttori (`PermalloyCore`), EQ 4 bande con interazione musicale tra le bande, filtri passa-alto/passa-basso a scatti e saturazione ricca dei trasformatori.
+13. **`greg_trident_80b_strip` (Trident Series 80B):** Progetto senza induttori basato su op-amp (`Tl072` / `Ne5534`), EQ 4 bande con medie swept e alte fisse a `12 kHz`, risposta aperta e brillante.
+14. **`greg_amek_9098_strip` (AMEK 9098):** Design Rupert Neve anni '90 ad altissima linearità con controlli **Glow** (generazione controllata di armoniche pari sulle basse) e **Sheen** (enfasi ariosa sulle alte) + EQ parametrico ad alta precisione.
+15. **`greg_mci_jh500_strip` (MCI JH-500):** Console americana anni '70: op-amp discreti/integrati con trasformatore d'uscita, EQ 3/4 bande con medie incisive e punch rock.
 
-### Neve 1073 e 1081
+## 4. Equalizzatori e Preamplificatori Standalone
 
-- Il modulo 1073 comprende preamplificatore ed EQ; il riferimento Neve moderno 1073SPX-D dichiara circuito 1073 con trasformatori Marinair su ingresso/uscita, gain mic a passi di 5 dB, EQ HF shelving 12 kHz, LF 35/60/110/220 Hz, MF peaking a sei frequenze e HPF 50/80/160/300 Hz. Questi numeri sono specifici della documentazione SPX-D e non sono automaticamente attribuiti a ogni revisione vintage.
-- Il 1081 e' un modello distinto: Neve lo descrive come design Class A/B del 1972, con trasformatori Marinair, EQ a quattro bande piu' filtri HP/LP selezionabili a 18 dB/ottava, preamp mic fino a +80 dB e impedenza selezionabile 300/1200 ohm. Frequenze e curve complete vanno prese dal manuale.
-- Fonti primarie: [Neve 1073 Range](https://www.ams-neve.com/outboard/1073-range/), [specifiche 1073SPX-D](https://www.ams-neve.com/outboard/1073-range/1073spx-d/), [Neve 1081 Classic](https://www.ams-neve.com/outboard/1081-range/1081-classic/).
+### `greg_pultec` — Pulse Techniques EQP-1A / MEQ-5
+* **Flusso del Segnale Reale:** `Input Transformer (UtcHa100x)` → `Passive RLC Attenuation/Boost Network (PermalloyCore inductors)` → `Push-Pull Tube Makeup Amp (Ecc83_12ax7 + Ecc82_12au7)` → `Output Transformer (UtcA10)`.
+* **Comportamento Circuitale Critico:**
+  * **Interazione "Pultec Trick":** `Low Boost` e `Low Atten` (`20, 30, 60, 100 Hz`) agiscono sulla stessa rete passiva con frequenze d'angolo leggermente sfalsate; alzandoli simultaneamente non si annullano, ma creano un boost profondo sulle sub-basse seguito da un dip stretto intorno a `150–300 Hz`.
+  * **High Boost & Bandwidth:** `Bandwidth` (`Sharp ↔ Broad`) cambia contemporaneamente sia il fattore `Q` sia l'ampiezza effettiva del picco (`3, 4, 5, 8, 10, 12, 16 kHz`), mentre `High Atten` (`5, 10, 20 kHz`) è uno shelf passivo separato a valle.
+  * **Colorazione Passiva a Riposo:** Anche con boost e attenuazione a `0`, il segnale attraversa trasformatori, induttori e valvole.
 
-### `greg_tape` — Studer A800 Mk III
+### `greg_neve_pre` & `greg_neve_eq` — Neve 1073
+* **Flusso del Segnale Reale:** `Input Transformer (MarinairT1444)` → `Class A Discrete Gain Stages (Neve2n3055_Bc108)` → `Inductor/Cap Passive-Active Feedback EQ` → `Single-Ended Class A 2N3055 Output Stage (DC-biased)` → `Output Transformer (MarinairLo1166)`.
+* **Curve & Frequenze Esatte (1073):**
+  * `HPF`: `18 dB/oct` (`50, 80, 160, 300 Hz`).
+  * `LF Shelf`: `35, 60, 110, 220 Hz` (`±16 dB`), pendenza morbida con leggero *overshoot* analogico.
+  * `MF Bell (Induttore)`: `0.36, 0.7, 1.6, 3.2, 4.8, 7.2 kHz` (`±18 dB`), Q fisso musicale che si stringe leggermente agli estremi di guadagno.
+  * `HF Shelf`: fisso a `12 kHz` (`±16 dB`).
 
-- **Riferimento:** registratore multitraccia da 2 pollici, modello Mk III scelto per l'emulazione.
-- **Variabili hardware da fissare:** velocita' 15/30 IPS, formulazione del nastro, flusso di riferimento, equalizzazione NAB/IEC, bias, livelli di registrazione/riproduzione, test tape e allineamento. Queste scelte cambiano risposta in frequenza, head bump, saturazione e distorsione.
-- **Specifiche non ancora trascritte:** non e' stato reperito un manuale primario specifico Mk III; non fissare curve o valori di allineamento sulla sola base della famiglia A800.
-- **Fonti:** il dominio Studer attuale reindirizza alla pagina [Studer di Evertz](https://evertz.com/solutions/studer/), dedicata alle soluzioni broadcast correnti e non documenta l'A800 Mk III. Serve il manuale di revisione corretto.
+### `greg_api_pre` — API 512c
+* **Flusso del Segnale Reale:** `Input Transformer (RE-115K)` → `Pad -20 dB` → `Op-Amp Discreto Api2520` → `Output Transformer (Api2623)`.
+* **Comportamento:** Risposta transitoria ultra-veloce, basso stretto e autoritario, saturazione armonica progressiva dell'op-amp `2520` e del nucleo `2623` al crescere del guadagno mic (`34–65 dB`) o Hi-Z (`14–45 dB`).
+
+### `greg_manley_eq` — Manley Massive Passive
+* **Flusso del Segnale Reale:** `Input Buffer` → `4-Band Overlapping Passive LC Network (PermalloyCore inductors)` → `All-Tube Differential Makeup Amp (Ecc88_6dj8 / 5751)` → `Output Transformer`.
+* **Comportamento Circuitale:** Le 4 bande (`22 Hz .. 27 kHz`) sono in parallelo/interazione passiva; in modalità `Shelf`, gli induttori generano un caratteristico *overshoot/dip* opposto prima della frequenza di taglio; i filtri `HPF` e `LPF` passivi a `18 dB/oct` hanno una leggera risonanza al ginocchio.
+
+---
+
+## 5. Channel Strip di Console (15 Modelli Distinti)
+
+Ogni modello mantiene architettura, componenti attivi e curve EQ proprie (non condividere mai la stessa curva EQ tra serie diverse):
+
+### Famiglia Neve
+1. **`greg_neve_1073_strip` (Neve 1073):** Preamp Class A (`Neve2n3055_Bc108` + `MarinairLo1166`), 3 bande EQ (HF fisso `12 kHz`, MF a induttore, LF shelf) + HPF `18 dB/oct`.
+2. **`greg_neve_1081_strip` (Neve 1081, 1972):** Architettura **Class A/B** + `Marinair`, EQ **4 bande** (2 bande medie parametriche con pulsante `Hi-Q`, LF e HF commutabili `Shelf / Bell`) + filtri **HPF e LPF** `18 dB/oct`.
+3. **`greg_neve_1084_strip` (Neve 1084):** Evoluzione Class A del 1073: HF selezionabile a **3 frequenze (`10, 12, 16 kHz`)**, pulsante `Hi-Q` sulla banda media e aggiunta del filtro **LPF** (`10, 14, 18 kHz` a `18 dB/oct`).
+4. **`greg_neve_88rs_strip` (Neve 88RS):** Console moderna ad altissimo headroom (`+26 dBu`), filtri HPF/LPF continui a pendenza variabile, EQ 4 bande completamente parametrico + sezione dinamica VCA (`That2180`) con Gate/Expander e Compressore/Limiter integrati.
+
+### Famiglia SSL (Solid State Logic)
+5. **`greg_ssl_4000e_strip` (SSL 4000 E):** Op-amp `Ne5534`, VCA `Dbx202BlackCan`, EQ selezionabile tra **rev. `02` ("Brown Knob")** (curva musicale più morbida) e **rev. `242` ("Black Knob")** (Q costante e chirurgia più decisa, filtri HPF `18 dB/oct` e LPF `12 dB/oct`) + dinamica VCA E-Series.
+6. **`greg_ssl_4000g_strip` (SSL 4000 G):** Op-amp `Ne5534`, VCA `Dbx202GoldCan`, EQ **rev. `292` ("Pink Knob")** con **Proportional Q** (la campana si stringe al crescere del boost/cut) e curve shelf con leggero *undershoot/overshoot* opposto + dinamica VCA G-Series.
+7. **`greg_ssl_9000j_strip` (SSL 9000 J):** Architettura **SuperAnalogue** (accoppiamento in DC privo di condensatori elettrolitici sul percorso audio, banda estesa `5 Hz – 100 kHz`, distorsione quasi nulla, transienti cristallini e sub-basse profondissime) + switch E/G sulla curva EQ.
+
+### Famiglia API
+8. **`greg_api_vision_strip` (API Vision):** Catena discreta completa: Preamp `212L` (`Api2520` + `Api2623`), filtri `215L`, compressore `225L` + gate/expander `235L`, EQ selezionabile tra `550L` (4 bande a **Proportional Q** con frequenze discrete) e `560L` (EQ grafico 10 bande a Q proporzionale).
+9. **`greg_api_legacy_plus_strip` (API Legacy Plus):** Console discreta `Api2520` + `Api2623` con EQ `550L` Proportional Q e bus routing analogico classico.
+
+### Famiglia Harrison, Trident, AMEK & MCI
+10. **`greg_harrison_32c_strip` (Harrison 32C):** EQ 4 bande a Q proporzionale con curve morbide e musicali + celebri filtri **HPF (`25 Hz – 3.1 kHz`) e LPF (`160 Hz – 20 kHz`) continui a `12 dB/oct` con caratteristica risonanza al ginocchio**.
+11. **`greg_harrison_mixbus_strip` (Harrison Mixbus):** Profilo DSP console virtuale (saturation drive progressivo, EQ 3 bande + HPF, compressore/leveler integrato).
+12. **`greg_trident_a_range_strip` (Trident A-Range):** Console discreta vintage a induttori (`PermalloyCore`), EQ 4 bande con interazione musicale tra le bande, filtri passa-alto/passa-basso a scatti e saturazione ricca dei trasformatori.
+13. **`greg_trident_80b_strip` (Trident Series 80B):** Progetto senza induttori basato su op-amp (`Tl072` / `Ne5534`), EQ 4 bande con medie swept e alte fisse a `12 kHz`, risposta aperta e brillante.
+14. **`greg_amek_9098_strip` (AMEK 9098):** Design Rupert Neve anni '90 ad altissima linearità con controlli **Glow** (generazione controllata di armoniche pari sulle basse) e **Sheen** (enfasi ariosa sulle alte) + EQ parametrico ad alta precisione.
+15. **`greg_mci_jh500_strip` (MCI JH-500):** Console americana anni '70: op-amp discreti/integrati con trasformatore d'uscita, EQ 3/4 bande con medie incisive e punch rock.
+
+## 6. Nastro Magnetico, Enhancer & Processori Speciali
+
+### `greg_tape` — Studer A800 Mk III (2-Inch Multitrack)
+* **Flusso del Segnale Reale:** `Input Electronics (Discrete/Op-Amp)` → `Record Pre-Emphasis EQ (NAB / CCIR)` → `Record Head + Bias Oscillator` → `Magnetic Tape Hysteresis (Jiles-Atherton)` → `Repro Head Gap Loss & Head Bump` → `Repro De-Emphasis EQ`.
+* **Parametri Fisici Obbligatori:**
+  * **Velocità Nastro:** `15 IPS` (head bump pronunciato tra `50–80 Hz`, roll-off dolce sopra `15 kHz`, compressione naturale sui transienti) vs `30 IPS` (head bump spostato a `100–130 Hz`, banda estesa `30 Hz – 22 kHz`, distorsione inferiore e transienti più aperti).
+  * **Formulazioni Nastro (`TapeFormulaModel`):** `Ampex456`, `Ampex499` (+3 dB headroom), `BasfSm900`, `EmtecSm911`, `Scotch250`.
+  * **Curva EQ & Bias:** Commutazione **NAB** (standard americano, più basse) vs **CCIR / IEC1** (standard europeo, minore enfasi sulle basse e rumore inferiore) + calibrazione **Bias** (`Under-Bias` brillante/granuloso vs `Over-Bias` scuro/compresso).
 
 ### `greg_exciter` — Aphex Aural Exciter Type C
-
-- **Riferimento:** Aural Exciter Type C, modello scelto per l'emulazione.
-- **Specifiche non ancora trascritte:** revisione, circuito di generazione armonica, frequenza di sintonia, livello/mix e risposta elettrica devono essere ricavati dal manuale Type C; non dedurli dal nome generico "Aural Exciter".
-- **Nota sulle fonti:** la [pagina ufficiale Aphex dell'Exciter attuale](https://aphex.com/products/exciter) documenta un prodotto moderno Aural Exciter/Optical Big Bottom e non prova le specifiche del Type C storico. Non trasferire al Type C le specifiche o i controlli del prodotto attuale.
+* **Topologia Circuitale:** Processore parallelo additivo. Il segnale viene sdoppiato: il ramo dry passa inalterato, mentre il ramo sidechain attraversa un **filtro passa-alto accordabile (`Tune` `1 .. 10 kHz`)**, un **generatore di armoniche pari/dispari asimmetrico con leggero sfasamento dinamico** e viene risommato in fase (`Mix`).
+* **Comportamento Chiave:** Aumenta la presenza, l'intelligibilità e l'aria sulle alte frequenze senza innalzare il livello di picco (`dBFS`) quanto farebbe un equalizzatore tradizionale.
 
 ### `greg_low_enhancer` — dbx 120A Subharmonic Synthesizer
+* **Topologia Circuitale:** Crossover fase-coerente a `80 Hz` o `120 Hz` (`HPF 12 dB/oct` + `LPF 6 dB/oct` unity-sum) abbinato a due sintetizzatori di sub-armoniche a ottava inferiore (`f / 2`) guidati dall'inviluppo e dai passaggi per lo zero del segnale di ingresso (`54–110 Hz`).
+* **Controlli:** `Subharmonics Master`, Banda 1 (`24–36 Hz`), Banda 2 (`36–56 Hz`), circuito `LF Boost` indipendente e `Subwoofer Out`.
 
-- **Topologia dichiarata dal costruttore:** sintesi subarmonica proprietaria che usa la forma d'onda del basso sorgente e genera una nota modellata un'ottava sotto; due bande di sintesi e un circuito LF Boost separato.
-- **Controlli e bande:** Subharmonics master; livelli indipendenti 26–36 Hz e 36–56 Hz (i controlli frontali sono etichettati 24–36 e 36–56 Hz); LF Boost; crossover selezionabile 80/120 Hz, bypass sintesi e livello uscita subwoofer. Il manuale dichiara range di sintesi 26–56 Hz da ingresso 54–110 Hz.
-- **Crossover:** HPF 12 dB/ottava (-3 dB a 80 o 120 Hz) e LPF derivato 6 dB/ottava, dichiarato phase-coherent/unity-sum.
-- **Specifiche pubblicate:** risposta 20 Hz–20 kHz ±0.5 dB senza sintesi in full-range mode; THD 0.05% senza sintesi; rumore uscita -88 dBu (controlli al massimo, non pesato 22 Hz–22 kHz); dynamic range 112 dB; ingresso max +22 dBu su jack e +8.5 dBV RCA; uscita max +22 dBu su 600 ohm.
-- **Punti di fedelta':** il processore non e' un semplice sub-oscillatore divide-per-due: serve preservare dipendenza dal materiale sorgente, le due bande, livelli e crossover separati. La sintesi musicale va caratterizzata con segnali di basso reali e test controllati.
-- **Fonte primaria:** [manuale ufficiale dbx 120A](https://dbxpro.com/en/product_documents/120a-manual-18-2217-cpdf) e [pagina prodotto dbx](https://dbxpro.com/en/products/120a).
+---
 
-## Famiglie compressori aggiunte al catalogo
+## 7. Trasduttori, Microfoni, Cabinet e Spazi Acustici (`core-dsp`)
 
-### DBX 160A
+Per i processori di re-amping, microfonazione virtuale e ambientazione acustica, i parametri fisici sono governati dai moduli dedicati di `core-dsp`:
 
-- **Topologia e controlli:** compressore/limiter VCA con detector RMS; curve OverEasy o Hard Knee, Threshold, Compression Ratio e Output Gain. Il controllo Infinity+ consente compressione inversa oltre la soglia; ingresso detector esterno e collegamento stereo fra due 160A sono documentati.
-- **Manuale 160A:** threshold -40..+20 dBu; ratio variabile da 1:1 a infinito e oltre fino alla curva -1:1; attacco program-dependent (tipicamente 15 ms per 10 dB, 5 ms per 20 dB, 3 ms per 30 dB); rilascio program-dependent (8 ms per 1 dB, 80 ms per 10 dB, 400 ms per 50 dB); risposta 20 Hz–20 kHz +0/-0.5 dB; uscita massima +24 dBm bilanciata.
-- **Punto di fedelta':** il tracking dinamico della curva OverEasy e l'andamento attack/release dipendente dal programma sono fondamentali. Non sostituirli con un soft-knee statico più un envelope follower a costanti fisse.
-- **Fonte primaria:** [DBX 160A — pagina e manuale del produttore](https://dbxpro.com/en/products/160a).
+* **`microphone_models.rs` (Capsula + Circuito Interno):**
+  * **Capsule:** Condensatore LDC (`M7`, `K47`, `K67`, `CK12`, `C800G`), SDC (`KM84`, `MK4`), Dinamiche (`SM57`, `SM7B`, `MD421`, `RE20`, `D112`), Nastro (`Royer R121`, `Coles 4038`) e Piezo/Carbon.
+  * **Fisica Acustica & Circuito:** Effetto prossimità legato alla figura polare (`Cardioid`, `Figure8`, `Omni`), risposta fuori asse (`0°..180°`), compressione meccanica del diaframma ad alti SPL e accoppiamento diretto al circuito interno (`Octal6sn7` + `HaufeT14`, `Fet2n5457`, `Jensen990`) con override `.with_custom_circuit(...)`.
+* **`pickup_transducers.rs` (Pickup & Trasduttori):**
+  * Circuito risonante passivo **RLC** (`SingleCoilStrat`, `TeleBridge`, `P90`, `HumbuckerPaf`, `Emg81`, `Precision/Jazz Bass`, `Piezo`, `RhodesTine`, `VinylCartridgeMm`) modulato da capacità del cavo (`100..1500 pF`), impedenza di carico (`10 kΩ .. 1 MΩ`), posizione sul body (*comb aperture*) e saturazione magnetica dei poli.
+* **`cabinet_speaker.rs` (Coni, Casse & Microfonazione):**
+  * Driver chitarra/basso (`Greenback G12M`, `Vintage 30`, `Alnico Blue`, `Jensen P12N`, `EVM12L`, `Ampeg 10"`, `Hartke 10"`, `JBL 15"`), configurazione (`1x`, `2x`, `4x`, `8x`), cassa (`OpenBack`, `ClosedBack`, `BassReflexPorted` con accordo Helmholtz) e posizionamento continuo del microfono (`cap_to_edge`, `distance_cm`, `off_axis_deg`).
+* **`acoustic_room.rs` (Stanza 3D & Prime Riflessioni):**
+  * Motore **Image-Source** 3D fino al 2° ordine pre-allocato in `initialize()`, dimensioni stanza (`width_m`, `length_m`, `height_m`), materiali distinti per pareti, pavimento e soffitto, assorbimento dell'aria e diffusione morbida.
 
-### DBX 160X
+---
 
-- **Topologia e controlli (manuale d'archivio):** detector true RMS, VCA Blackmer e circuito feed-forward; Over Easy o hard knee, ratio continuo da 1:1 a infinito e oltre fino a -1:1 (Infinity+), threshold, output gain, bypass hard-wire e detector accessibile. Stereo link tra due unita' tramite detector RMS; attacco e rilascio sono program-dependent.
-- **Range e tempi dichiarati:** threshold -40..+20 dBm; output gain -20..+20 dB; attack 15 ms per incremento di 10 dB, 5 ms/20 dB, 3 ms/30 dB; rilascio automatico program-dependent, indicato come 0..500 ms. Compressione massima dichiarata \>60 dB.
-- **Dati elettrici della copia consultata:** ingresso max +24 dBm; uscita max +24 dBm su 600 ohm o superiore; uscita single-ended 22 ohm nella configurazione standard; risposta +0/-1 dB, 20 Hz..20 kHz; dynamic range \>113 dB; rumore equivalente ingresso \< -89 dBm, 20 Hz..20 kHz.
-- **Revisione/limite fonte:** dati estratti da una scansione del manuale 160X ospitata da terzi, non dal produttore. La stessa documentazione descrive opzioni di uscita bilanciata attiva o a trasformatore, quindi verificare la configurazione della macchina fisica prima di usare i valori d'uscita come riferimento.
-- **Punto di fedelta':** non trasferire al 160X i dati del 160A. La copia del manuale 160X documenta l'uscita standard single-ended, mentre il 160A ha uscita elettronicamente bilanciata.
-- **Fonti:** [DBX 160A e storia della famiglia](https://dbxpro.com/en/products/160a); [manuale 160X d'archivio, copia non ospitata dal produttore](https://tcfurlong.com/wp-content/uploads/dbx-160X-Rental-Manual.pdf).
+## 8. Processori Puramente Digitali e Utility (Nessun Outboard Analogico)
 
-### DBX 165A
+I seguenti plugin della suite sono processori digitali originali ad altissima precisione (`f64`, zero colorazione analogica non richiesta, latenza esatta dichiarata all'host ove presente):
 
-- **Differenza fra 165 e 165A:** il memo DBX allegato al manuale dichiara che il 165A e' identico al 165 salvo PeakStop. Percio' i dati seguenti provengono dal manuale del 165 e dal memo 165A: non sono specifiche generiche della famiglia 160.
-- **Topologia e controlli:** compressore mono Over Easy con detector RMS true e VCA in feed-forward; soglia, rapporto 1:1..infinito:1, attacco e rilascio manuali o auto, output gain, meter input/output/gain change, bypass hard-wire e accoppiamento stereo di due unita'. Il detector e' accessibile separatamente per EQ/filtri o altre elaborazioni esterne.
-- **Tempi dichiarati:** in auto, attack tipico 15 ms per variazione di 10 dB, 5 ms/20 dB e 3 ms/30 dB; release 120 dB/s. In manuale, attack 1..400 dB/ms e release 10..4000 dB/s. Non convertire questi slew rate direttamente in un singolo tempo RC.
-- **Dati elettrici del manuale 165:** threshold -40..+10 dB riferiti a 0.775 V RMS; ingresso max +24 dB (12.3 V RMS); uscita max +23 dBm su 600 ohm o superiore; risposta +0/-1 dB, 20 Hz..20 kHz; rumore equivalente ingresso \< -90 dBm, 20 Hz..20 kHz. Distorsione tipica a compressione infinita e 1 kHz/0 dBm: 0.05% seconda armonica, 0.2% terza con tempi centrati.
-- **PeakStop del 165A:** limiter/clipper a valle del compressore e dell'output gain, istantaneo, basato su clipper controllato in tensione con arrotondamento dei picchi. Il memo specifica range -2..+24 dBm; ammette brevi overshoot per l'arrotondamento e raccomanda di impostare il limite 1..2 dB sotto il ceiling assoluto.
-- **Punto di fedelta':** Over Easy, risposta temporale auto/manuale, detector separato, stereo-link e PeakStop sono comportamenti distinti; non riutilizzare i valori del 160A/160X. Il PeakStop non e' un limiter lookahead trasparente.
-- **Fonti primarie:** [DBX 165A — manuale ufficiale combinato 165/165A](https://dbxpro.com/en/products/165a).
+* **Dinamica & Livellamento:**
+  * `greg_multiband_comp` (Compressore multibanda con crossover Linkwitz-Riley LR4/LR8 a fase coerente).
+  * `greg_limiter` (True-Peak Mastering Limiter 4x oversampled ITU-R BS.1770-4 con lookahead e rilascio adattivo).
+  * `greg_gate` (Noise Gate / Expander con isteresi, hold e sidechain filter).
+  * `greg_leveler` (Vocal / Level Auto-Fader sillabico K-weighted con lookahead, silence floor e music sidechain).
+  * `greg_trans_mono` & `greg_trans_multi` (Transient Shaper differenziale a banda singola e multibanda).
+* **Equalizzazione & Spettro:**
+  * `greg_surgical_eq` (EQ parametrico chirurgico ZDF a 10 bande con analizzatore di spettro).
+  * `greg_lin_eq` & `greg_lin_comp` (Equalizzatore FIR e compressore a fase lineare).
+  * `greg_eq_match` (Spectrum Matcher LTAS a fase lineare o minima con smoothing psicoacustico e persistenza della curva).
+* **Spazio, Modulazione & Tempo:**
+  * `greg_space` (Riverbero algoritmico FDN a 8/16 linee con diffusione e modulazione).
+  * `greg_pingpong` (Stereo / Multi-tap Delay sincronizzato al BPM con filtraggio nel loop).
+  * `greg_ir_reverb` (Convoluzione partizionata a latenza zero con caricamento WAV 16..64-bit).
+* **Pitch, Restauro, Lo-Fi & Routing:**
+  * `greg_pitch_clean` & `greg_pitch_formant` (Pitch shifter fase-coerente e preservazione delle formanti).
+  * `greg_denoiser`, `greg_declipper`, `greg_dehummer`, `greg_declicker` (Suite di restauro audio spettrale e nel dominio del tempo).
+  * `greg_destroyer` (Decimator, Bitcrusher e simulatore campionatori vintage Akai MPC60 / MPC3000 / SP-1200).
+  * `greg_bus_summer`, `greg_phase`, `greg_ms_encoder`, `greg_ms_decoder` (Utility di somma, rotazione continua di fase e matrice Mid/Side).
 
-### Compressori API standalone
-
-La pagina ufficiale [API Compressors](https://apiaudio.com/compressors/) elenca i modelli sotto. TCS-II e' un channel strip integrato, non aggiunto come un secondo plugin compressore: la sua sezione compressore e' gia' coperta dal relativo riferimento 527A. In conformità alla regola di accorpamento, le versioni differenti dello stesso outboard sono accorpate nello stesso plugin con selettore di versione.
-
-| Plugin accorpato | Modelli accorpati | Specifica utile alla fedelta' (pagina costruttore) | Fonte |
-| --- | --- | --- | --- |
-| `greg_api_2500` | API 2500 e API 2500+ | Dual-channel; threshold -20..+10 dBu; THRUST con filtro prima del detector RMS; feedback ("Old") oppure feed-forward ("New"); knee soft/medium/hard; auto/manual makeup; sidechain bilanciata; output clipping a +28 dBu. La versione 2500+ aggiunge il controllo Mix/Blend (OFF, crossfade o compressione parallela), max output +32 dBu bilanciato a trasformatore e risposta 20 Hz–50 kHz ±0.5 dB. | [API 2500](https://apiaudio.com/product/2500-stereo-compressor/), [API 2500+](https://apiaudio.com/product/2500-stereo-bus-compressor/) |
-| `greg_api_sr22` | API SR22 e API Select SV12 | Circuito nato nella console ATI Paragon; due canali, link stereo con somma RMS, THRUST, knee hard/soft; threshold -40..+15 dBu, ratio 1:1..10:1, attack adattivo 10–40 ms, release 30–400 ms, makeup 0..+20 dB. Accorpa la versione rack SR22 e il modulo serie 500 SV12 con selettore di formato. | [API SR22](https://apiaudio.com/product/sr22-compressor/), [API SV12](https://apiaudio.com/product/api-select-sv12-compressor/) |
-| `greg_api_225l` | API 225L | Modulo VCA della serie 200; feedback/feed-forward, hard/soft, auto makeup, sidechain e link stereo; threshold +10..-20 dBu, ratio 1:1..infinito, attack 1–25 ms, release 0.3–3 s. | [API 225L](https://apiaudio.com/product/225l-compressor/) |
-| `greg_api_t25` | API T25 | Due canali, FET feedback, uscita Class A a valvole e trasformatore; ratio 2/4/8/20:1, attack 20 µs..0.8 ms, release 50 ms..1.2 s, 11 posizioni per ciascun tempo, THRUST e D-S. | [API T25](https://apiaudio.com/product/t25-tube-compressor/) |
-| `greg_api_525` | API 525 e API 525A | Peak-detecting feedback; ratio 2:1 oppure limit 20:1, Ceiling accoppiato tra compressione e output, De-Ess dedicato. La versione vintage 525 ha attack fisso 15 µs e 4 release frequency-dependent; la versione 525A estende attack variabile 15 µs..15 ms e 7 release discreti (0.05..2 s). Selettore di versione 525 / 525A. | [API 525](https://apiaudio.com/product/525-compressor/), [API 525A](https://apiaudio.com/product/525a-fet-compressor/) |
-| `greg_api_527` | API 527 e API 527A | VCA discreto con 2510/2520 e trasformatore; threshold +10..-20 dBu, ratio 1:1..infinito, attack 1–25 ms, release 0.3–3 s, feed-forward/feedback, hard/soft, THRUST e link multi-unit. Accorpa 527 e 527A con selettore di versione. | [API 527](https://apiaudio.com/product/527-compressor-limiter/), [API 527A](https://apiaudio.com/product/527a-compressor-limiter/) |
-| `greg_api_529` | API 529 | Compressore stereo dual-slot 500 Series derivato dal 2500; old/new, THRUST, tre knee, auto/variable makeup; ratio 1.5:1..infinito, attack \<1..50 ms, release 0.05..4 s, threshold +10..-20 dBu. | [API 529](https://apiaudio.com/product/529-stereo-compressor/) |
-
-**Regola di modellazione:** non condividere una singola curva API generica. 525/525A sono FET peak-detecting con caratteristiche temporali e Ceiling differenti; 527/527A/225L sono varianti VCA con controlli e detector specifici; 2500/2500+ e 529 hanno routing e opzioni stereo; SR22/SV12 sono basati sul circuito ATI Paragon; T25 aggiunge un percorso FET/valvolare a due canali. Il selettore di versione interno permette di passare fedelmente tra le revisioni storiche dell'hardware.
-
-## Lacune di specifiche e riferimenti non assegnati
-
-| Plugin | Riferimento selezionato | Informazioni mancanti prima di scrivere un modello circuitale |
-| --- | --- | --- |
-| `greg_harrison_pre`, `greg_harrison_comp`, `greg_harrison_eq` | Harrison 32C | Reperire manuale/revisione; documentare guadagni, curve EQ, topologia e tempi del compressore. |
-| `greg_tape` | Studer A800 Mk III, 2-inch multitrack | Velocita' (15/30 IPS), formulazione nastro, flusso, EQ NAB/IEC, bias e allineamento. |
-| `greg_exciter` | Aphex Aural Exciter Type C | Manuale Type C, revisione, generazione armoniche, frequenze e livelli. |
-| `greg_low_enhancer` | dbx 120A Subharmonic Synthesizer | Specifiche di manuale trascritte; restano da caratterizzare algoritmo di sintesi e comportamento ai segnali reali. |
-| `greg_bus_summer` | Nessun modello indicato | Scegliere mixer/console e percorso di somma (trasformatori, amplificatori, headroom, numero canali). |
-| `greg_gate` | Nessun modello indicato | Scegliere unità/revisione e documentare detector, attack/hold/release, range, hysteresis e key filtering. |
-
-Le macchine confermate hanno ora un'identita' hardware di progetto; i parametri mancanti non vanno comunque indovinati. Il gate e il sommatore restano senza outboard assegnato.
-
-## Gap di documentazione e prossimo passo
-
-1. Rappresentare 1176 Rev D/E come profili del medesimo plugin; bloccare le revisioni LA-2A, LA-3A, Fairchild 670, SSL bus comp e gli esatti moduli SSL E/G.
-2. Recuperare e archiviare i manuali esatti con identificativo/revisione per Harrison 32C, Studer A800 Mk III, Aphex Type C e i compressori ottici; trascrivere le tabelle temporali del Fairchild.
-3. Per ogni unità scelta creare un set di misure A/B: risposta a piccoli segnali, sweep a piu' livelli, transiente e recupero dopo burst, curva input/output, THD/spettro, rumore e condizioni di carico.
-4. Aggiornare le schede `docs/plugins/` con i dati verificati e separare i controlli estesi dagli originali hardware.
-
-Fino a questi passaggi, le implementazioni alpha restano modelli ispirati alla topologia, non emulazioni hardware validate.
-
-\### \`greg\_leveler\` — Vocal / Level Auto-Fader (Utility Dinamica)
-
-\* \*\*Crate / ID CLAP:\*\* \`plugins/greg-leveler\` (\`com.greg.audio.greg\_leveler\`)
-
-\* \*\*Natura:\*\* Processore di livellamento automatico del guadagno (Auto-Fader / Gain Rider) trasparente, privo di compressione non lineare, progettato per mantenere voci, dialoghi o strumenti solisti costanti rispetto a un livello Target senza alterare i transienti.
-
-\* \*\*Topologia DSP (\`core-dsp\`):\*\*
-
-\* \*\*Detector Sillabico:\*\* Misurazione RMS / pesata K-weighting con finestra di integrazione rapida (30–80 ms) preceduta da filtri bandpass (HPF/LPF) per isolare il corpo vocale da sibilanti ("S") e sub-armoniche.
-
-\* \*\*Silence / Breath Gate (\`Floor\`):\*\* Sotto la soglia impostata, il fader torna dolcemente a \`0.0 dB\` evitando di amplificare respiri o rumore di fondo nelle pause.
-
-\* \*\*Lookahead (\`LatencyDelay\`):\*\* Anticipo configurabile (0–20 ms) con latenza esatta dichiarata all'host CLAP/VST3 per muovere il fader sull'attacco della sillaba.
-
-\* \*\*Music Sidechain (Dynamic Target):\*\* L'ingresso \*External Sidechain\* (base musicale/mix) modula dinamicamente il Target, alzando la voce nei ritornelli densi e riabbassandola nelle strofe intime.
-
-\* \*\*Zero Colorazione (Default):\*\* Guadagno puro line-level smoothed in \`f64\`, zero saturazione o rumore aggiunto di default; bypass compensato con crossfade 5 ms e \`PanicProtection\`.
-
-\* \*\*Controlli Main Panel (\`greg\_gui\_core\`):\*\*
-
-\* \`Target\` (\`-36.0 .. -6.0 dBFS\`): livello di riferimento desiderato.
-
-\* \`Range Up / Max Boost\` (\`0.0 .. +12.0 dB\`): escursione massima in positivo.
-
-\* \`Range Down / Max Cut\` (\`-12.0 .. 0.0 dB\`): escursione massima in negativo.
-
-\* \`Speed\` (\`Slow\` .. \`Fast\` / \`10 .. 250 ms\`): inerzia del fader virtuale.
-
-\* \`Floor / Sensitivity\` (\`-60.0 .. -18.0 dBFS\`): soglia di rilevamento voce vs silenzio/respiri.
-
-\* \*\*Controlli Advanced Panel (\`+ ADV\`):\*\*
-
-\* \`Music SC Amount\` (\`0 .. 100%\`): influenza della sidechain esterna sul Target.
-
-\* \`Lookahead\` (\`0.0 .. 20.0 ms\`): anticipo del detector (aggiorna la latenza dichiarata all'host).
-
-\* \`Detector HPF\` (\`80 .. 500 Hz\`) e \`Detector LPF\` (\`2.0 .. 12.0 kHz\`): isolamento frequenziale del rilevatore.
-
-\* \*\*Telemetria GUI (\`metering.rs\`):\*\* Espone Input/Output multicanale, Phase Correlation e l'escursione netta del fader (\`-12 dB .. 0 dB .. +12 dB\`).
-
-\### \`greg\_eq\_match\` — Spectrum Matcher / EQ Curve Cloning (Mastering \& Tone Matching)
-
-\* \*\*Crate / ID CLAP:\*\* \`plugins/greg-eq-match\` (\`com.greg.audio.greg-eq-match\`)
-
-\* \*\*Natura:\*\* Equalizzatore di matching spettrale (EQ Matching) a fase lineare o minima che cattura il profilo tonale medio (LTAS) di una sorgente di riferimento e genera una curva di correzione smussata per adattare una traccia o un master.
-
-\* \*\*Topologia DSP (\`core-dsp\`):\*\*
-
-  \* \*\*Analisi LTAS (Long-Term Average Spectrum):\*\* Finestre FFT da 4096 campioni (Hann, overlap 75%) calcolate su thread dedicato/non-RT o buffer pre-allocati per mediare lo spettro senza picchi transitori.
-
-  \* \*\*Sorgente Reference:\*\* Cattura interna (\*Learn Reference\*) oppure confronto dinamico continuo tramite \*External Sidechain\*.
-
-  \* \*\*Smoothing Psicoacustico \& Cap:\*\* Media mobile logaritmica (da 1/12 d'ottava fino a 1 ottava) e limitazione dell'escursione massima (\`Max Boost/Cut\`) per prevenire artefatti risonanti (\*ringing\*).
-
-  \* \*\*Motore di Convoluzione (\`realfft\` / FIR):\*\* Sintesi del filtro FIR a fase lineare (512/1024 tap con latenza dichiarata all'host) o conversione a fase minima (zero latenza) per transienti percussivi.
-
-  \* \*\*Persistenza Stato:\*\* La curva catturata viene salvata nello stato del progetto (\`#\[persist = "matched\_curve"\]\`).
-
-\* \*\*Controlli Main Panel (\`greg\_gui\_core\`):\*\*
-
-  \* \`Learn Reference\` \& \`Learn Source\` (pulsanti di cattura spettrale) + \`Match\` (calcola e blocca la curva).
-
-  \* \`Amount\` (\`0.0 .. 100.0%\`): intensità della curva applicata (scala proporzionalmente i dB di correzione).
-
-  \* \`Smoothing\` (\`1 .. 100%\` / \`1/12 oct .. 1 oct\`): morbidezza della curva di EQ.
-
-  \* \`Output Trim\` (\`-12.0 .. +12.0 dB\`): compensazione del volume post-match.
-
-\* \*\*Controlli Advanced Panel (\`+ ADV\`):\*\*
-
-  \* \`Phase Mode\` (\`Linear Phase\` / \`Minimum Phase\`).
-
-  \* \`Range Low\` (\`20 .. 500 Hz\`) \& \`Range High\` (\`2.0 .. 20.0 kHz\`): limita l'intervento del match solo a una porzione dello spettro (es. lasciando intatti i sub-bassi).
-
-  \* \`Max Boost / Cut\` (\`±3 .. ±18 dB\`) e \`Live Sidechain Match\` (on/off).
-
-  \* \`GregSpectrum\` (obbligatorio): mostra sovrapposte in tempo reale la curva Reference, la curva Source e la curva di correzione risultante.

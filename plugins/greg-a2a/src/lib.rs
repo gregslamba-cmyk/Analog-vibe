@@ -16,7 +16,7 @@ use core_dsp::core_dsp_modules::{
     transformer_hysteresis::TransformerHysteresis,
 };
 use nih_plug_vizia::vizia::prelude::*;
-use greg_gui_core::{GuiTelemetry, create_greg_editor};
+use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
 
@@ -415,7 +415,26 @@ impl Plugin for GregA2a {
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params_main = self.params.clone();
         let params_adv = self.params.clone();
-        create_greg_editor(
+        let param_defs: &'static [greg_gui_core::ParamDef] =
+            Box::leak(vec![
+                greg_gui_core::ParamDef::knob("Peak Reduction", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.peak_reduction);
+                })),
+                greg_gui_core::ParamDef::knob("Gain", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.gain);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Mode", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.mode);
+                })),
+                greg_gui_core::ParamDef::knob("Tube Drive", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.tube_drive);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Oversampling", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.oversampling);
+                })),
+            ].into_boxed_slice(),
+        );
+        create_greg_editor_with_params(
             "Greg A2A",
             self.telemetry.clone(),
             move |cx| {
@@ -442,6 +461,7 @@ impl Plugin for GregA2a {
                 RotaryKnob::new(cx, EditorData::params, |p| &p.sidechain_gain);
                 RotaryKnob::new(cx, EditorData::params, |p| &p.analog_drift);
             },
+            Some(param_defs),
         )
     }
 

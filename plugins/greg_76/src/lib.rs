@@ -16,7 +16,7 @@ use core_dsp::core_dsp_modules::{
     transformer_hysteresis::TransformerHysteresis,
 };
 use nih_plug_vizia::vizia::prelude::*;
-use greg_gui_core::{GuiTelemetry, create_greg_editor};
+use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
 
@@ -473,7 +473,41 @@ impl Plugin for GregFet76 {
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params_main = self.params.clone();
         let params_adv = self.params.clone();
-        create_greg_editor(
+        let param_defs: &'static [greg_gui_core::ParamDef] =
+            Box::leak(vec![
+                greg_gui_core::ParamDef::knob("Input", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.input);
+                })),
+                greg_gui_core::ParamDef::knob("Output", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.output);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Ratio", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.ratio);
+                })),
+                greg_gui_core::ParamDef::knob("Threshold", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.threshold);
+                })),
+                greg_gui_core::ParamDef::knob("Attack", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.attack);
+                })),
+                greg_gui_core::ParamDef::knob("Release", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.release);
+                })),
+                greg_gui_core::ParamDef::knob("Output Gain", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.output_gain);
+                })),
+                greg_gui_core::ParamDef::knob("Transformer Iron", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.transformer_iron);
+                })),
+                greg_gui_core::ParamDef::knob("Analog Drift", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.analog_drift);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Oversampling", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.oversampling);
+                })),
+            ].into_boxed_slice(),
+        );
+        create_greg_editor_with_params(
             "Greg 76",
             self.telemetry.clone(),
             move |cx| {
@@ -512,6 +546,7 @@ impl Plugin for GregFet76 {
                 })
                 .child_space(Pixels(10.0));
             },
+            Some(param_defs),
         )
     }
 

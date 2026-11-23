@@ -15,8 +15,16 @@ use core_dsp::core_dsp_modules::{
     transformer_hysteresis::TransformerHysteresis,
     zdf_filters::ZdfSvf,
 };
-use greg_gui_core::{GuiTelemetry, create_greg_editor};
+use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
+use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
+
+#[derive(Clone, Lens)]
+struct EditorData {
+    params: Arc<GregPultecParams>,
+}
+
+impl Model for EditorData {}
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
 enum PultecVersion {
@@ -416,11 +424,63 @@ impl Plugin for GregPultec {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        create_greg_editor(
+        let params_main = self.params.clone();
+        let params_adv = self.params.clone();
+        let param_defs: &'static [greg_gui_core::ParamDef] =
+            Box::leak(vec![
+                greg_gui_core::ParamDef::toggle("Bypass", Box::new(|cx| {
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.bypass);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Version", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.version);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Low Boost Freq", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.low_boost_freq);
+                })),
+                greg_gui_core::ParamDef::knob("Low Boost Gain", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.low_boost_gain);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Low Atten Freq", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.low_atten_freq);
+                })),
+                greg_gui_core::ParamDef::knob("Low Atten Gain", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.low_atten_gain);
+                })),
+                greg_gui_core::ParamDef::enum_switch("High Peak Freq", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.high_peak_freq);
+                })),
+                greg_gui_core::ParamDef::knob("High Peak Gain", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.high_peak_gain);
+                })),
+                greg_gui_core::ParamDef::enum_switch("High Atten Freq", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.high_atten_freq);
+                })),
+                greg_gui_core::ParamDef::knob("High Atten Gain", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.high_atten_gain);
+                })),
+                greg_gui_core::ParamDef::knob("Output Gain", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.output_gain);
+                })),
+                greg_gui_core::ParamDef::knob("Analog Drift", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.analog_drift);
+                })),
+                greg_gui_core::ParamDef::toggle("Stereo Link", Box::new(|cx| {
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.link);
+                })),
+            ].into_boxed_slice(),
+        );
+        create_greg_editor_with_params(
             "Greg Pultec",
             self.telemetry.clone(),
-            |_cx| {},
-            |_cx| {},
+            move |cx| {
+                let editor_data = EditorData { params: params_main.clone() };
+                editor_data.build(cx);
+            },
+            move |cx| {
+                let editor_data = EditorData { params: params_adv.clone() };
+                editor_data.build(cx);
+            },
+            Some(param_defs),
         )
     }
 

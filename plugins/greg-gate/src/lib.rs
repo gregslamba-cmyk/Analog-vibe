@@ -4,7 +4,7 @@ use core_dsp::core_dsp_modules::{
     panic_protection::{PanicProtection, ProtectionResult},
     realtime_controls::BypassCrossfade,
 };
-use greg_gui_core::{GuiTelemetry, create_greg_editor};
+use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
 use std::sync::Arc;
@@ -149,7 +149,7 @@ impl Plugin for GregGate {
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params_arc_main = self.params.clone();
         let params_arc_adv = self.params.clone();
-        create_greg_editor(
+        create_greg_editor_with_params(
             "Greg Gate",
             self.telemetry.clone(),
             move |cx| {
@@ -157,7 +157,7 @@ impl Plugin for GregGate {
                 gui_data.build(cx);
                 VStack::new(cx, |cx| {
                     Label::new(cx, "Greg Gate").font_size(14.0).color(Color::rgb(255, 255, 255));
-                    Label::new(cx, "Main Parameters").font_size(12.0).color(Color::rgb(210, 215, 225));
+                    Label::new(cx, "Main Parameters").font_size(12.0).color(Color::rgb(210, 215, 225)).bottom(Pixels(6.0));
                     RotaryKnob::new(cx, GregGateGuiData::params, |p| &p.threshold).width(Pixels(115.0)).height(Pixels(24.0));
                     RotaryKnob::new(cx, GregGateGuiData::params, |p| &p.ratio).width(Pixels(115.0)).height(Pixels(24.0));
                     RotaryKnob::new(cx, GregGateGuiData::params, |p| &p.attack).width(Pixels(115.0)).height(Pixels(24.0));
@@ -171,10 +171,11 @@ impl Plugin for GregGate {
                 let gui_data = GregGateGuiData { params: params_arc_adv.clone() };
                 gui_data.build(cx);
                 VStack::new(cx, |cx| {
-                    Label::new(cx, "Advanced Parameters").font_size(12.0).color(Color::rgb(210, 215, 225));
+                    Label::new(cx, "Advanced Parameters").font_size(12.0).color(Color::rgb(210, 215, 225)).bottom(Pixels(6.0));
                 })
                 .height(Pixels(200.0)).background_color(Color::rgb(28, 30, 35)).child_space(Pixels(10.0));
             },
+            None,
         )
     }
     fn process(

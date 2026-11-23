@@ -14,8 +14,16 @@ use core_dsp::core_dsp_modules::{
     vari_mu::{TimeConstant, VariMuCell},
 };
 
-use greg_gui_core::{GuiTelemetry, create_greg_editor};
+use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
+use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
+
+#[derive(Clone, Lens)]
+struct EditorData {
+    params: Arc<GregChildParams>,
+}
+
+impl Model for EditorData {}
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
 #[allow(clippy::upper_case_acronyms)]
@@ -415,11 +423,52 @@ impl Plugin for GregChild {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        create_greg_editor(
+        let params_main = self.params.clone();
+        let params_adv = self.params.clone();
+        let param_defs: &'static [greg_gui_core::ParamDef] =
+            Box::leak(vec![
+                greg_gui_core::ParamDef::knob("Input", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.input);
+                })),
+                greg_gui_core::ParamDef::knob("Threshold", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.threshold);
+                })),
+                greg_gui_core::ParamDef::knob("Output", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.output);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Time Constant", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.time_constant);
+                })),
+                greg_gui_core::ParamDef::knob("Tube Drive", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.tube_drive);
+                })),
+                greg_gui_core::ParamDef::toggle("Bypass", Box::new(|cx| {
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.bypass);
+                })),
+            ].into_boxed_slice(),
+        );
+        create_greg_editor_with_params(
             "Greg Child",
             self.telemetry.clone(),
-            |_cx| {},
-            |_cx| {},
+            move |cx| {
+                let editor_data = EditorData { params: params_main.clone() };
+                editor_data.build(cx);
+            },
+            move |cx| {
+                let editor_data = EditorData { params: params_adv.clone() };
+                editor_data.build(cx);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.stereo_link);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_left);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_right);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.external_sidechain);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.sidechain_filter_enabled);
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.sidechain_listen);
+                EnumSwitch::new(cx, EditorData::params, |p| &p.sidechain_filter);
+                RotaryKnob::new(cx, EditorData::params, |p| &p.sidechain_frequency);
+                RotaryKnob::new(cx, EditorData::params, |p| &p.sidechain_q);
+                RotaryKnob::new(cx, EditorData::params, |p| &p.sidechain_gain);
+            },
+            Some(param_defs),
         )
     }
 

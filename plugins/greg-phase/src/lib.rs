@@ -9,7 +9,7 @@ use core_dsp::core_dsp_modules::{
     routing_matrix::StereoFrame,
 };
 use nih_plug_vizia::vizia::prelude::*;
-use greg_gui_core::{GuiTelemetry, create_greg_editor};
+use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
 
@@ -125,21 +125,35 @@ impl Plugin for GregPhase {
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params_main = self.params.clone();
         let params_adv = self.params.clone();
-        create_greg_editor(
+        let param_defs: &'static [greg_gui_core::ParamDef] =
+            Box::leak(vec![
+                greg_gui_core::ParamDef::toggle("Invert Left Polarity", Box::new(|cx| {
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_left);
+                })),
+                greg_gui_core::ParamDef::toggle("Invert Right Polarity", Box::new(|cx| {
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_right);
+                })),
+                greg_gui_core::ParamDef::toggle("Invert Both (Link)", Box::new(|cx| {
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_both);
+                })),
+                greg_gui_core::ParamDef::toggle("Bypass", Box::new(|cx| {
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.bypass);
+                })),
+            ].into_boxed_slice(),
+        );
+        create_greg_editor_with_params(
             "Greg Phase",
             self.telemetry.clone(),
             move |cx| {
                 let editor_data = EditorData { params: params_main.clone() };
                 editor_data.build(cx);
-                ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_left);
-                ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_right);
-                ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_both);
             },
             move |cx| {
                 let editor_data = EditorData { params: params_adv.clone() };
                 editor_data.build(cx);
                 ToggleSwitch::new(cx, EditorData::params, |p| &p.bypass);
             },
+            Some(param_defs),
         )
     }
 

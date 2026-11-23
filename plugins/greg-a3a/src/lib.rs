@@ -17,8 +17,16 @@ use core_dsp::core_dsp_modules::{
     sidechain_processor::{SidechainFilter, SidechainProcessor},
     transformer_hysteresis::TransformerHysteresis,
 };
-use greg_gui_core::{GuiTelemetry, create_greg_editor};
+use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
+use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
+
+#[derive(Clone, Lens)]
+struct EditorData {
+    params: Arc<GregA3aParams>,
+}
+
+impl Model for EditorData {}
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
 enum Mode {
@@ -407,11 +415,65 @@ impl Plugin for GregA3a {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        create_greg_editor(
+        let params_main = self.params.clone();
+        let param_defs: &'static [greg_gui_core::ParamDef] =
+            Box::leak(vec![
+                greg_gui_core::ParamDef::knob("Peak Reduction", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.peak_reduction);
+                })),
+                greg_gui_core::ParamDef::knob("Gain", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.gain);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Mode", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.mode);
+                })),
+                greg_gui_core::ParamDef::knob("Output Drive", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.output_drive);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Oversampling", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.oversampling);
+                })),
+                greg_gui_core::ParamDef::toggle("Bypass", Box::new(|cx| {
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.bypass);
+                })),
+                greg_gui_core::ParamDef::toggle("Invert Left Polarity", Box::new(|cx| {
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_left);
+                })),
+                greg_gui_core::ParamDef::toggle("Invert Right Polarity", Box::new(|cx| {
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_right);
+                })),
+                greg_gui_core::ParamDef::toggle("External Sidechain", Box::new(|cx| {
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.external_sidechain);
+                })),
+                greg_gui_core::ParamDef::toggle("Sidechain Filter Enabled", Box::new(|cx| {
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.sidechain_filter_enabled);
+                })),
+                greg_gui_core::ParamDef::toggle("Sidechain Listen", Box::new(|cx| {
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.sidechain_listen);
+                })),
+                greg_gui_core::ParamDef::enum_switch("Sidechain Filter", Box::new(|cx| {
+                    EnumSwitch::new(cx, EditorData::params, |p| &p.sidechain_filter);
+                })),
+                greg_gui_core::ParamDef::knob("Sidechain Frequency", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.sidechain_frequency);
+                })),
+                greg_gui_core::ParamDef::knob("Sidechain Q", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.sidechain_q);
+                })),
+                greg_gui_core::ParamDef::knob("Sidechain Gain", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.sidechain_gain);
+                })),
+            ].into_boxed_slice(),
+        );
+        create_greg_editor_with_params(
             "Greg A3A",
             self.telemetry.clone(),
+            move |cx| {
+                let editor_data = EditorData { params: params_main.clone() };
+                editor_data.build(cx);
+            },
             |_cx| {},
-            |_cx| {},
+            Some(param_defs),
         )
     }
 

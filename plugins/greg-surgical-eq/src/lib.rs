@@ -11,7 +11,7 @@ use core_dsp::core_dsp_modules::{
     surgical_eq::{EqBand, EqPhaseMode, SurgicalEq},
 };
 use nih_plug_vizia::vizia::prelude::*;
-use greg_gui_core::{GuiTelemetry, create_greg_editor};
+use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
 
@@ -305,24 +305,60 @@ impl Plugin for GregSurgicalEq {
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params_main = self.params.clone();
         let params_adv = self.params.clone();
-        create_greg_editor(
+        let mut param_defs: Vec<greg_gui_core::ParamDef> = vec![
+            greg_gui_core::ParamDef::enum_switch("Phase Mode", Box::new(|cx| {
+                EnumSwitch::new(cx, EditorData::params, |p| &p.phase_mode);
+            })),
+            greg_gui_core::ParamDef::toggle("Bypass", Box::new(|cx| {
+                ToggleSwitch::new(cx, EditorData::params, |p| &p.bypass);
+            })),
+        ];
+        for band_idx in 0..BAND_COUNT {
+            let idx = band_idx;
+            param_defs.push(greg_gui_core::ParamDef::toggle(
+                format!("Band {} Enabled", idx + 1).leak(),
+                Box::new(move |cx| {
+                    ToggleSwitch::new(cx, EditorData::params, move |p| &p.bands[idx].enabled);
+                }),
+            ));
+            param_defs.push(greg_gui_core::ParamDef::enum_switch(
+                format!("Band {} Type", idx + 1).leak(),
+                Box::new(move |cx| {
+                    EnumSwitch::new(cx, EditorData::params, move |p| &p.bands[idx].filter_type);
+                }),
+            ));
+            param_defs.push(greg_gui_core::ParamDef::knob(
+                format!("Band {} Frequency", idx + 1).leak(),
+                Box::new(move |cx| {
+                    RotaryKnob::new(cx, EditorData::params, move |p| &p.bands[idx].frequency);
+                }),
+            ));
+            param_defs.push(greg_gui_core::ParamDef::knob(
+                format!("Band {} Gain", idx + 1).leak(),
+                Box::new(move |cx| {
+                    RotaryKnob::new(cx, EditorData::params, move |p| &p.bands[idx].gain);
+                }),
+            ));
+            param_defs.push(greg_gui_core::ParamDef::knob(
+                format!("Band {} Q", idx + 1).leak(),
+                Box::new(move |cx| {
+                    RotaryKnob::new(cx, EditorData::params, move |p| &p.bands[idx].q);
+                }),
+            ));
+        }
+        let param_defs: &'static [greg_gui_core::ParamDef] = Box::leak(param_defs.into_boxed_slice());
+        create_greg_editor_with_params(
             "Greg Surgical EQ",
             self.telemetry.clone(),
             move |cx| {
                 let editor_data = EditorData { params: params_main.clone() };
                 editor_data.build(cx);
-                EnumSwitch::new(cx, EditorData::params, |p| &p.phase_mode);
-                ToggleSwitch::new(cx, EditorData::params, |p| &p.bypass);
             },
             move |cx| {
                 let editor_data = EditorData { params: params_adv.clone() };
                 editor_data.build(cx);
-                RotaryKnob::new(cx, EditorData::params, |p| &p.bands[0].enabled);
-                RotaryKnob::new(cx, EditorData::params, |p| &p.bands[0].filter_type);
-                RotaryKnob::new(cx, EditorData::params, |p| &p.bands[0].frequency);
-                RotaryKnob::new(cx, EditorData::params, |p| &p.bands[0].gain);
-                RotaryKnob::new(cx, EditorData::params, |p| &p.bands[0].q);
             },
+            Some(param_defs),
         )
     }
 
