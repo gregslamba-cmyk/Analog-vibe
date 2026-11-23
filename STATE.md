@@ -16,7 +16,9 @@
 - [COMPLETATO] `DelayLine` in `delay_lines.rs` resa `#[derive(Clone, Debug)]` per permettere l'uso in strutture non-Copy.
 - [COMPLETATO] `cargo check -p core-dsp`: pulito (0 errori, solo 2 warning preesistenti in `nonlinear_stages` e `modulation_engine`).
 - [COMPLETATO] `cargo test -p core-dsp cabinet_speaker`: 5/5 passanti.
-- [COMPLETATO] `cargo test -p core-dsp acoustic_room`: 4/4 passanti.
+  - [COMPLETATO] `cargo test -p core-dsp acoustic_room`: 4/4 passanti.
+- [COMPLETATO] `cabinet_speaker.rs`: esteso `MicPreampCircuit` con metodo `.with_custom_circuit(...)` per costruire microfoni virtuali ibridi (es. CK12 capsule + 300B tubo + trasformatore Marinair). Circuiti automatici storico-accurati per capsula (`MicCapsuleModel`) oppure custom; gestiti tubi da `component_models.rs` (`TubeStage`) e trasformatori (`TransformerModel`/`create_transformer`). Pre-processamento microfono via `CabinetSpeaker::mic_preamp()`, zero heap, NaN/Inf sanitizzati, silenzio a riposo.
+- [COMPLETATO] `cargo test -p core-dsp`: 130 test passanti, 0 warning, 0 errori.
 
 ## Stato aggiornato (2026-11-22) — Dynamic Multi-Channel Routing (Mono → 7.1)
 
