@@ -796,20 +796,20 @@ fn process_channel(
     };
 
     let pre_emp = if channel == 0 {
-        pre_emphasis_l.pre_emphasis(mix, 0.25)
+        pre_emphasis_l.pre_emphasis(mix, 0.25, channel)
     } else {
-        pre_emphasis_r.pre_emphasis(mix, 0.25)
+        pre_emphasis_r.pre_emphasis(mix, 0.25, channel)
     };
     let saturated = process_nonlinear(pre_emp, 1.2, NonlinearMode::TubeTriode);
     let de_emp = if channel == 0 {
-        de_emphasis_l.de_emphasis(saturated, 0.25)
+        de_emphasis_l.de_emphasis(saturated, 0.25, channel)
     } else {
-        de_emphasis_r.de_emphasis(saturated, 0.25)
+        de_emphasis_r.de_emphasis(saturated, 0.25, channel)
     };
     let ac_out = if channel == 0 {
-        ac_coupling_l.process(de_emp)
+        ac_coupling_l.process(de_emp, 0)
     } else {
-        ac_coupling_r.process(de_emp)
+        ac_coupling_r.process(de_emp, 1)
     };
     let trans_out = if channel == 0 {
         transformer_l.process(ac_out, 1.4, 0.3, 0.5)
@@ -817,9 +817,9 @@ fn process_channel(
         transformer_r.process(ac_out, 1.4, 0.3, 0.5)
     };
     let slewed = if channel == 0 {
-        slew_l.process(trans_out, sample_rate * 0.5, sample_rate)
+        slew_l.process(trans_out, sample_rate * 0.5, sample_rate, 0)
     } else {
-        slew_r.process(trans_out, sample_rate * 0.5, sample_rate)
+        slew_r.process(trans_out, sample_rate * 0.5, sample_rate, 1)
     };
 
     slewed

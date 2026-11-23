@@ -5,6 +5,7 @@ use std::sync::atomic::Ordering;
 
 use core_dsp::core_dsp_modules::{
     analog_variance::AnalogVariance,
+    component_models::{create_transformer, TubeModel, TubeStage, TransformerModel},
     metering::Metering,
     nonlinear_stages::{AcCoupling, DynamicMirrorPreEmphasis, tube_saturate},
     opto_compressor::{OptoCell, OptoMode, target_reduction_db},
@@ -99,6 +100,10 @@ struct GregA2a {
     params: Arc<GregA2aParams>,
     routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix,
     optical_cells: [OptoCell<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    input_transformers: [TransformerHysteresis; plugin_support::MAX_AUDIO_CHANNELS],
+    tube_stages_ecc83: [Option<TubeStage>; plugin_support::MAX_AUDIO_CHANNELS],
+    tube_stages_ecc81: [Option<TubeStage>; plugin_support::MAX_AUDIO_CHANNELS],
+    output_transformers: [TransformerHysteresis; plugin_support::MAX_AUDIO_CHANNELS],
     oversamplers: [Oversampler<f32>; plugin_support::MAX_AUDIO_CHANNELS],
     bypass_crossfades: [BypassCrossfade<f32>; plugin_support::MAX_AUDIO_CHANNELS],
     dry_delays: [LatencyDelay<f32, 32>; plugin_support::MAX_AUDIO_CHANNELS],
@@ -243,6 +248,10 @@ impl Default for GregA2a {
             params: Arc::new(GregA2aParams::default()),
             routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix::default(),
             optical_cells: [OptoCell::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            input_transformers: [TransformerHysteresis::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            tube_stages_ecc83: [None; plugin_support::MAX_AUDIO_CHANNELS],
+            tube_stages_ecc81: [None; plugin_support::MAX_AUDIO_CHANNELS],
+            output_transformers: [TransformerHysteresis::default(); plugin_support::MAX_AUDIO_CHANNELS],
             oversamplers: [Oversampler::default(); plugin_support::MAX_AUDIO_CHANNELS],
             bypass_crossfades: [BypassCrossfade::default(); plugin_support::MAX_AUDIO_CHANNELS],
             dry_delays: [LatencyDelay::default(); plugin_support::MAX_AUDIO_CHANNELS],
@@ -357,6 +366,24 @@ impl Plugin for GregA2a {
         for sag in &mut self.power_sags {
             sag.initialize(self.sample_rate, 0.1, 0.3);
         }
+        for stage in &mut self.tube_stages_ecc83 {
+            *stage = Some(TubeStage::new(
+                TubeModel::Ecc83_12ax7,
+                self.sample_rate as f64,
+            ));
+        }
+        for stage in &mut self.tube_stages_ecc81 {
+            *stage = Some(TubeStage::new(
+                TubeModel::Ecc81_12at7,
+                self.sample_rate as f64,
+            ));
+        }
+        for tx in &mut self.input_transformers {
+            *tx = create_transformer(TransformerModel::UtcHa100x, self.sample_rate as f64);
+        }
+        for tx in &mut self.output_transformers {
+            *tx = create_transformer(TransformerModel::UtcA10, self.sample_rate as f64);
+        }
         for t in &mut self.transformers {
             t.reset();
         }
@@ -387,6 +414,18 @@ impl Plugin for GregA2a {
     fn reset(&mut self) {
         for cell in &mut self.optical_cells {
             cell.reset();
+        }
+        for stage in &mut self.tube_stages_ecc83 {
+            if let Some(s) = stage.as_mut() { s.reset(); }
+        }
+        for stage in &mut self.tube_stages_ecc81 {
+            if let Some(s) = stage.as_mut() { s.reset(); }
+        }
+        for tx in &mut self.input_transformers {
+            tx.reset();
+        }
+        for tx in &mut self.output_transformers {
+            tx.reset();
         }
         for oversampler in &mut self.oversamplers {
             oversampler.reset();
@@ -568,15 +607,28 @@ impl Plugin for GregA2a {
                     };
                     let sag_gain = self.power_sags[channel].gain(compressed);
                     let pre_emph = self.pre_emphases[channel]
-                        .pre_emphasis((compressed as f64) * drift * (sag_gain as f64), 0.3);
+                        .pre_emphasis((compressed as f64) * drift * (sag_gain as f64), 0.3, channel);
                     let oversampler = &mut self.oversamplers[channel];
                     let saturated = oversampler.process(pre_emph as f32, factor, |value| {
                         tube_saturate(value, tube_drive)
                     });
-                    let de_emph = self.pre_emphases[channel].de_emphasis(saturated as f64, 0.3);
-                    let ac_coupled = self.ac_couplings[channel].process(de_emph);
-                    let transformer_out =
-                        self.transformers[channel].process(ac_coupled, 1.0, 0.5, 0.2);
+                    let de_emph = self.pre_emphases[channel].de_emphasis(saturated as f64, 0.3, channel);
+                    let ac_coupled = self.ac_couplings[channel].process(de_emph, channel);
+                    // Input transformer (UtcHa100x)
+                    let input_txfm_out = self.input_transformers[channel]
+                        .process(ac_coupled, 1.0, 0.5, 0.2);
+                    // Tube stages: Ecc83 (12AX7) then Ecc81 (cathode follower)
+                    let tube_ecc83_out = self.tube_stages_ecc83[channel]
+                        .as_mut()
+                        .map(|s| s.process_sample(input_txfm_out, 0.0))
+                        .unwrap_or(input_txfm_out);
+                    let tube_ecc81_out = self.tube_stages_ecc81[channel]
+                        .as_mut()
+                        .map(|s| s.process_sample(tube_ecc83_out, 0.0))
+                        .unwrap_or(tube_ecc83_out);
+                    // Output transformer (UtcA10)
+                    let transformer_out = self.output_transformers[channel]
+                        .process(tube_ecc81_out as f64, 1.0, 0.5, 0.2) as f32;
                     *sample = finite(
                         self.bypass_crossfades[channel].process(dry, transformer_out as f32),
                     );

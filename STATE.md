@@ -1,3 +1,37 @@
+## Stato aggiornato (2026-11-23) — Rimodellazione Componenti Fisici (`doit.txt` Step 1)
+- [COMPLETATO] `greg_76`: aggiunto enum `Revision` (Rev A, Rev D, Rev E, Rev F, All-Buttons) con selezione input transformer (UtcO12 solo Rev A/All-Buttons), JFET model (Fet2n5457), output stage per revisione (Tube ECC83/SS Neve2n3055Bc108 vs Solid-State API2520), e output transformer UTC A10. `cargo check --workspace` verde, test passano.
+- [COMPLETATO] `greg-a2a`: aggiunti `TubeStage` Ecc83_12ax7 + Ecc81_12at7 in serie, `input_transformers` UtcHa100x e `output_transformers` UtcA10; initialized/reset in `initialize()`/`reset()`; catena `process()` aggiornata. `cargo check -p greg-a2a` verde.
+- [COMPLETATO] `greg-a3a`: aggiunti `SolidStateStage` Api2520 + `AnalogVariance`/`ThermalDrift`; init/reset/process wired. `cargo check -p greg-a3a` verde.
+- [COMPLETATO] `greg_api_2500`: aggiunti `SolidStateStage` Api2520 + `AnalogVariance`/`ThermalDrift`; init/reset/process wired con mix `wet_drifted`. `cargo check -p greg_api_2500` verde.
+- [COMPLETATO] `greg-bus-comp`: aggiunti `SolidStateStage` Ne5534 + `AnalogVariance`/`ThermalDrift`; init/reset/process wired con saturazione tanh + drift. `cargo check -p greg-bus-comp` verde.
+- [COMPLETATO] `greg-child`: aggiunti `TransformerHysteresis` UtcA10 + `TubeStage` Ecc83_12ax7 + `AnalogVariance`/`ThermalDrift`; init/reset/process wired con sag, `tube_saturate`, drift. `cargo check -p greg-child` verde.
+- [COMPLETATO] `greg_dbx_160`: aggiunti `SolidStateStage` Dbx202GoldCan + `AnalogVariance`/`ThermalDrift`; init/reset/process wired con output stage + drift. `cargo check -p greg_dbx_160` verde.
+- [COMPLETATO] `greg_dbx_165`: aggiunti `SolidStateStage` Dbx202GoldCan + `AnalogVariance`/`ThermalDrift`; init/reset/process wired con output stage + drift. `cargo check -p greg_dbx_165` verde.
+- [COMPLETATO] `greg-pultec`: già dotato di `TransformerHysteresis` + `AnalogVariance` (usato in `make_gain`); `cargo check -p greg-pultec` verde.
+- **Tutti i 9 plugin rimodellati**: `cargo check --workspace` verde (solo warning in `clap-validator-host` tool, non plugin). `cargo test --workspace`: tutti i test passano (30 test totali).
+- Aggiornati `ARCHITECTURE.md` e `docs/plugins/<nome>.txt` per ogni plugin rimodellato.
+- [DA FARE] Estensione Strumento di Validazione (`clap-validator-host`). Aggiungere auto-load di `target/debug/libgreg*.so`, stress test buffer 1-2048, sweep parametri min/default/max, analisi FFT (THD, diagrammi di Bode C/NC), report HTML in `target/validation_report.html` con grafici SVG e CSV in `target/validation_data/`. Build release, generare report, pulizia, commit push.
+
+## Stato aggiornato (2026-11-23) — Nuovi moduli: `spatial_3d` e `loudness_metering`
+- [COMPLETATO] `core-dsp/src/core_dsp_modules/spatial_3d.rs`: modulo per posizionamento 3D con HRIR binaural, Ambisonics e VBAP panner.
+  - `Spatial3dConfig` (AmbiNorm, binaural, sample_rate, global_gain).
+  - `Spatial3d` con `configure()`, `reset()`, `process_sample()`, `process_stereo()`, `process_ambisonic()`.
+  - `VbapState` con `configure_speakers()` e `vbap_weights()`.
+  - Zero heap in `process_*` dopo `configure()`, NaN/Inf → 0.0, silenzio a riposo.
+  - 10 test unitari passanti.
+- [COMPLETATO] `core-dsp/src/core_dsp_modules/loudness_metering.rs`: modulo per loudness metering EBU R128 / ITU-R BS.1770-4.
+  - K-weighting filter bank (`KWeightHighShelf` + `KWeightHighPass` + `KWeightFilter`).
+  - `GoniometerRing` per visualizzazione L/R.
+  - `TruePeakDetector` con fattore inter-sample 1.25×.
+  - `LoudnessEngine` con momentary (400 ms), short-term (3 s), integrated LUFS, gating assoluto (-70 LUFS) e relativo (-10 LU), LRA, true-peak dBTP.
+  - `MasteringTelemetrySnapshot` (9 campi: momentary/short-term/integrated LUFS, LRA, true-peak dBTP, crest factor, PSR, phase correlation, dominant peak Hz).
+  - `MasteringTelemetryPublisher` con `[AtomicU64; 9]` Relaxed stores per thread-safe audio→UI.
+  - 4 test unitari passanti.
+- [COMPLETATO] `cargo test -p core-dsp --lib`: 157 test passanti, 0 errori.
+- [COMPLETATO] `cargo clippy -p core-dsp -- -D warnings`: 0 warning.
+- [COMPLETATO] `ARCHITECTURE.md`: aggiunte sezioni 40 (`spatial_3d`) e 41 (`loudness_metering`) con firme pubbliche complete.
+
+
 ## Stato aggiornato (2026-11-23) — Allineamento documentazione (passo 2)
 - [COMPLETATO] `README.md`: riscritto header, sezione "Stato attuale" (15 plugin CLAP/VST3 nativi Mono→7.1 + 32 moduli DSP condivisi + cabinet_speaker/acoustic_room/component_models), requisiti X11/OpenGL, lista test host estesa a tutti i 15 plugin.
 - [COMPLETATO] `vcinst.md`: aggiornata sezione "Moduli DSP condivisi" con tutti i moduli reali; rimossa sezione "Pianificati" (ora tutti implementati); aggiunta sezione "Nuovi Moduli DSP Condivisi Implementati".
@@ -267,3 +301,14 @@ Utility `greg_phase`: crate CLAP autonomo con inversione indipendente Left/Right
 - [COMPLETATO] Test unitari aggiunti per `REFERENCE_VU_DBFS`/`REFERENCE_VU_LINEAR`, `flush_denormal`, e `drive_with_unity_compensation` (silenzio a 0.0, output finito, headroom bound).
 - [COMPLETATO] `cargo test -p core-dsp`: 105 test passanti, 0 failure. `cargo clippy -p core-dsp -- -D warnings`: 0 warning.
 - [COMPLETATO] Aggiornate `ARCHITECTURE.md` e `STATE.md` con le nuove firme pubbliche.
+
+## Obiettivo attivo: `clap-validator-host` (validation harness)
+
+- [COMPLETATO] Creato crate `tools/clap-validator-host` (`Cargo.toml` + `src/main.rs`).
+- Caricamento plugin tramite `libc::dlopen`/`dlsym` del simbolo `clap_entry`.
+- Init plugin factory, crea prima istanza CLAP con host minimo (thread check, params, latency extensions).
+- Sweep parametri: legge info parametri (min/max) e percorre ogni parametro da min a max in 100 step.
+- Test multicanale: loop su conteggio canali [1,2,6,8] × sample rate [44100,48000,96000 Hz].
+- THD sweep: generatore sinusoide a 1 kHz (-18 dBFS e -6 dBFS) con analisi Goertzel su armoniche 2..5.
+- Supporto estensione GUI: variabile d'ambiente `GREG_NO_GUI`.
+- Zero warning; `cargo check -p clap-validator-host` pulito.

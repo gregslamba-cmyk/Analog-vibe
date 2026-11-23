@@ -5,6 +5,7 @@ use std::sync::atomic::Ordering;
 
 use core_dsp::core_dsp_modules::{
     analog_variance::{AnalogVariance, ThermalDrift},
+    component_models::{SolidStateModel, SolidStateStage},
     metering::Metering,
     nonlinear_stages::{
         AcCoupling, DynamicMirrorPreEmphasis, MillerRollOff, SlewRateLimiter,
@@ -232,6 +233,7 @@ struct GregA3a {
     miller_rolloffs: [MillerRollOff; plugin_support::MAX_AUDIO_CHANNELS],
     pre_emphases: [DynamicMirrorPreEmphasis; plugin_support::MAX_AUDIO_CHANNELS],
     power_sags: [PsuSag<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    output_stages: [SolidStateStage; plugin_support::MAX_AUDIO_CHANNELS],
     analog_variance: AnalogVariance,
     thermal_drift: ThermalDrift,
 }
@@ -266,6 +268,10 @@ impl Default for GregA3a {
             miller_rolloffs: [MillerRollOff::default(); plugin_support::MAX_AUDIO_CHANNELS],
             pre_emphases: [DynamicMirrorPreEmphasis::default(); plugin_support::MAX_AUDIO_CHANNELS],
             power_sags: [PsuSag::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            output_stages: array::from_fn(|_| SolidStateStage::new(
+                SolidStateModel::Api2520,
+                48_000.0,
+            )),
             analog_variance: AnalogVariance::from_seed(0x41_33_41_33, 0.02, 0.001, 0.0),
             thermal_drift: ThermalDrift::new(),
         }
@@ -371,6 +377,9 @@ impl Plugin for GregA3a {
         self.thermal_drift.configure(self.sample_rate as f64);
         for sag in &mut self.power_sags {
             sag.initialize(self.sample_rate, 0.1, 0.3);
+        }
+        for stage in &mut self.output_stages {
+            stage.configure(self.sample_rate as f64);
         }
         for t in &mut self.transformers_in {
             t.reset();
@@ -570,12 +579,20 @@ impl Plugin for GregA3a {
                     let reduction = self.optical_cells[channel].process_solid_state(target);
                     let compressed =
                         phase_input * util::db_to_gain(self.params.gain.value() - reduction);
+                    // Physical output stage (solid-state discrete op-amp with nonlinearity)
+                    let stage_out = self.output_stages[channel].process_sample(compressed as f64, 0.0) as f32;
                     let drive = util::db_to_gain(self.params.output_drive.value());
                     let oversampler = &mut self.oversamplers[channel];
-                    let wet = oversampler.process(finite(compressed), factor, |value| {
+                    let wet = oversampler.process(finite(stage_out), factor, |value| {
                         core_dsp::core_dsp_modules::nonlinear_stages::soft_clip(value, drive)
                     });
-                    *sample = finite(self.bypass_crossfades[channel].process(dry, wet));
+                    // Analog variance drift per channel (±1% component tolerance, ±3% between L/R)
+                    let drift = if channel == 0 {
+                        self.analog_variance.left_gain
+                    } else {
+                        self.analog_variance.right_gain
+                    };
+                    *sample = finite(self.bypass_crossfades[channel].process(dry, wet * drift as f32));
                     self.metering.record_sample(input, *sample, reduction);
                     self.telemetry.push_in_peak(channel, input);
                     self.telemetry.push_out_peak(channel, *sample);

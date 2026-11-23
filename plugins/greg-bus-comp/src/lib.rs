@@ -4,6 +4,8 @@ use std::{array, sync::Arc};
 use std::sync::atomic::Ordering;
 
 use core_dsp::core_dsp_modules::{
+    analog_variance::{AnalogVariance, ThermalDrift},
+    component_models::{SolidStateModel, SolidStateStage},
     metering::Metering,
     panic_protection::{PanicProtection, ProtectionResult},
     realtime_controls::{BypassCrossfade, EnvelopeFollower, LatencyDelay},
@@ -285,6 +287,9 @@ struct GregBusComp {
     panic_protection: PanicProtection,
     metering: Metering,
     telemetry: Arc<GuiTelemetry>,
+    output_stages: [SolidStateStage; plugin_support::MAX_AUDIO_CHANNELS],
+    analog_variance: AnalogVariance,
+    thermal_drift: ThermalDrift,
 }
 
 impl Default for GregBusComp {
@@ -311,6 +316,12 @@ impl Default for GregBusComp {
             panic_protection: PanicProtection::default(),
             metering: Metering::default(),
             telemetry: GuiTelemetry::new(true),
+            output_stages: array::from_fn(|_| SolidStateStage::new(
+                SolidStateModel::Ne5534,
+                48_000.0,
+            )),
+            analog_variance: AnalogVariance::from_seed(0x86_42_13_57, 0.02, 0.001, 0.0),
+            thermal_drift: ThermalDrift::new(),
         }
     }
 }
@@ -431,6 +442,12 @@ impl Plugin for GregBusComp {
             }
             context.set_latency_samples(latency);
         }
+
+        // Initialize physical analog stages
+        self.thermal_drift.configure(self.sample_rate as f64);
+        for stage in &mut self.output_stages {
+            stage.configure(self.sample_rate as f64);
+        }
         initialized
     }
 
@@ -446,6 +463,9 @@ impl Plugin for GregBusComp {
         }
         for delay in &mut self.dry_delays {
             delay.reset();
+        }
+        for stage in &mut self.output_stages {
+            stage.reset();
         }
         self.last_bypassed = self.params.bypass.value();
         for crossfade in &mut self.bypass_crossfades {
@@ -641,15 +661,23 @@ impl Plugin for GregBusComp {
                     let reduction_db = envelope.next(target_reduction);
 
                     let compressed = driven[channel] * db_to_gain(-reduction_db) * output_gain;
+                    // Physical output stage (Neve 5534-style Class-A op-amp with nonlinearity)
+                    let stage_out = self.output_stages[channel].process_sample(compressed as f64, 0.0) as f32;
                     let oversampler = &mut self.oversamplers[channel];
                     let wet = if drive > 1.0 {
-                        oversampler.process(compressed, factor, |value| {
+                        oversampler.process(stage_out, factor, |value| {
                             nonlinear_stages_tanh(value, drive)
                         })
                     } else {
-                        oversampler.process(compressed, factor, |value| value)
+                        oversampler.process(stage_out, factor, |value| value)
                     };
-                    *sample = finite(self.bypass_crossfades[channel].process(dry, wet));
+                    // Analog variance drift per channel (±1% component tolerance)
+                    let drift = if channel == 0 {
+                        self.analog_variance.left_gain
+                    } else {
+                        self.analog_variance.right_gain
+                    };
+                    *sample = finite(self.bypass_crossfades[channel].process(dry, wet * drift as f32));
                     self.metering
                         .record_sample(driven[channel], *sample, reduction_db);
                     self.telemetry.push_in_peak(channel, driven[channel]);

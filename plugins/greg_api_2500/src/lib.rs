@@ -4,6 +4,8 @@ use std::{array, sync::Arc};
 use std::sync::atomic::Ordering;
 
 use core_dsp::core_dsp_modules::{
+    analog_variance::{AnalogVariance, ThermalDrift},
+    component_models::{SolidStateModel, SolidStateStage},
     metering::Metering,
     panic_protection::{PanicProtection, ProtectionResult},
     realtime_controls::{BypassCrossfade, EnvelopeFollower, LatencyDelay},
@@ -367,6 +369,9 @@ struct GregApi2500 {
     metering: Metering,
     sample_rate: f32,
     telemetry: Arc<GuiTelemetry>,
+    output_stages: [SolidStateStage; plugin_support::MAX_AUDIO_CHANNELS],
+    analog_variance: AnalogVariance,
+    thermal_drift: ThermalDrift,
 }
 
 impl Default for GregApi2500 {
@@ -392,6 +397,12 @@ impl Default for GregApi2500 {
             metering: Metering::default(),
             sample_rate: 0.0,
             telemetry: GuiTelemetry::new(true),
+            output_stages: array::from_fn(|_| SolidStateStage::new(
+                SolidStateModel::Api2520,
+                48_000.0,
+            )),
+            analog_variance: AnalogVariance::from_seed(0x24_68_02_46, 0.02, 0.001, 0.0),
+            thermal_drift: ThermalDrift::new(),
         }
     }
 }
@@ -500,6 +511,12 @@ impl Plugin for GregApi2500 {
             }
             context.set_latency_samples(latency);
         }
+
+        // Initialize physical analog stages
+        self.thermal_drift.configure(self.sample_rate as f64);
+        for stage in &mut self.output_stages {
+            stage.configure(self.sample_rate as f64);
+        }
         sidechains_ok && delays_ok
     }
 
@@ -515,6 +532,9 @@ impl Plugin for GregApi2500 {
         }
         for delay in &mut self.dry_delays {
             delay.reset();
+        }
+        for stage in &mut self.output_stages {
+            stage.reset();
         }
         self.last_bypassed = self.params.bypass.value();
         for crossfade in &mut self.bypass_crossfades {
@@ -724,20 +744,29 @@ impl Plugin for GregApi2500 {
                     let reduction_db = self.envelopes[channel].next(target_reduction);
                     let gain = util::db_to_gain(-reduction_db);
                     let wet_signal = driven[channel] * gain * output_gain;
+                    // Physical output stage (API 2520 discrete op-amp with nonlinearity)
+                    let stage_out = self.output_stages[channel].process_sample(wet_signal as f64, 0.0) as f32;
                     let oversampler = &mut self.oversamplers[channel];
-                    let wet = oversampler.process(finite(wet_signal), factor, |value| value);
+                    let wet = oversampler.process(finite(stage_out), factor, |value| value);
+                    // Analog variance drift per channel (±1% component tolerance)
+                    let drift = if channel == 0 {
+                        self.analog_variance.left_gain
+                    } else {
+                        self.analog_variance.right_gain
+                    };
+                    let wet_drifted = wet * drift as f32;
 
                     let mixed = if mix_active {
                         match mix_blend {
-                            MixBlend::Off => wet,
+                            MixBlend::Off => wet_drifted,
                             MixBlend::Crossfade => {
                                 let wet_amount = 1.0 - (-reduction_db / 20.0).exp().clamp(0.0, 1.0);
-                                dry * (1.0 - wet_amount) + wet * wet_amount
+                                dry * (1.0 - wet_amount) + wet_drifted * wet_amount
                             }
-                            MixBlend::Parallel => finite(dry + wet),
+                            MixBlend::Parallel => finite(dry + wet_drifted),
                         }
                     } else {
-                        wet
+                        wet_drifted
                     };
 
                     *sample = finite(self.bypass_crossfades[channel].process(dry, mixed));

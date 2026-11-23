@@ -4,6 +4,8 @@ use std::{array, sync::Arc};
 use std::sync::atomic::Ordering;
 
 use core_dsp::core_dsp_modules::{
+    analog_variance::{AnalogVariance, ThermalDrift},
+    component_models::{create_transformer, TransformerModel},
     metering::Metering,
     nonlinear_stages::tube_saturate,
     panic_protection::{PanicProtection, ProtectionResult},
@@ -11,6 +13,7 @@ use core_dsp::core_dsp_modules::{
     realtime_controls::{BypassCrossfade, LatencyDelay},
     resampler_bitdepth::{Oversampler, OversamplingFactor},
     sidechain_processor::{SidechainFilter, SidechainProcessor},
+    transformer_hysteresis::TransformerHysteresis,
     vari_mu::{TimeConstant, VariMuCell},
 };
 
@@ -264,6 +267,9 @@ struct GregChild {
     panic_protection: PanicProtection,
     metering: Metering,
     telemetry: Arc<GuiTelemetry>,
+    output_transformers: [TransformerHysteresis; plugin_support::MAX_AUDIO_CHANNELS],
+    analog_variance: AnalogVariance,
+    thermal_drift: ThermalDrift,
 }
 
 impl Default for GregChild {
@@ -291,6 +297,9 @@ impl Default for GregChild {
             panic_protection: PanicProtection::default(),
             metering: Metering::default(),
             telemetry: GuiTelemetry::new(true),
+            output_transformers: array::from_fn(|_| TransformerHysteresis::default()),
+            analog_variance: AnalogVariance::from_seed(0x43_48_49_4C, 0.02, 0.001, 0.0),
+            thermal_drift: ThermalDrift::new(),
         }
     }
 }
@@ -396,6 +405,12 @@ impl Plugin for GregChild {
                 delay.reset();
             }
             context.set_latency_samples(latency);
+
+            // Initialize physical analog stages
+            self.thermal_drift.configure(self.sample_rate as f64);
+            for tx in &mut self.output_transformers {
+                *tx = create_transformer(TransformerModel::UtcA10, self.sample_rate as f64);
+            }
         }
         initialized
     }
@@ -415,6 +430,9 @@ impl Plugin for GregChild {
         }
         for delay in &mut self.dry_delays {
             delay.reset();
+        }
+        for tx in &mut self.output_transformers {
+            tx.reset();
         }
         self.last_bypassed = self.params.bypass.value();
         for crossfade in &mut self.bypass_crossfades {
@@ -591,12 +609,21 @@ impl Plugin for GregChild {
 
                     let reduction = self.cells[channel].process(keys[channel], threshold_db);
                     let compressed = driven[channel] * util::db_to_gain(-reduction) * output_gain;
-                    let sag_gain = self.power_sags[channel].gain(compressed);
+                    // Physical output transformer (Marinair-style with hysteresis)
+                    let tx_out = self.output_transformers[channel]
+                        .process(compressed as f64, 1.0, 0.5, 0.6) as f32;
+                    let sag_gain = self.power_sags[channel].gain(tx_out);
                     let oversampler = &mut self.oversamplers[channel];
-                    let wet = oversampler.process(compressed * sag_gain, factor, |value| {
+                    let wet = oversampler.process(sag_gain * tx_out, factor, |value| {
                         tube_saturate(value, drive)
                     });
-                    *sample = finite(self.bypass_crossfades[channel].process(dry, wet));
+                    // Analog variance drift per channel (±1% component tolerance)
+                    let drift = if channel == 0 {
+                        self.analog_variance.left_gain
+                    } else {
+                        self.analog_variance.right_gain
+                    };
+                    *sample = finite(self.bypass_crossfades[channel].process(dry, wet * drift as f32));
                     self.metering
                         .record_sample(raw[channel], *sample, reduction);
                     self.telemetry.push_in_peak(channel, raw[channel]);

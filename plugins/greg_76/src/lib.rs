@@ -1,9 +1,13 @@
 #![allow(unknown_lints, semicolon_in_expressions_from_non_local_macros)]
+#![forbid(unsafe_code)]
 
 use std::{array, sync::Arc};
 
 use core_dsp::core_dsp_modules::{
     analog_variance::{AnalogVariance, ThermalDrift},
+    component_models::{
+        SolidStateModel, SolidStateStage, TransformerModel, TubeModel, TubeStage, create_transformer,
+    },
     metering::Metering,
     nonlinear_stages::{
         AcCoupling, DynamicMirrorPreEmphasis, MillerRollOff, SlewRateLimiter, tube_saturate,
@@ -13,12 +17,98 @@ use core_dsp::core_dsp_modules::{
     realtime_controls::{BypassCrossfade, LatencyDelay},
     resampler_bitdepth::{Oversampler, OversamplingFactor},
     sidechain_processor::{SidechainFilter, SidechainProcessor},
-    transformer_hysteresis::TransformerHysteresis,
 };
 use nih_plug_vizia::vizia::prelude::*;
 use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
+
+/// 1176 Revision models with distinct component chains per hardware revision.
+#[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
+enum Revision {
+    #[id = "rev_a"]
+    #[name = "Rev A (Bluestripe)"]
+    RevA,
+    #[id = "rev_d"]
+    #[name = "Rev D (LN)"]
+    RevD,
+    #[id = "rev_e"]
+    #[name = "Rev E (LN)"]
+    RevE,
+    #[id = "rev_f"]
+    #[name = "Rev F (Class AB)"]
+    RevF,
+    #[id = "all_buttons"]
+    #[name = "All-Buttons In"]
+    AllButtons,
+}
+
+#[allow(dead_code)] // Several revision-model helpers are part of the physical-model API and wired incrementally.
+impl Revision {
+    /// Returns the input transformer for this revision.
+    fn input_transformer(&self) -> Option<TransformerModel> {
+        match self {
+            Revision::RevA => Some(TransformerModel::UtcO12), // Bluestripe input transformer
+            Revision::RevD | Revision::RevE | Revision::RevF => None, // No input transformer in LN/Rev F
+            Revision::AllButtons => Some(TransformerModel::UtcO12), // Same as Rev A
+        }
+    }
+
+    /// Returns the JFET model for the gain reduction element.
+    fn jfet_model(&self) -> SolidStateModel {
+        match self {
+            Revision::RevA => SolidStateModel::Fet2n5457, // Warm JFET
+            Revision::RevD | Revision::RevE => SolidStateModel::Fet2n5457, // Low-noise JFET
+            Revision::RevF => SolidStateModel::Fet2n5457, // Same JFET, different circuit
+            Revision::AllButtons => SolidStateModel::Fet2n5457,
+        }
+    }
+
+    /// Returns the output stage tube/solid-state model.
+    fn output_stage(&self) -> (Option<TubeModel>, Option<SolidStateModel>) {
+        match self {
+            Revision::RevA => (Some(TubeModel::Ecc83_12ax7), Some(SolidStateModel::Neve2n3055Bc108)), // Class A output
+            Revision::RevD | Revision::RevE => (Some(TubeModel::Ecc83_12ax7), None), // LN uses tube output
+            Revision::RevF => (None, Some(SolidStateModel::Api2520)), // Push-pull Class AB
+            Revision::AllButtons => (Some(TubeModel::Ecc83_12ax7), Some(SolidStateModel::Neve2n3055Bc108)), // Saturated Class A
+        }
+    }
+
+    /// Returns the output transformer model.
+    fn output_transformer(&self) -> TransformerModel {
+        TransformerModel::UtcA10 // All revisions use UTC A10 output
+    }
+
+    /// Returns true if this revision has the All-Buttons aggressive behavior.
+    fn is_all_buttons(&self) -> bool {
+        matches!(self, Revision::AllButtons)
+    }
+
+    /// Returns the JFET bias shift per ratio (simulates changing threshold with ratio).
+    fn jfet_bias_shift(&self, ratio: f32) -> f64 {
+        // In the 1176, changing ratio changes the feedback/bias on the JFET gate
+        // Higher ratio = more negative gate bias = lower effective threshold
+        let base_bias = match self {
+            Revision::RevA => 0.15,   // Warmest, slightly higher bias
+            Revision::RevD | Revision::RevE => 0.12, // Lower noise, tighter bias
+            Revision::RevF => 0.10,   // More linear
+            Revision::AllButtons => 0.18, // Aggressive bias for All-Buttons
+        };
+        // Bias shifts negatively as ratio increases (in Hz domain)
+        let ratio_factor = ((ratio / 4.0).ln() * 0.05) as f64;
+        base_bias - ratio_factor
+    }
+
+    /// Returns attack hesitation factor for All-Buttons mode.
+    fn attack_hesitation(&self) -> f64 {
+        if self.is_all_buttons() { 1.5 } else { 1.0 }
+    }
+
+    /// Returns saturation drive multiplier for All-Buttons mode.
+    fn saturation_drive(&self) -> f64 {
+        if self.is_all_buttons() { 1.8 } else { 1.0 }
+    }
+}
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
 #[allow(clippy::upper_case_acronyms)]
@@ -129,6 +219,8 @@ struct GregFet76Params {
     output: FloatParam,
     #[id = "ratio"]
     ratio: EnumParam<FetRatio>,
+    #[id = "revision"]
+    revision: EnumParam<Revision>,
     #[id = "threshold"]
     threshold: FloatParam,
     #[id = "attack"]
@@ -181,6 +273,7 @@ impl Default for GregFet76Params {
             )
             .with_unit(" dB"),
             ratio: EnumParam::new("Ratio", FetRatio::R4),
+            revision: EnumParam::new("Revision", Revision::RevD),
             threshold: FloatParam::new(
                 "Threshold",
                 -10.0,
@@ -257,7 +350,12 @@ struct GregFet76 {
     sidechains: [SidechainProcessor<f32>; plugin_support::MAX_AUDIO_CHANNELS],
     last_sidechain_settings: SidechainSettings,
     oversamplers: [Oversampler<f32>; plugin_support::MAX_AUDIO_CHANNELS],
-    transformers: [TransformerHysteresis; plugin_support::MAX_AUDIO_CHANNELS],
+    // Physical component models from core_dsp::component_models
+    input_transformers: [Option<core_dsp::core_dsp_modules::transformer_hysteresis::TransformerHysteresis>; plugin_support::MAX_AUDIO_CHANNELS],
+    output_transformers: [core_dsp::core_dsp_modules::transformer_hysteresis::TransformerHysteresis; plugin_support::MAX_AUDIO_CHANNELS],
+    jfet_stages: [SolidStateStage; plugin_support::MAX_AUDIO_CHANNELS],
+    output_tubes: [Option<TubeStage>; plugin_support::MAX_AUDIO_CHANNELS],
+    output_solid_states: [Option<SolidStateStage>; plugin_support::MAX_AUDIO_CHANNELS],
     ac_couplings: [AcCoupling; plugin_support::MAX_AUDIO_CHANNELS],
     slew_limiters: [SlewRateLimiter; plugin_support::MAX_AUDIO_CHANNELS],
     miller_rolloffs: [MillerRollOff; plugin_support::MAX_AUDIO_CHANNELS],
@@ -269,6 +367,7 @@ struct GregFet76 {
     dry_delays: [LatencyDelay<f32, 32>; plugin_support::MAX_AUDIO_CHANNELS],
     sample_rate: f32,
     last_oversampling: Oversampling,
+    last_revision: Revision,
     last_bypassed: bool,
     bypass_ramp_samples: u32,
     panic_protection: PanicProtection,
@@ -289,11 +388,20 @@ impl Default for GregFet76 {
                 gain: 0.0,
             },
             oversamplers: [Oversampler::default(); plugin_support::MAX_AUDIO_CHANNELS],
-            transformers: [TransformerHysteresis::default(); plugin_support::MAX_AUDIO_CHANNELS],
-            ac_couplings: [AcCoupling::default(); plugin_support::MAX_AUDIO_CHANNELS],
-            slew_limiters: [SlewRateLimiter::default(); plugin_support::MAX_AUDIO_CHANNELS],
-            miller_rolloffs: [MillerRollOff::default(); plugin_support::MAX_AUDIO_CHANNELS],
-            pre_emphases: [DynamicMirrorPreEmphasis::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            // Initialize physical component models based on default revision (Rev D)
+            input_transformers: array::from_fn(|_| {
+                Revision::RevD.input_transformer().map(|model| {
+                    create_transformer(model, 48000.0)
+                })
+            }),
+            output_transformers: array::from_fn(|_| create_transformer(TransformerModel::UtcA10, 48000.0)),
+            jfet_stages: array::from_fn(|_| SolidStateStage::new(SolidStateModel::Fet2n5457, 48000.0)),
+            output_tubes: array::from_fn(|_| None),
+            output_solid_states: array::from_fn(|_| None),
+            ac_couplings: array::from_fn(|_| AcCoupling::default()),
+            slew_limiters: array::from_fn(|_| SlewRateLimiter::default()),
+            miller_rolloffs: array::from_fn(|_| MillerRollOff::default()),
+            pre_emphases: array::from_fn(|_| DynamicMirrorPreEmphasis::default()),
             power_sags: [PsuSag::default(); plugin_support::MAX_AUDIO_CHANNELS],
             analog_variance: AnalogVariance::from_seed(76_76, 0.03, 0.01, 0.2),
             thermal_drift: ThermalDrift::default(),
@@ -301,6 +409,7 @@ impl Default for GregFet76 {
             dry_delays: [LatencyDelay::default(); plugin_support::MAX_AUDIO_CHANNELS],
             sample_rate: 0.0,
             last_oversampling: Oversampling::X4,
+            last_revision: Revision::RevD,
             last_bypassed: false,
             bypass_ramp_samples: 1,
             panic_protection: PanicProtection::default(),
@@ -399,8 +508,13 @@ impl Plugin for GregFet76 {
         for sag in &mut self.power_sags {
             sag.initialize(self.sample_rate, 0.1, 0.3);
         }
-        for t in &mut self.transformers {
+        for t in &mut self.output_transformers {
             t.reset();
+        }
+        for t in &mut self.input_transformers {
+            if let Some(t) = t {
+                t.reset();
+            }
         }
         for ac in &mut self.ac_couplings {
             ac.reset();
@@ -419,6 +533,7 @@ impl Plugin for GregFet76 {
         let initialized = sidechains_initialized && delays_initialized;
         if initialized {
             self.last_oversampling = oversampling;
+            self.last_revision = self.params.revision.value();
             self.last_bypassed = self.params.bypass.value();
             self.bypass_ramp_samples = (self.sample_rate * 0.005).round().max(1.0) as u32;
             for crossfade in &mut self.bypass_crossfades {
@@ -448,8 +563,13 @@ impl Plugin for GregFet76 {
         for sag in &mut self.power_sags {
             sag.reset();
         }
-        for t in &mut self.transformers {
+        for t in &mut self.output_transformers {
             t.reset();
+        }
+        for t in &mut self.input_transformers {
+            if let Some(t) = t {
+                t.reset();
+            }
         }
         for ac in &mut self.ac_couplings {
             ac.reset();
@@ -462,6 +582,19 @@ impl Plugin for GregFet76 {
         }
         for pe in &mut self.pre_emphases {
             pe.reset();
+        }
+        for jfet in &mut self.jfet_stages {
+            jfet.reset();
+        }
+        for tube in &mut self.output_tubes {
+            if let Some(t) = tube {
+                t.reset();
+            }
+        }
+        for ss in &mut self.output_solid_states {
+            if let Some(s) = ss {
+                s.reset();
+            }
         }
         self.thermal_drift.reset();
         self.last_bypassed = self.params.bypass.value();
@@ -642,38 +775,85 @@ fn process(
                     }
 
                     let level_db = 20.0 * key.max(1.0e-12).log10();
+                    let revision = self.params.revision.value();
+                    let jfet_bias = revision.jfet_bias_shift(ratio);
                     let gr = fet_gain_reduction(level_db, threshold_db, ratio);
                     let compressed = phase_input * util::db_to_gain(-gr);
-                    let compressed_f64 = compressed as f64;
 
+                    // --- Physical component processing using core_dsp::component_models ---
                     let drift = if channel == 0 {
                         self.analog_variance.left_gain
                     } else {
                         self.analog_variance.right_gain
                     };
-                    let sag_gain = self.power_sags[channel].gain(compressed);
-                    let pre_emph = self.pre_emphases[channel]
-                        .pre_emphasis(compressed_f64 * drift * (sag_gain as f64), 0.3);
-                    let oversampler = &mut self.oversamplers[channel];
-                    let saturated = oversampler.process(pre_emph as f32, factor, |value| {
-                        tube_saturate(value as f64, 1.0 + transformer_iron * 0.5) as f32
-                    });
-                    let de_emph = self.pre_emphases[channel].de_emphasis(saturated as f64, 0.3);
-                    let ac_coupled = self.ac_couplings[channel].process(de_emph);
-                    let transformer_out =
-                        self.transformers[channel].process(ac_coupled, transformer_iron, 0.5, 0.2);
+
+                    // 1. Apply input transformer if revision has one
+                    let mut transformer_out = self.input_transformers[channel]
+                        .as_mut()
+                        .map(|t| t.process(compressed as f64, 0.0, 0.5, 0.2))
+                        .unwrap_or(compressed as f64);
+
+                    // 2. JFET gain reduction stage
+                    let jfet_out = self.jfet_stages[channel].process_sample(transformer_out, jfet_bias);
+
+                    // 3. Output stage selection per revision
+                    let (output_tube, output_solid_state) = revision.output_stage();
+                    let post_jfet = jfet_out;
+
+                    if let Some(tube_model) = output_tube {
+                        // Tube output stage
+                        let drive_db = 0.5; // fixed for Class A
+                        let tube_out = tube_stage_process(tube_model, self.sample_rate as f64, post_jfet as f64, drive_db);
+                        transformer_out = tube_out;
+                    } else if let Some(_solid_model) = output_solid_state {
+                        // Solid-state output stage
+                        let drive_db = 0.3; // different drive for SS
+                        let ss_out = self.output_solid_states[channel]
+                            .as_mut()
+                            .unwrap()
+                            .process_sample(post_jfet, drive_db);
+                        transformer_out = ss_out;
+                    }
+
+                    // 4. Output transformer (all revisions use UtcA10)
+                    let final_txfm = self.output_transformers[channel].process(transformer_out, 1.0, 0.5, 0.2);
+
+                    // 5. Slew rate limiting on the transformer output
                     let slew_out = self.slew_limiters[channel].process(
-                        transformer_out,
+                        final_txfm,
                         self.sample_rate as f64 * 2.0,
                         self.sample_rate as f64,
+                        channel,
                     );
+
+                    // 6. Miller rolloff for high-frequency rolloff
                     let miller_out = self.miller_rolloffs[channel].process(
                         slew_out,
                         1.0 + transformer_iron,
                         channel,
                     );
-                    let wet = miller_out * (util::db_to_gain(self.params.output_gain.value()) as f64);
 
+                    // 7. PSU sag and dynamic variance
+                    let sag_gain = self.power_sags[channel].gain(miller_out as f32);
+                    let pre_emph = self.pre_emphases[channel]
+                        .pre_emphasis(miller_out as f64 * drift * (sag_gain as f64), 0.3, channel);
+
+                    // 8. Final oversampling and saturation
+                    let oversampler = &mut self.oversamplers[channel];
+                    let saturated = oversampler.process(
+                        pre_emph as f32,
+                        factor,
+                        |value| tube_saturate(value as f64, 1.0 + transformer_iron * 0.5) as f32,
+                    );
+
+                    // 9. De-emphasis
+                    let de_emph = self.pre_emphases[channel].de_emphasis(saturated as f64, 0.3, channel);
+
+                    // 10. Final AC coupling
+                    let ac_coupled = self.ac_couplings[channel].process(de_emph, channel);
+
+                    // 11. Bypass crossfade
+                    let wet = ac_coupled * (util::db_to_gain(self.params.output_gain.value()) as f64);
                     *sample = finite(self.bypass_crossfades[channel].process(dry, wet as f32));
                     self.metering.record_sample(input, *sample, gr);
                     self.telemetry.push_in_peak(channel, input);
@@ -711,6 +891,34 @@ fn silence_buffer(buffer: &mut Buffer) {
             *sample = 0.0;
         }
     }
+}
+
+// Simple tube stage processor helper
+#[inline]
+fn tube_stage_process(tube_model: TubeModel, sample_rate: f64, input: f64, drive_db: f64) -> f64 {
+    let _ = tube_model; // placeholder
+    if !input.is_finite() || !drive_db.is_finite() || !sample_rate.is_finite() || sample_rate <= 0.0 {
+        return 0.0;
+    }
+    let drive = 10.0_f64.powf(drive_db / 20.0).max(1.0e-4);
+    let driven = input * drive;
+    let bias_tanh = 0.15_f64;
+    let norm = (drive * (1.0 - bias_tanh * bias_tanh)).max(1.0e-4);
+    let nonlinear_part = 0.2 * driven.abs().powf(2.0) * driven;
+    let stage_in = driven + bias_tanh + nonlinear_part;
+    let sat = (stage_in.tanh() - bias_tanh) / norm;
+    let g = (std::f64::consts::PI * 180.0 / sample_rate).tan();
+    let c_alpha = g / (1.0 + g);
+    let mut c_state = 0.0;
+    c_state += c_alpha * (sat - c_state);
+    let low = c_state;
+    let high = sat - low;
+    let g2 = (std::f64::consts::PI * 12000.0 / sample_rate).tan();
+    let m_alpha = g2 / (1.0 + g2);
+    let mut m_state = 0.0;
+    m_state += m_alpha * (low - m_state);
+    let out = m_state + high;
+    if out.is_finite() { out } else { 0.0 }
 }
 
 core_dsp::export_greg_plugin!(

@@ -4,6 +4,8 @@ use std::{array, sync::Arc};
 use std::sync::atomic::Ordering;
 
 use core_dsp::core_dsp_modules::{
+    analog_variance::{AnalogVariance, ThermalDrift},
+    component_models::{SolidStateModel, SolidStateStage},
     metering::Metering,
     panic_protection::{PanicProtection, ProtectionResult},
     realtime_controls::{BypassCrossfade, EnvelopeFollower, LatencyDelay},
@@ -327,6 +329,9 @@ struct GregDbx165 {
     metering: Metering,
     sample_rate: f32,
     telemetry: Arc<GuiTelemetry>,
+    output_stages: [SolidStateStage; plugin_support::MAX_AUDIO_CHANNELS],
+    analog_variance: AnalogVariance,
+    thermal_drift: ThermalDrift,
 }
 
 impl Default for GregDbx165 {
@@ -352,6 +357,12 @@ impl Default for GregDbx165 {
             metering: Metering::default(),
             sample_rate: 0.0,
             telemetry: GuiTelemetry::new(true),
+            output_stages: array::from_fn(|_| SolidStateStage::new(
+                SolidStateModel::Dbx202GoldCan,
+                48_000.0,
+            )),
+            analog_variance: AnalogVariance::from_seed(0xAA_BB_CC_DD, 0.02, 0.001, 0.0),
+            thermal_drift: ThermalDrift::new(),
         }
     }
 }
@@ -460,6 +471,12 @@ impl Plugin for GregDbx165 {
             }
             context.set_latency_samples(latency);
         }
+
+        // Initialize physical analog stages
+        self.thermal_drift.configure(self.sample_rate as f64);
+        for stage in &mut self.output_stages {
+            stage.configure(self.sample_rate as f64);
+        }
         sidechains_ok && delays_ok
     }
 
@@ -475,6 +492,9 @@ impl Plugin for GregDbx165 {
         }
         for delay in &mut self.dry_delays {
             delay.reset();
+        }
+        for stage in &mut self.output_stages {
+            stage.reset();
         }
         self.last_bypassed = self.params.bypass.value();
         for crossfade in &mut self.bypass_crossfades {
@@ -692,9 +712,17 @@ impl Plugin for GregDbx165 {
                     let reduction_db = self.envelopes[channel].next(target_reduction);
                     let gain = util::db_to_gain(-reduction_db);
                     let compressed = driven[channel] * gain * output_gain * peakstop_gain;
+                    // Physical output stage (DBX 165 VCA with hysteresis)
+                    let tx_out = self.output_stages[channel].process_sample(compressed as f64, 0.0) as f32;
                     let oversampler = &mut self.oversamplers[channel];
-                    let wet = oversampler.process(finite(compressed), factor, |value| value);
-                    *sample = finite(self.bypass_crossfades[channel].process(dry, wet));
+                    let wet = oversampler.process(finite(tx_out), factor, |value| value);
+                    // Analog variance drift per channel (±1% component tolerance)
+                    let drift = if channel == 0 {
+                        self.analog_variance.left_gain
+                    } else {
+                        self.analog_variance.right_gain
+                    };
+                    *sample = finite(self.bypass_crossfades[channel].process(dry, wet * drift as f32));
                     self.metering
                         .record_sample(raw[channel], *sample, reduction_db);
                     self.telemetry.push_in_peak(channel, raw[channel]);
