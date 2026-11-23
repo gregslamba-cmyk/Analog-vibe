@@ -129,19 +129,13 @@ Componenti preamp/EQ/dinamica esistenti non vengono rimossi. Un modello per ID; 
 
 ### Moduli DSP condivisi
 
-Riusa i moduli disponibili in `core-dsp`; verifica la scheda prima di aggiungere logica duplicata: `routing_matrix`, `phase_inversion`, `filters`, `sidechain_processor`, `resampler_bitdepth`, `nonlinear_stages`, `transformer_hysteresis`, `psu_sag`, `analog_variance`, `realtime_controls`, `metering`, `surgical_eq`, `panic_protection`, `opto_compressor`, `vari_mu`.  Trasformatori d’ingresso. Delay per creare riverberi e delay
+Riusa i moduli disponibili in `core-dsp`; verifica la scheda prima di aggiungere logica duplicata: `routing_matrix`, `phase_inversion`, `filters`, `sidechain_processor`, `resampler_bitdepth`, `nonlinear_stages`, `transformer_hysteresis`, `psu_sag`, `analog_variance`, `realtime_controls`, `metering`, `surgical_eq`, `panic_protection`, `opto_compressor`, `vari_mu`, `delay_lines`, `fdn_reverb`, `partitioned_convolver`, `loudness_rider`, `spectral_analyzer`, `tape_physics`, `pitch_shifter`, `spectral_restoration`, `tempo_sync`, `mix_mastering_fx`, `modulation_engine`, `mpc_sampler_engine`, `component_models`, `cabinet_speaker`, `acoustic_room`.
 
-\### Nuovi Moduli DSP Condivisi Pianificati (\`core-dsp\`)
+### Nuovi Moduli DSP Condivisi Implementati
 
-\- \`delay\_lines\`: linee di ritardo pre-allocate con lettura frazionaria (interpolazione All-Pass / Cubica) e modulazione LFO senza perdita di alte frequenze (base per riverberi, chorus, echo).
-
-\- \`fdn\_reverb\`: motore riverbero algoritmico con diffusori All-Pass, matrice di feedback ortogonale (Hadamard/Householder 8x8–16x16), damping in frequenza ZDF e modulazione multi-fase (per Plate EMT-style e Hall/Room Lexicon/Valhalla-style).
-
-\- \`partitioned\_convolver\`: convoluzione partizionata a blocchi (Overlap-Save via \`realfft\`, pre-allocata in \`initialize()\`) per risposte impulsive lunghe a latenza zero (\`greg\_ir\_reverb\`).
-
-\- \`loudness\_rider\`: detector di loudness sillabica K-weighted, gate con isteresi per silenzio/respiri (\`Floor\`) e smoother a rampa in \`dB/sec\` con lookahead (\`greg\_leveler\`, \`greg\_deesser\`, \`greg\_depop\`).
-
-\- \`spectral\_analyzer\`: calcolo FFT finestrato su ring-buffer lock-free con smoothing logaritmico a frazioni d'ottava per telemetria grafica (\`GregSpectrum\`).
+- **`cabinet_speaker`**: simulatore fisico di cabinet, coni e microfoni per chitarra e basso (Klippel, cone excursion breakup, thermal compression, speaker count config, enclosure types, mic positioner).
+- **`acoustic_room`**: simulatore di room e early reflections 3D (image-source method, surface materials, diffusion, late field).
+- **`component_models`**: modelli fisici di tubi, stato solido, trasformatori e non-linear elements (dipendenti da `f64`).
 
 ## Fedelta': riferimenti correnti e regole di accorpamento
 

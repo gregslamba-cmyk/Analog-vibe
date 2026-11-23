@@ -1,3 +1,11 @@
+## Stato aggiornato (2026-11-23) — Allineamento documentazione (passo 2)
+- [COMPLETATO] `README.md`: riscritto header, sezione "Stato attuale" (15 plugin CLAP/VST3 nativi Mono→7.1 + 32 moduli DSP condivisi + cabinet_speaker/acoustic_room/component_models), requisiti X11/OpenGL, lista test host estesa a tutti i 15 plugin.
+- [COMPLETATO] `vcinst.md`: aggiornata sezione "Moduli DSP condivisi" con tutti i moduli reali; rimossa sezione "Pianificati" (ora tutti implementati); aggiunta sezione "Nuovi Moduli DSP Condivisi Implementati".
+- [COMPLETATO] `cargo test -p core-dsp`: 130 test passanti, 0 errori.
+- [COMPLETATO] `cargo clippy -p core-dsp -- -D warnings`: 0 warning.
+- [COMPLETATO] `cargo doc --no-deps --workspace`: compila senza errori.
+- [COMPLETATO] `cargo test --workspace --lib`: tutti i test passano.
+
 ## Stato aggiornato (2026-11-23) — Nuovi moduli fisici: cabinet_speaker e acoustic_room
 - [COMPLETATO] `core-dsp/src/core_dsp_modules/cabinet_speaker.rs`: modulo fisico per emulazione altoparlante/cabinet.
   - `klippel_bl_kms(x)`: curva chiusura del cono (Bl(x) e Kms(x)) ispirata a Klippel, closed-form f64, senza solver iterativi.

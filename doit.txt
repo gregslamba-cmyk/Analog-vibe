@@ -1,136 +1,65 @@
-esegui un passo alla volta, una volta finito cancella il passo
-passo 2
+pass0 1
+Leggi `Cargo.toml`, `vcinst.md`, `ARCHITECTURE.md` e `tools/` (se già presente).
 
-Leggi `vcinst.md`, `ARCHITECTURE.md`, `core-dsp/src/core_dsp_modules/mod.rs` e `fdn_reverb.rs`.
+Obiettivo: creare un binario/crate dedicato nel workspace chiamato `tools/clap-validator-host` (aggiunto a `members` in `Cargo.toml`) che funga da **Host CLAP di Validazione, Stress-Test Parametri, Analisi THD/Armoniche e Test GUI** per tutti i `.clap` compilati in `target/release/`:
 
-Obiettivo: aggiungere a `core-dsp` due moduli fisici completi per la simulazione di **Cabinet/Coni/Microfoni** (chitarra e basso) e **Stanze Acustiche / Early Reflections 3D** (`#![forbid(unsafe_code)]`, elaborazione interna `f64`, zero allocazioni nel path real-time `process()`):
+1. **Caricamento Dinamico CLAP (`libloading` + ABI CLAP C):**
+   - Carica qualsiasi libreria `.clap` passato da riga di comando (o scansiona automaticamente tutti i `target/release/libgreg*.so` / `~/.clap/greg*.clap`).
+   - Risolve `clap_entry`, inizializza la factory, istanzia il plugin, verifica i metadati (`id`, `name`, `features`) e legge l'elenco completo dei parametri (`clap.params`).
 
-1. **Nuovo modulo `cabinet_speaker.rs` (Simulatore Fisico di Cabinet, Coni & Microfoni per Chitarra e Basso, esportato in `mod.rs` e `lib.rs`):**
-   - **Modelli di Cono (`SpeakerDriverModel`) — Chitarra & Basso:**
-     - **Chitarra:**
-       - `CelestionGreenbackG12m` (12", 25W, medie legnose e breakup armonico morbido)
-       - `CelestionVintage30` (12", 60W, mediobasse compatte e attacco aggressivo su 2–4 kHz)
-       - `CelestionAlnicoBlue` (12", 15W, compressione naturale immediata e campanellio sulle alte)
-       - `JensenP12n` (12" Alnico vintage americano, brillante e aperto)
-       - `EminenceEvm12l` (12", 200W, altissimo headroom pulito e lineare)
-     - **Basso:**
-       - `AmpegSvt10` (10" ceramico, punch classico sulle medie e attacco rapido)
-       - `HartkeAluminum10` (10" con cono in alluminio, transienti ultra-veloci e brillantezza moderna)
-       - `JblD130f15` (15" vintage da basso, sub-basse profonde e calore rotondo)
-       - `EminenceBass12` (12" moderno ad alta escursione per cabinet bassi compatti)
-     - **Fisica del Cono:** Include **non-linearità dinamica della sospensione (*cone excursion breakup*)**, **compressione termica della bobina (*voice-coil thermal compression*)** al crescere della potenza e picco di risonanza d'impedenza (`f_s`).
-   - **Numero e Disposizione dei Coni (`SpeakerCountConfig`):**
-     - `Single1x` (1 cono), `Dual2x` (2 coni con leggera interazione di fase/comb tra i due driver), `Quad4x` (4 coni 2x2 con accoppiamento acustico sulle basse e baffle-step), `Octo8x` (colonna 8x10 stile Ampeg SVT con direttività verticale).
-   - **Tipologia di Cassa (`CabinetEnclosureType`):**
-     - `OpenBack` (cassa aperta posteriore: cancellazione a dipolo sulle sub-basse e risonanza ariosa tipica dei combo 1x12 / 2x12).
-     - `ClosedBack` (cassa chiusa sigillata: sospensione pneumatica, bassi stretti e percussivi con smorzamento controllato).
-     - `BassReflexPorted { port_tuning_hz: f64 }` (cassa **Bass Reflex** con condotto accordo Helmholtz regolabile, es. 40–55 Hz: estende la risposta sulle sub-basse fino alla frequenza d'accordo e taglia ripidamente a 24 dB/oct sotto la frequenza del reflex).
-   - **Microfoni & Posizionamento continuo (`MicPositioner`):**
-     - Modelli `DynamicSm57`, `RibbonR121`, `CondenserU47Fet` e `BassDynamicRe20_D112` (ottimizzato per coni da basso) con parametri continui `cap_to_edge` (`0.0` centro cupola → `1.0` bordo cono), `distance_cm` (con **effetto prossimità** realistico sotto i 15 cm) e `off_axis_deg` (`0°..60°`).
+2. **Test di Affidabilità Multicanale & Stress-Test Parametri:**
+   - Attiva ed elabora blocchi audio reali nelle configurazioni **Mono (1 ch)**, **Stereo (2 ch)**, **5.1 (6 ch)** e **7.1 (8 ch)** a `44.1 kHz`, `48 kHz` e `96 kHz`.
+   - Muove ogni parametro esposto tra `min_value`, `default_value` e `max_value` durante l'elaborazione audio, verificando che l'uscita resti sempre finita (**zero `NaN`**, **zero `Inf`**, **zero panic**).
 
-2. **Nuovo modulo `acoustic_room.rs` (Simulatore di Room & Early Reflections 3D con Dimensioni e Materiali, esportato in `mod.rs` e `lib.rs`):**
-   - **Geometria e Dimensioni 3D (`RoomDimensions`):**
-     - Parametri continui di `width_m` (larghezza, 2.0–50.0 m), `length_m` (lunghezza, 2.0–60.0 m), `height_m` (altezza soffitto, 2.2–25.0 m), posizione sorgente `(x, y, z)` e coppia microfonica stereo/multicanale.
-     - Motore **Image-Source** pre-allocato in `initialize()` (zero allocazioni in `process()`) che calcola i ritardi esatti (in campioni con interpolazione frazionaria) e l'attenuazione per distanza delle prime riflessioni del 1° e 2° ordine (pareti laterali, fronte/retro, pavimento, soffitto).
-   - **Materiali Acustici per Superficie (`SurfaceMaterial` — configurabile separatamente per Pareti, Pavimento e Soffitto, più preset completi):**
-     - `WoodPanelsStudio` (legno trattato da sala ripresa: calore naturale, assorbimento medio-alto morbido)
-     - `ConcreteStoneLiveRoom` (cemento/pietra: altissima riflettività e brillantezza, decadimento lungo)
-     - `PlasterDrywall` (intonaco/cartongesso: stanza standard)
-     - `GlassWindow` (vetro: forte riflessione sulle alte, trasparenza sulle basse)
-     - `AcousticFoamBooth` (pannelli fonoassorbenti/vocal booth: altissimo assorbimento su medie e alte, decadimento secco)
-     - `CarpetFloor` vs `HardwoodFloor` (pavimento in moquette vs parquet).
-     - Ogni riflessione applica filtri ZDF multi-banda tarati sui coefficienti di assorbimento del materiale attraversato + **assorbimento dell'aria (*air absorption*)** sulle alte frequenze proporzionale ai metri percorsi.
-   - **`AcousticRoomProcessor`:** Combina le `EarlyReflections` con uno stadio di diffusione morbida (`pre_delay_ms`, `early_late_mix`, `width`, `decay_scale`) utilizzabile sia come room studio stand-alone sia in cascata con `FdnReverb`.
+3. **Analizzatore THD, Armoniche (H2–H5) & Risposta Dinamica:**
+   - Inietta una sinusoide pura a `1000 Hz` a `-18 dBFS` (`0 VU`) e `-6 dBFS` (`+12 VU`), calcola lo spettro FFT e stampa in tabella per ogni plugin:
+     - **THD %** (Distorsione Armonica Totale)
+     - **H2 (2ª Armonica dB)** vs **H3 (3ª Armonica dB)** (per verificare la firma valvolare/Classe A vs simmetrica)
+     - **Gain Reduction / Peak Output** su un test burst dinamico (`-30 dBFS → -3 dBFS`).
 
-3. **Nuovo modulo `pickup_transducers.rs` (Simulatore Fisico di Pickup & Trasduttori Elettromagnetici/Piezo, esportato in `mod.rs` e `lib.rs`):**
-   - **Modelli Fisici RLC + Saturazione Magnetica (`PickupModel` + `PickupSimulator`):**
-     - **Chitarra Elettrica:**
-       - `SingleCoilStrat` (induttanza bassa ~2.2 H, picco risonante alto ~3.8–4.5 kHz, attacco brillante e campana sulle alte)
-       - `SingleCoilTeleBridge` (piastra base in acciaio, mediobasse più grintose e attacco incisivo)
-       - `P90Soapbar` (avvolgimento largo, medie aggressive e risonanza attorno a 2.8 kHz)
-       - `HumbuckerPaf` (doppia bobina ~4.5 H, picco risonante più basso ~2.2–2.6 kHz, cancellazione di fase tra le due bobine *comb aperture* e saturazione magnetica dolce sui picchi)
-       - `HumbuckerHighOutput` (induttanza alta ~8 H, medie spinte e compressione magnetica immediata)
-       - `ActiveEmg81` (bassa impedenza bufferizzata, risposta piatta estesa senza picco passivo, dinamica netta).
-     - **Basso Elettrico:**
-       - `BassPrecisionSplit` (punch sulle medio-basse 800 Hz, corpo pieno)
-       - `BassJazzSingle` (due single-coil con interazione di fase e brillantezza sulle medie)
-       - `BassMusicManHumbucker` (attacco percussivo e ringhio sulle alte-medie).
-     - **Trasduttori Acustici & Vintage:**
-       - `PiezoAcousticBridge` (altissima impedenza, risonanza acuta ~6–8 kHz con body resonance filter per chitarra/basso acustico)
-       - `RhodesTinePickup` (trasduttore elettromagnetico asimmetrico per piano elettrico, ricco di armoniche pari e campana metallica sulle transienti)
-       - `VinylCartridgeMm` (testina magnetica a magnete mobile con curva RIAA inversa/diretta e leggera isteresi dello stilo).
-   - **Parametri Fisici Interattivi (`PickupConfig`):**
-     - `cable_capacitance_pf` (`100..1500 pF` — simula la lunghezza del cavo chitarra che abbassa la frequenza di risonanza del pickup passivo!)
-     - `preamp_load_impedance_kohm` (`10 kΩ` fuzz vintage vs `250 kΩ / 500 kΩ` potenziometri vs `1 MΩ` DI moderno — cambia il fattore Q del picco risonante)
-     - `string_proximity_drive` (saturazione magnetica dei poli quando le corde sono vicine al pickup)
-     - `pickup_position_ratio` (filtro a pettine *comb aperture* regolabile tra posizione Bridge, Middle e Neck).
-     
-4. **Nuovo modulo `microphone_models.rs` (Simulatore Fisico di Capsule Microfoniche & Circuiti di Amplificazione Interni, esportato in `mod.rs` e `lib.rs`):**
-   - **Modelli di Capsula & Trasduttore Acustico (`CapsuleModel`):**
-     - **Condensatore a Diaframma Largo (LDC):**
-       - `NeumannM7_U47` (diaframma in PVC vintage, medio-basse calde e presenza setosa tra 8–12 kHz)
-       - `NeumannK47_U47Fet` (risposta più controllata in alto, punch sulle medie, altissimo SPL)
-       - `NeumannK67_U67_U87` (picco di presenza marcato a 5–8 kHz compensato dal de-emphasis interno del circuito)
-       - `AkgCk12_C12_ElaM251` (capsula ottone edge-terminated, aria cristallina sopra i 12 kHz e dettagli estremi)
-       - `SonyC800g` (diaframma largo moderno ultra-esteso e trasparente con enorme headroom).
-     - **Condensatore a Diaframma Piccolo (SDC):**
-       - `NeumannKm84` (risposta estremamente lineare e transiente veloce, leggero calore del trasformatore d'uscita)
-       - `SchoepsCmc6_Mk4` (trasparenza analitica e risposta fuori asse perfettamente uniforme).
-     - **Dinamici a Bobina Mobile:**
-       - `ShureSm57_Unidyne` (trasformatore interno, picco di presenza incisivo a 4–6 kHz, roll-off naturale sub-80 Hz e sopra i 15 kHz)
-       - `ShureSm7b` (risposta morbida e rotonda per voce/broadcast, forte effetto prossimità e switch Presence Boost / Bass Roll-Off)
-       - `SennheiserMd421` (attacco veloce e presenza sulle medio-alte, ideale per tom/chitarre)
-       - `ElectroVoiceRe20` (tecnologia Variable-D: effetto prossimità quasi assente anche a 2 cm dalla griglia, punch granitico)
-       - `AkgD112` (capsula grande per cassa/basso con risonanza accordata a 60–100 Hz e click a 4 kHz).
-     - **Nastro (Ribbon):**
-       - `RoyerR121` (nastro in alluminio da 2.5 micron: roll-off naturale dolce sopra i 12 kHz, bassi corposi, figura a 8 con effetto prossimità marcato e altissimo SPL)
-       - `Coles4038` (nastro BBC storico: medio-alte vellutate e caldissime, transienti smussati).
-     - **Piezoelettrici & Speciali:**
-       - `ContactPiezoDisc` (capsula a contatto per strumenti acustici/percussivi: risonanza acuta sui 5–7 kHz e altissima sensibilità ai transienti)
-       - `LoFiTelephoneCarbon` (capsula a carbone banda telefonica 300 Hz–3.4 kHz con distorsione granulosa).
-   - **Catena Completa Capsula + Circuito Interno (`MicrophoneSimulator`):**
-     - **Accoppiamento Acustico:** Simula l'**effetto prossimità (*proximity boost*)** fisico legato alla figura polare (`Cardioid`, `Figure8`, `Omni` — dove `Omni` ha zero effetto prossimità e `Figure8` ha il massimo), la **risposta fuori asse (`off_axis_deg` 0°..180°)** con attacco sulle alte frequenze e la **saturazione meccanica del diaframma (*high-SPL diaphragm compression*)**.
-     - **Circuito di Amplificazione Interno Integrato (`MicPreampCircuit`):** Collega automaticamente la capsula al suo circuito reale tramite `component_models.rs` (es. valvola `Octal6sn7` / `SubMini6072a` / `Ef86` + trasformatore `HaufeT14` / `UtcO12` per i condensatori valvolari vintage; FET `Fet2n5457` + de-emphasis EQ per `U87`/`KM84`; stadio discreto `Jensen990` / `Lme49720` transformerless per i microfoni moderni ultra-puliti), con selettori fisici reali (**Pad -10/-20 dB**, **Low-Cut 80/100 Hz**, **Presence Boost**, **Distance cm**).
-**Verifica:**
-   - Aggiungi test unitari deterministici (confronto curva OpenBack vs ClosedBack vs BassReflexPorted, coni chitarra V30 vs basso Ampeg 8x10, centro vs bordo cono, effetto prossimità, ritardi e assorbimento frequenziale tra `AcousticFoamBooth` e `ConcreteStoneLiveRoom`).
-   - Aggiorna `ARCHITECTURE.md` e `STATE.md`.
-   - Esegui `cargo test -p core-dsp` e `cargo clippy -p core-dsp -- -D warnings` finché tutto passa con 0 errori e 0 warning.
+4. **Test Estensione GUI (`clap.gui`):**
+   - Verifica che l'estensione `clap.gui` sia dichiarata correttamente e che l'interrogazione `is_api_supported("x11", false)` e il fallback `GREG_NO_GUI=1` rispondano senza errori o panic.
+
+5. **Verifica & Esecuzione:**
+   - Compila `cargo build -p clap-validator-host` e lancia l'eseguibile sui plugin già compilati in `target/release/` producendo un report completo a schermo.
 
 passo 2
-Leggi `README.md`, `ARCHITECTURE.md`, `STATE.md`, `GUI_SPEC.md`, `vcinst.md` e verifica tutti gli altri file `.md` presenti nella root del progetto e nelle sottocartelle `crates/*` e `plugins/*`.
 
-Obiettivo: aggiornare e allineare **tutta la documentazione del repository** — inclusi i file generali, le specifiche tecniche e la documentazione dei singoli crate e dei 15 plugin — affinché riflettano con precisione lo stato attuale del codice:
+Leggi `vcinst.md`, `ARCHITECTURE.md` e `core-dsp/src/core_dsp_modules/component_models.rs`.
 
-esegui il test dei plugin in clap_host e scrivi i risultati nei file di documentazione dei singoli plugin 
+Obiettivo: rimodellare i 9 plugin analogici esistenti della suite affinché utilizzino internamente i modelli fisici reali dei componenti hardware di `core_dsp::component_models` (calibrati a `0 VU = -18 dBFS`, rispettando l'ordine reale degli stadi e differenziando effettivamente le revisioni selezionabili), mantenendo zero allocazioni in `process()`, supporto dinamico Mono → 7.1 su tutti gli `MAX_AUDIO_CHANNELS = 8` canali e tutti i parametri DAW invariati:
 
-1. **`README.md` (Presentazione principale su GitHub):**
-   - Scrivi una presentazione chiara, moderna e professionale della suite **Analog-Vibe Audio Suite**.
-   - Evidenzia i pilastri tecnici: 100% Rust (`#![forbid(unsafe_code)]`), elaborazione interna a 64-bit (`f64`), formato nativo **CLAP** (con esportazione multi-formato VST3/LV2/AU), supporto dinamico nativo **Mono → 7.1 Surround (1..8 canali)** con sidechain dedicata, motore `core-dsp` da 27 moduli e GUI 2D vettoriale flat ridimensionabile (`greg_gui_core`).
-   - Inserisci una tabella aggiornata dei **15 plugin già compilabili e operativi** (nome, hardware/modello di riferimento, revisioni integrate, canali supportati).
-   - Aggiungi istruzioni copy-pasteabili per **compilare da sorgente** (inclusa la lista completa dei pacchetti `-dev` X11/XCB/OpenGL per Ubuntu/Debian) e **installare i `.clap` in Reaper** (`~/.clap/`).
+1. **`plugins/greg_76` (UREI / UA 1176 — Rev A / D / E / F):**
+   - Implementa la soglia fissa dove la manopola `Input` spinge il segnale contro la soglia e cambiare `Ratio` (`4:1, 8:1, 12:1, 20:1`) sposta la soglia effettiva del bias JFET, più la modalità **All-Buttons In** (esitazione iniziale d'attacco + saturazione aggressiva).
+   - Differenzia le revisioni selezionabili: **Rev A ("Bluestripe")** con trasformatore d'ingresso `UtcO12` + JFET `Fet2n5457` caldo + uscita Class A (`UtcA10`); **Rev D/E (LN)** con JFET `Fet2n5457` a basso rumore + `UtcA10`; **Rev F** con stadio finale push-pull Class AB più lineare.
 
-2. **`ARCHITECTURE.md`, `STATE.md`, `GUI_SPEC.md` e altri file `.md` della root:**
-   - Allinea `GUI_SPEC.md` e `ARCHITECTURE.md` con l'architettura definitiva di `greg_gui_core` (widget vettoriali `RotaryKnob`, `ToggleSwitch`, `EnumSwitch`, layout orizzontale fluido, finestra ridimensionabile con `ResizeHandle`, meter `IN`/`OUT` dinamici 1..8 canali e barra `GR` negativa).
-   - Aggiorna `STATE.md` (e qualsiasi altro file di stato/roadmap presente nella root) con lo stato verificato dei 15 plugin, il metering per-canale e il supporto Mono → 7.1.
+2. **`plugins/greg-a2a` (Teletronix LA-2A):**
+   - Usa la catena reale: trasformatore `UtcHa100x` → cella opto `TeletronixT4b` (rilascio bifasico con effetto memoria fotoresistiva) → valvole `Ecc83_12ax7` + `Ecc81_12at7` (White cathode follower) → trasformatore d'uscita `UtcA10` (mantenendo la colorazione passiva/valvolare anche a Gain Reduction = 0 dB).
 
-3. aggiorna anche tutti gli altri file di documentazione presenti
+3. **`plugins/greg-a3a` (UREI LA-3A):**
+   - Usa la catena reale a stato solido: cella opto `TeletronixT4b` → amplificatore discreto Classe A `Neve2n3055_Bc108` (attacco transitorio più pronto e brillante rispetto all'LA-2A) → trasformatore d'uscita `UtcA10`, collegando anche `analog_variance` per eliminare l'unico warning rimasto.
 
-nel file del readme indica che la costruzione dei plugin è basata sul core_dsp, una libreria creata apposta e avvanzata in rust
+4. **`plugins/greg_api_2500` (API 2500 / 2500+):**
+   - Usa op-amp discreto `SolidStateModel::Api2520` + VCA `That2180` + trasformatore d'uscita `TransformerModel::Api2623`, mantenendo distinte le topologie `Old` (feedback) vs `New` (feed-forward) e i filtri sidechain `THRUST` (`Norm`, `Med`, `Loud`).
 
-4. ** **Documentazione dei singoli crate e dei 15 plugin (`crates/*`, `core-dsp`, `plugins/*`):**
-   - Verifica e aggiorna eventuali `README.md` interni ai singoli crate (`core-dsp`, `plugin-support`, `greg_gui_core`) e ai 15 plugin (`plugins/greg*`), aggiungendo un breve `README.md` (o aggiornando i doc comment `//!` in testa a `src/lib.rs`) per ciascuno dei 15 plugin con: descrizione del processore, controlli Main Panel e `+ ADV`, revisioni/modalità disponibili e canali supportati (Mono → 7.1).
-   - Verifica che `cargo doc --no-deps --workspace` compili senza errori.
- 
-aggiorna il gitignore
+5. **`plugins/greg-bus-comp` (SSL 4000 E / G Bus Compressor):**
+   - Usa op-amp `SolidStateModel::Ne5534` e commuta realmente tra VCA `Dbx202BlackCan` (profilo **4000E**, più grintoso) e VCA `Dbx202GoldCan` (profilo **4000G**, più trasparente e punchy).
 
-passo 3
-Leggi `vcinst.md`, `ARCHITECTURE.md`, `STATE.md`, `doit.txt` e `core-dsp/src/core_dsp_modules/mod.rs`.
+6. **`plugins/greg-child` (Fairchild 670):**
+   - Usa valvole `TubeModel::Octal6sn7` + `Ecc83_12ax7` + trasformatore `TransformerModel::TriadHs56` + sag alimentazione `Rectifier5u4g`, con ratio progressivo Vari-Mu e le 6 reti temporali composite (incluse le costanti program-dependent 5 e 6) e routing `Link` / `Lat-Vert` (M/S).
 
-1. **Verifica / Crea `core-dsp/src/core_dsp_modules/component_models.rs`:**
-   - Se `component_models.rs` non esiste ancora in `core-dsp/src/core_dsp_modules/`, crealo ed esportalo in `mod.rs` e `lib.rs` implementando tutte le famiglie di componenti reali descritte in `doit.txt` (`TubeModel`/`TubeStage`, `SolidStateModel`/`SolidStateStage`, `TransformerModel`, `NonlinearElementModel`, `TapeFormulaModel`, `VintageIcModel`) mappate sui motori fisici `f64` esistenti (`#![forbid(unsafe_code)]`, zero allocazioni in `process()`), con test unitari deterministici.
-   - Verifica che `cargo test -p core-dsp` e `cargo clippy -p core-dsp -- -D warnings` passino con 0 errori e 0 warning.
+7. **`plugins/greg_dbx_160` (Famiglia DBX 160 — 160 VU / 160X / 160A):**
+   - Differenzia le 3 revisioni: **160 VU** (solo Hard Knee, VCA `Dbx202BlackCan`, detector RMS che lascia passare la punta del transiente), **160X** (curva OverEasy, tempi program-dependent e rapporti `Infinity+` fino a `-1:1`) e **160A** (VCA `Dbx202GoldCan` ad alto headroom).
 
-2. **Aggiorna tutta la documentazione del repository:**
-   - Allinea `README.md`, `ARCHITECTURE.md`, `STATE.md`, `GUI_SPEC.md` e i doc comment / guide dei singoli crate e dei 15 plugin (`docs/plugins/*.md`) allo stato reale e completo di `core-dsp` (inclusi tutti i nuovi moduli `mix_mastering_fx`, `modulation_engine`, `mpc_sampler_engine`, `component_models`) e della suite di 15 plugin CLAP/VST3 nativi Mono → 7.1.
-   - Verifica che `cargo test --workspace` e `cargo doc --no-deps --workspace` passino con 0 errori.
+8. **`plugins/greg_dbx_165` (DBX 165 / 165A Over-Easy):**
+   - Usa VCA `Dbx202GoldCan`, modalità tempi `Auto` (program-dependent) vs `Manual` (slew-rate in dB/ms e dB/s) e circuito **PeakStop** finale con clipper `NonlinearElementModel::Silicon1n4148`.
+
+9. **`plugins/greg-pultec` (Pultec EQP-1A):**
+
+passo 3 testa i plugin dell'host e aggiorna la documentazioen
+   - Usa la catena reale: trasformatore `UtcHa100x` → rete passiva RLC con induttori `PermalloyCore` e interazione fisica reale tra `Low Boost` e `Low Atten` ("Pultec Trick") + `Bandwidth` che modula sia Q che ampiezza dell'High Boost → stadio valvolare push-pull `Ecc83_12ax7` + `Ecc82_12au7` → trasformatore `UtcA10`.
+
+Verifica:
+- Esegui `cargo check --workspace` e `cargo test --workspace` finché tutti i test passano con 0 errori e 0 warning.
+- Aggiorna `ARCHITECTURE.md` e `STATE.md`.
 

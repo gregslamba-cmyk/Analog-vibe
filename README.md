@@ -1,15 +1,27 @@
 # Analog-vibe
 
-Suite in sviluppo di plugin audio CLAP in Rust, con DSP condiviso e documentazione individuale dei plugin e dei moduli.
+Suite di plugin audio CLAP/VST3 in Rust con DSP condiviso, elaborazione interna a 64-bit (`f64`), zero allocazioni nel thread audio e totale assenza di codice `unsafe` (`#![forbid(unsafe_code)]`). Supporta formati nativi da **Mono a 7.1 Surround (1–8 canali)** con sidechain dedicata, metering per canale e latenza dichiarata all'host.
 
-## Stato
+## Stato attuale
 
-Il workspace contiene la libreria `core-dsp`, i compressori `greg-fet`, `greg-a2a`, `greg-a3a`, `greg-child`, `greg-bus-comp` e `greg-limiter`, l'EQ chirurgico `greg-surgical-eq`, le utility `greg-ms-encoder`, `greg-ms-decoder` e `greg-phase`, e un host CLAP offline per test con segnali sintetici. Gli altri processori presenti nei cataloghi e in `docs/plugins/` sono requisiti e specifiche di progetto, non plugin gia' implementati.
+Il workspace contiene:
+
+* **`core-dsp`** — libreria di moduli DSP condivisi (`routing_matrix`, `zdf_filters`, `transformer_hysteresis`, `nonlinear_stages`, `psu_sag`, `analog_variance`, `sidechain_processor`, `metering`, `resampler_bitdepth`, `delay_lines`, `fdn_reverb`, `surgical_eq`, `filters`, `fft_convolution`, `linear_phase_fir`, `partitioned_convolver`, `loudness_rider`, `spectral_analyzer`, `tape_physics`, `pitch_shifter`, `spectral_restoration`, `tempo_sync`, `mix_mastering_fx`, `modulation_engine`, `mpc_sampler_engine`, `component_models`, `opto_compressor`, `vari_mu`, `realtime_controls`, `panic_protection`, `cabinet_speaker`, `acoustic_room`).
+* **15 plugin CLAP + VST3 nativi** (esportati con la macro `export_greg_plugin!`):
+  * Compressori/dinamica: `greg_76` (FET 1176-style), `greg-a2a` (opto valvolare), `greg-a3a` (opto a stato solido), `greg-child` (Vari-Mu), `greg-bus-comp` (VCA da bus), `greg_dbx_160` (DBX 160 VU/160X/160A), `greg_dbx_165` (DBX 165/165A), `greg_api_2500` (API 2500 bus), `greg-gate`, `greg-limiter`.
+  * EQ: `greg-surgical-eq`, `greg-pultec`.
+  * Utility: `greg-ms-encoder`, `greg-ms-decoder`, `greg-phase`.
+* **Nuovi moduli fisici di core-dsp:** `cabinet_speaker` (simulatore di cabinet/coni/microfoni per chitarra e basso), `acoustic_room` (stanze acustiche e early reflections 3D con image-source), `component_models` (tubi, stato solido, trasformatori, elementi non lineari).
+* Un **host CLAP offline** (`clap-signal-host`) per test deterministici con segnali sintetici e formati di buffer irregolari.
+* `greg_gui_core` — GUI 2D vettoriale flat (knob, toggle, enum switch, layout fluido, meter IN/OUT, barra GR) per la fase di test ergonomico.
+
+Gli altri processori presenti nei cataloghi e in `docs/plugins/` sono requisiti e specifiche di progetto, non plugin già implementati.
 
 ## Requisiti
 
 - Rust e Cargo
 - Linux per il caricamento CLAP dinamico incluso nel test host
+- (Opzionale, per link GUI) pacchetti di sviluppo X11/XCB/OpenGL su Ubuntu/Debian: `libxcb-dri2-dev`, `libxcb-icccm4-dev`, `libxcb-image0-dev`, `libxcb-keysyms1-dev`, `libxcb-randr0-dev`, `libxcb-render-util0-dev`, `libxcb-shape0-dev`, `libxcb-shm0-dev`, `libxcb-xfixes0-dev`, `libxcb-xinerama0-dev`, `libgl1-mesa-dev`
 
 ## Build e verifiche
 
@@ -17,6 +29,7 @@ Il workspace contiene la libreria `core-dsp`, i compressori `greg-fet`, `greg-a2
 cargo fmt --all -- --check
 cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
+cargo doc --no-deps --workspace
 cargo build --workspace --release
 ```
 
@@ -27,19 +40,24 @@ I bundle CLAP sono generati dai crate in `plugins/`.
 Con il plugin compilato in release:
 
 ```sh
-cargo run --release -p clap-signal-host -- target/release/libgreg_fet.so
+cargo run --release -p clap-signal-host -- target/release/libgreg_76.so
 cargo run --release -p clap-signal-host -- target/release/libgreg_a2a.so
 cargo run --release -p clap-signal-host -- target/release/libgreg_a3a.so
-cargo run --release -p clap-signal-host -- target/release/libgreg_child.so
+cargo run --release -p clap-signal-host -- target/release/libgreg_api_2500.so
 cargo run --release -p clap-signal-host -- target/release/libgreg_bus_comp.so
+cargo run --release -p clap-signal-host -- target/release/libgreg_child.so
+cargo run --release -p clap-signal-host -- target/release/libgreg_dbx_160.so
+cargo run --release -p clap-signal-host -- target/release/libgreg_dbx_165.so
+cargo run --release -p clap-signal-host -- target/release/libgreg_gate.so
 cargo run --release -p clap-signal-host -- target/release/libgreg_limiter.so
-cargo run --release -p clap-signal-host -- target/release/libgreg_surgical_eq.so
 cargo run --release -p clap-signal-host -- target/release/libgreg_ms_encoder.so
 cargo run --release -p clap-signal-host -- target/release/libgreg_ms_decoder.so
 cargo run --release -p clap-signal-host -- target/release/libgreg_phase.so
+cargo run --release -p clap-signal-host -- target/release/libgreg_pultec.so
+cargo run --release -p clap-signal-host -- target/release/libgreg_surgical_eq.so
 ```
 
-Il test host carica i moduli CLAP, processa sinusoidi e controlla i fattori di oversampling del FET e degli opto, le sei costanti e i modi stereo-link/dual mono del Vari-Mu, la riduzione di guadagno, le modalita' e la latenza dichiarata dell'EQ e del limiter, la matrice M/S, inversione di polarita' e bypass. Non sostituisce la verifica in una DAW, le misure A/B su hardware analogico o la misura della latenza del sistema audio.
+Il test host carica i moduli CLAP, processa sinusoidi e verifica oversampling, latenza dichiarata, bypass, inversione di polarità, matrice M/S, sidechain e riduzione di guadagno. Non sostituisce la verifica in una DAW, le misure A/B su hardware analogico o la misura della latenza del sistema audio.
 
 ## Documentazione
 
