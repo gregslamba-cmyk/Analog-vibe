@@ -1,130 +1,22 @@
-task 1
+Leggi `vcinst.md`, `ARCHITECTURE.md` e `core-dsp/src/core_dsp_modules/mod.rs`.
 
-Leggi `crates/greg_gui_core/Cargo.toml`, `crates/greg_gui_core/src/lib.rs` e `tools/clap-validator-host/src/main.rs`.
+Obiettivo: creare il nuovo modulo `core-dsp/src/core_dsp_modules/dsp_graph.rs` (esportato in `mod.rs` e `lib.rs`, mantenendo `#![forbid(unsafe_code)]`, elaborazione interna `f64` e zero allocazioni nel path real-time `process()`):
 
-Obiettivo: implementare un sistema di **Layout Personalizzabile (`gui_layout.json`) + Designer Visivo Drag & Drop** nel report HTML di `clap-validator-host`, **retrocompatibile al 100%** con l'attuale griglia automatica di `greg_gui_core`:
+1. **Modello del Grafo Audio (`AudioGraphBuilder` → `CompiledAudioGraph`):**
+   - Trait `DspGraphNode`: interfaccia uniforme `initialize(sample_rate, max_block_size)`, `reset()`, `latency_samples() -> usize`, `process_node(inputs: &[&[f64]], outputs: &mut [&mut [f64]], num_channels: usize, num_samples: usize)`.
+   - **Compilazione Topologica Off-Thread (`AudioGraphBuilder::compile()`):**
+     - Verifica l'assenza di cicli privi di ritardo (rilevamento cicli con supporto esplicito ai nodi `FeedbackDelayZ1`).
+     - Calcola l'ordinamento topologico ottimale e pre-alloca tutti i buffer intermedi (`AudioEdgeBuffer` fino a `MAX_AUDIO_CHANNELS = 8` canali × `max_block_size`) **esclusivamente in fase di compilazione/inizializzazione** (zero allocazioni nel thread audio!).
+     - **PDC Interno Automatico (Plugin Delay Compensation):** Calcola la latenza accumulata su ogni percorso parallelo e inserisce automaticamente nodi di ritardo compensativi sui rami più veloci quando convergono in un sommatore, garantendo coerenza di fase al campione.
 
-1. **Retrocompatibilità Garantita in `crates/greg_gui_core`:**
-   - Definisci uno schema JSON pulito (`GuiLayoutSpec`, deserializzato con `serde_json` solo all'apertura della finestra UI, **mai nel thread audio**):
-     - `window_width: f32`, `window_height: f32`, `background_hex: String`, `accent_hex: String`
-     - `elements: Vec<GuiElementPlacement>` dove ogni elemento ha `param_id: String` (o widget speciale `"in_meter"`, `"out_meter"`, `"gr_meter"`, `"spectrum"`), `label: String`, `widget_type: String` (`"knob"`, `"toggle"`, `"enum"`, `"meter"`, `"spectrum"`), `x: f32`, `y: f32`, `width: f32`, `height: f32`.
-   - **Regola di Fallback Automatico:** Quando un plugin chiama `create_greg_editor_with_params(...)`, `greg_gui_core` cerca un layout JSON opzionale (passato tramite `include_str!` opzionale o cercato a runtime vicino al bundle `.clap` / nella cartella del plugin).
-     - Se il layout JSON **esiste ed è valido**, posiziona ogni controllo alle coordinate esatte `(x, y, width, height)` in modalità assoluta (`PositionType::SelfDirected`).
-     - Se il layout JSON **non esiste o manca**, usa **esattamente la griglia automatica VStack/HStack esistente** senza alcuna modifica visiva o funzionale!
+2. **Nodi di Servizio Predefiniti Inclusi nel Modulo:**
+   - `GainPanNode` (guadagno smoothed e routing canali), `SplitterNode`, `SummerMixerNode` (somma multi-ingresso senza clipping), `ParallelDryWetNode` (crossfade fase-coerente) e `FeedbackDelayZ1Node`.
+   - Flag opzionale `offload_eligible: bool` su ogni nodo per marcare i sottografi pronti per futura esecuzione parallela SIMD/GPU.
 
-2. **Designer Visivo Drag & Drop Integrato in `tools/clap-validator-host` (`target/validation_report.html`):**
-   - Nella sezione di ogni plugin dentro `target/validation_report.html`, aggiungi una scheda/pannello interattivo **"GUI Layout Designer (Drag & Drop)"** in JavaScript puro (zero dipendenze esterne):
-     - Mostra il canvas in scala 1:1 della finestra del plugin (`820x360` di default) con griglia magnetica selezionabile (`Snap 4px / 8px / 16px`), sfondo e colori personalizzabili.
-     - Carica automaticamente tutti i parametri reali del plugin estratti da `clap.params` più i widget meter (`IN`, `OUT`, `GR`, `Spectrum`) disposti inizialmente secondo la griglia di default.
-     - Permette di **trascinare (Drag & Drop)** e **ridimensionare** ogni manopola, switch o meter con il mouse, allineando le coordinate in tempo reale.
-     - Include il pulsante **"Esporta / Copia `gui_layout.json`"** (sia download diretto del file `.json` sia copia negli appunti con un clic) pronto da salvare in `plugins/<crate>/gui_layout.json`.
+3. **Esecuzione Real-Time Deterministica (`CompiledAudioGraph::process(...)`):**
+   - Esegue sequenzialmente gli step pre-compilati con sanitizzazione `NaN`/`Inf` → `0.0` e `PanicProtection`.
 
-3. **Verifica & Sicurezza:**
-   - Verifica che tutti e 15 i plugin continuino a compilare e funzionare identicamente senza file JSON (retrocompatibilità totale).
-   - Esegui `cargo check --workspace` e `cargo test --workspace` con 0 errori.
-
-task 2
-
-Leggi `Cargo.toml`, `README.md`, `STATE.md`, `ARCHITECTURE.md` e `tools/clap-validator-host/`.
-
-Obiettivo: eseguire il collaudo strumentale completo su tutti i 15 plugin compilati in `--release` tramite `tools/clap-validator-host` e generare/aggiornare tutta la documentazione tecnica individuale (`docs/plugins/<plugin_id>.md` e `plugins/<crate>/README.txt`) oltre al `README.md` principale:
-
-1. **Compilazione Release Completa & Installazione Locale:**
-   - Esegui `cargo build --release --workspace` verificando 0 errori e 0 warning.
-   - Copia tutti e 15 i bundle aggiornati da `target/release/libgreg*.so` in `~/.clap/Analog-vibe/greg*.clap` (senza prefisso `lib`).
-
-2. **Collaudo Strumentale & Generazione Grafici SVG (`tools/clap-validator-host`):**
-   - Assicurati che `tools/clap-validator-host` supporti il flag `--update-docs` e generi:
-     - Report HTML interattivo completo in `target/validation_report.html` + file dati grezzi `.csv` in `target/validation_data/`.
-     - 4 grafici vettoriali SVG stabili per ogni plugin in `docs/assets/measurements/`:
-       - `<plugin_id>_bode.svg` (Risposta in Frequenza dB + Fase ° `20 Hz – 20 kHz`)
-       - `<plugin_id>_harmonics.svg` (Spettro `1 kHz` + Armoniche `H2..H7` e badge `THD %`)
-       - `<plugin_id>_transfer.svg` (Curva statico-dinamica `Input dBFS` vs `Output dBFS`)
-       - `<plugin_id>_transient.svg` (Inviluppo Gain Reduction / Transienti nel tempo)
-   - Esegui `cargo run --release -p clap-validator-host -- --update-docs` su tutti i 15 `.clap` e stampa a schermo la tabella riassuntiva dei risultati (Mono → 7.1, 44.1/48/96 kHz, THD %, H2/H3, Latenza, Check GUI/Fallback).
-
-3. **Aggiornamento Documentazione Individuale (`docs/plugins/<id>.md` + `plugins/<crate>/README.txt`) & `README.md`:**
-   - Per ognuno dei 15 plugin, aggiorna sia la scheda in `docs/plugins/<plugin_id>.md` sia un file `README.txt` pulito dentro la rispettiva cartella `plugins/<crate>/README.txt` con:
-     - Descrizione musicale e circuitale dell'hardware/algoritmo reale emulato (inclusi i componenti `core-dsp` utilizzati).
-     - Tabella completa dei parametri DAW (estratti da `clap.params` con range e default).
-     - Misure strumentali certificate a `0 VU = -18 dBFS` (THD %, H2/H3, risposta in frequenza, latenza) e link ai 4 grafici SVG in `docs/assets/measurements/`.
-   - Aggiorna il `README.md` principale, `STATE.md` e `ARCHITECTURE.md` allo stato finale verificato.
-   - Esegui `cargo test --workspace` e `cargo clippy --workspace --all-targets -- -D warnings` per confermare che tutto sia verde al 100%.
-
-task 3
-
-Leggi `tools/clap-validator-host/src/main.rs`.
-
-Dai file CSV generati (`greg_gate` a unity gain mostra `gain_db = 0.000` ma `thd_percent = 200.000`), risulta che `thd_percent` e `bode_gain_db` vengono attualmente calcolati sullo stesso buffer a singolo impulso (`1/sqrt(N) = 0.03125`), facendo risultare `sqrt(4)*100 = 200%` di THD anche su un segnale pulito, e senza attendere la latenza del plugin (`latency_samples`) prima di misurare.
-
-Correggi `tools/clap-validator-host/src/main.rs`:
-1. **Warm-up prima della misura:** Dopo l'attivazione del plugin, elabora prima almeno `latency_samples + 2048` campioni di warm-up in modo che i buffer di lookahead/oversampling (es. `22` o `262` samples) siano a regime.
-2. **Segnali separati per ogni misura:**
-   - **THD & Armoniche (`H2..H7`):** Genera una **sinusoide continua a `1000.0 Hz`** a `0 VU` (`amplitude = 0.12589`, pari a `-18.0 dBFS` RMS/peak calibrato) su un buffer di `8192` campioni con finestra di Hann prima della FFT/Goertzel, così `greg_gate` / `greg_phase` / `greg_ms_encoder` mostrano `THD ~ 0.000%` e i plugin analogici mostrano la loro vera distorsione armonica (`0.05% – 3.5%`).
-   - **Bode Gain & Phase (`20 Hz – 20 kHz`):** Calcola il rapporto complesso `H(f) = FFT(output) / FFT(input)` (compensando il ritardo di fase lineare dovuto a `latency_samples`) così `bode_gain_db` è `0.00 dB` e `bode_phase_deg` è `0.0°` sui plugin trasparenti.
-3. Ricompila `cargo build --release -p clap-validator-host`, rieseguilo su tutti i 15 plugin per rigenerare `target/validation_report.html` e i CSV, e stampa la nuova tabella!
-
-task 4
-
-Leggi `tools/clap-validator-host/src/main.rs`.
-
-Obiettivo: correggere i calcoli FFT/THD/Bode (eliminando il falso 200% di THD dovuto all'impulso e aggiungendo il warm-up della latenza) ed estendere il banco di prova affinché testi **ogni singolo parametro esposto** (sia staticamente sia con **automazione dinamica continua/a gradini durante l'audio**) su **più frequenze (`100 Hz`, `1000 Hz`, `8000 Hz`)** e con **6 segnali calibrati (`Sine`, `Sawtooth`, `Triangle`, `Square`, `Impulse`, `Dynamic Burst`)**:
-
-1. **Warm-up Latenza & Segnali Calibrati (`0 VU = -18 dBFS`):**
-   - Prima di ogni misura, elabora `latency_samples + 4096` campioni di warm-up affinché i buffer di lookahead e oversampling (`22`, `262` samples, ecc.) siano a regime.
-   - Genera buffer da `8192` campioni a `48000 Hz` per ciascuno dei **6 segnali di test**:
-     - `Sine` (`100 Hz`, `1000 Hz`, `8000 Hz` a `-18.0 dBFS` RMS) — analisi THD pura e risposta in frequenza/fase.
-     - `Sawtooth` (`110 Hz`, `1000 Hz` a `-18.0 dBFS` RMS) — armoniche pari + dispari, asimmetrica.
-     - `Triangle` (`110 Hz`, `1000 Hz` a `-18.0 dBFS` RMS) — armoniche dispari dolci (`1/n²`).
-     - `Square` (`110 Hz`, `1000 Hz` a `-18.0 dBFS` RMS) — fronti ripidi, armoniche dispari (`1/n`), test slew-rate e ringing.
-     - `Impulse` (`Dirac delta` calibrato dopo il warm-up, compensando l'esatto offset di `latency_samples` per allineare il picco) — risposta all'impulso pura, pre/post-ringing FIR/IIR e curve Bode complete (`20 Hz – 20 kHz`) di ampiezza e fase.
-     - `Dynamic Burst` (alternanza `-30 dBFS → -3 dBFS → -30 dBFS`) — misura attacco, overshoot, recupero/release e Gain Reduction effettiva in dB.
-
-2. **Analisi Statica & Dinamica (Automazione) per Ogni Singolo Parametro (`clap.params`):**
-   - **Test Statico:** Per ogni parametro esposto, lo imposta su `min`, `25%`, `default`, `75%` e `max` ed esegue le misure su tutti i segnali (`Sine`, `Sawtooth`, `Triangle`, `Square`, `Impulse`, `Dynamic Burst`).
-   - **Test Dinamico (Automazione Real-Time in `process()`):** Mentre scorre una sinusoide/onda complessa continua, invia eventi `CLAP_EVENT_PARAM_VALUE` campione-per-campione/blocco-per-blocco modulando il parametro lungo una rampa continua (`min → max → min`) e poi con salti istantanei (`step min ↔ max`), misurando:
-     - `param_sensitivity_db` (variazione effettiva dell'uscita/spettro provocata dal parametro, per verificare che **nessun parametro sia "morto" o scollegato**!)
-     - `zipper_noise_peak` / discontinuità massimo salto campione-su-campione durante lo sweep (verifica che lo smoothing `SmoothedParam` funzioni senza click/pop!).
-   - Registra tutti i dati nel CSV (`target/validation_data/<plugin_id>.csv`): `signal_type`, `param_name`, `param_mode` (`static` / `dynamic_sweep` / `dynamic_step`), `param_value`, `input_rms_db`, `output_rms_db`, `crest_factor_db`, `thd_percent`, `h2_dbc`, `h3_dbc`, `bode_gain_db`, `bode_phase_deg`, `max_step_delta` (anti-zipper check).
-
-3. **Aggiornamento Grafici SVG & Report HTML (`target/validation_report.html`):**
-   - Nel report HTML mostra per ogni plugin i grafici SVG aggiornati:
-     1. **Bode Plot (Ampiezza dB + Fase ° da `Impulse` + `Sine` compensati per `latency_samples`).**
-     2. **Spettro Armonico H2–H7 & THD%** sulle sinusoidi (`100 Hz / 1 kHz / 8 kHz`).
-     3. **Confronto 4 Forme d'Onda (`Sine`, `Saw`, `Tri`, `Square`) & Risposta all'Impulso (`Impulse` ringing/overshoot).**
-     4. **Analisi Dinamica Parametri (Automazione `min → max` & `Burst`):** Sensibilità reale di ogni manopola e assenza di zipper noise.
-
-4. **Compilazione & Esecuzione:**
-   - Compila `cargo build --release -p clap-validator-host`, lancialo su tutti i 15 `.clap` in `target/release/` e stampa a terminale la tabella riepilogativa (inclusi eventuali parametri non reattivi o click rilevati)!
-
-Leggi `tools/clap-validator-host/src/main.rs`.
-
-Obiettivo: aggiornare `tools/clap-validator-host` affinché testi a fondo **la saturazione armonica reale, ogni singolo parametro (statico + automazione dinamica) e 6 forme d'onda/segnali** su tutti i 15 plugin `.clap`, eliminando il falso 200% di THD dovuto al vecchio calcolo sull'impulso:
-
-1. **Test Dedicato di Saturazione & Gain Staging (`-12 VU` → `+18 VU` + Max Drive):**
-   - Dopo un warm-up di `latency_samples + 4096` campioni, inietta una sinusoide pura a `1000.0 Hz` (`8192` campioni, finestra di Hann) su **5 livelli calibrati** (`0 VU = -18.0 dBFS`):
-     - `-12 VU` (`-30 dBFS`), `0 VU` (`-18 dBFS`), `+6 VU` (`-12 dBFS`), `+12 VU` (`-6 dBFS`), `+18 VU` (`0 dBFS`).
-   - Esegue inoltre un test **`Saturation Drive Max`** impostando al massimo i controlli di ingresso/guadagno/saturazione (`Input`, `Gain`, `Makeup`, `Drive`, `Peak Reduction`) a `0 VU` e `+12 VU`.
-   - Misura con FFT a 64-bit (`f64`): **`THD %`**, **`H2 (dBc)`** (2ª armonica pari), **`H3 (dBc)`** (3ª armonica dispari), **`H4/H5 (dBc)`** e **`Peak Rounding / Crest Delta (dB)`**.
-
-2. **6 Segnali Calibrati (`Sine`, `Sawtooth`, `Triangle`, `Square`, `Impulse`, `Dynamic Burst`):**
-   - `Sine` (`100 Hz`, `1000 Hz`, `8000 Hz` a `-18 dBFS`).
-   - `Sawtooth` (`110 Hz`, `1000 Hz` a `-18 dBFS`) — armoniche pari + dispari asimmetriche.
-   - `Triangle` (`110 Hz`, `1000 Hz` a `-18 dBFS`) — armoniche dispari dolci (`1/n²`).
-   - `Square` (`110 Hz`, `1000 Hz` a `-18 dBFS`) — fronti ripidi, test slew-rate e ringing.
-   - `Impulse` (`Dirac delta` compensato per `latency_samples`) — curve Bode reali di **Ampiezza (dB)** e **Fase (°)** `20 Hz – 20 kHz` (a unity gain sui plugin trasparenti deve leggere `0.00 dB` e `0.0°`).
-   - `Dynamic Burst` (`-30 dBFS → -3 dBFS → -30 dBFS`) — misura Gain Reduction effettiva (dB), attacco e recupero.
-
-3. **Test Statico & Dinamico (Automazione Real-Time) di Ogni Parametro (`clap.params`):**
-   - Per **ogni parametro** esposto dal plugin, testa sia i valori statici (`min`, `25%`, `default`, `75%`, `max`) sia uno **sweep dinamico in tempo reale** (`CLAP_EVENT_PARAM_VALUE` da `min → max → min`) verificando:
-     - `param_sensitivity_db` (variazione reale dell'uscita/spettro provocata dal parametro).
-     - `max_step_delta` (verifica assenza di click / zipper noise durante l'automazione).
-
-4. **Grafici SVG & Report HTML (`target/validation_report.html` + `target/validation_data/*.csv`):**
-   - Genera per ogni plugin:
-     1. **Bode Plot (Ampiezza dB + Fase ° compensata per latenza)**
-     2. **Curva di Saturazione (`-12 VU` → `+18 VU`): crescita di `THD %`, `H2` e `H3`**
-     3. **Confronto 4 Forme d'Onda (`Sine`, `Saw`, `Tri`, `Square`) & Risposta all'Impulso**
-     4. **Sensibilità & Automazione Dinamica di tutti i Parametri**.
-   - Compila `cargo build --release -p clap-validator-host`, lancialo su tutti i 15 `.clap` in `target/release/` e stampa a terminale la tabella con i valori reali di **THD %, H2, H3 a 0 VU e +18 VU** per ogni plugin!
+4. **Test Unitari & Documentazione:**
+   - Testa catene seriali (`A → B → C`), rami paralleli con sommatore (`Dry + Wet` con verifica compensazione automatica PDC quando un ramo ha latenza `64` campioni!), rilevamento di cicli non validi e loop con `FeedbackDelayZ1Node`.
+   - Aggiorna `ARCHITECTURE.md` e `STATE.md`, ed esegui `cargo test -p core-dsp` e `cargo clippy -p core-dsp -- -D warnings`.
 

@@ -167,54 +167,23 @@
 ## Plugin completato: `greg_dbx_160` (DBX 160 VCA Compressor/Limiter)
 - [COMPLETATO] Specificare topologia VCA, versione 160 VU / 160X / 160A con selettore.
 - [COMPLETATO] Implementare ratio 1:1/2:1/4:1/8:1/12:1/20:1/infinity:1 e Infinity+ (-1:1) per 160X/160A.
-- [COMPLETATO] Implementare soft-knee OverEasy (12 dB) / Hard Knee (1.5 dB) con selettore.
-- [COMPLETATO] Implementare attacco/rilascio program-dependent per 160X/160A, fissi per 160 VU.
-- [COMPLETATO] Implementare Stereo Link / Dual Mono, inversione polarità L/R, sidechain esterno con filtri HP/LP/Bell/LS/HS e SC Listen.
-- [COMPLETATO] Implementare bypass click-free con micro-crossfade, compensazione latenza oversampling (dry delay).
-- [COMPLETATO] Integrata metering lock-free I/O peak/RMS, gain reduction, phase correlation.
-- [COMPLETATO] Integrata PanicProtection con sanitizzazione NaN/Inf.
-- [COMPLETATO] Oversampling 1x/2x/4x/8x con latenza dichiarata all'host.
-- [COMPLETATO] Formati CLAP + VST3 nativi via export_greg_plugin! con ID `com.greg.audio.greg-db-x-160`.
-- [COMPLETATO] 5 test unitari passanti, cargo check pulito, 0 clippy warning per il crate.
-- [COMPLETATO] Documentazione scheda tecnica aggiornata (docs/plugins/greg_dbx_160.txt).
+# STATE.md — Analog Vibe Suite
 
-## Nuovo modulo condiviso: metering
-- [COMPLETATO] Definire un'API DSP real-time per input/output peak e RMS e gain reduction.
-- [COMPLETATO] Esporre snapshot atomici thread-safe e coprire i casi con test unitari.
-- [COMPLETATO] Integrare la raccolta nei plugin CLAP presenti nel workspace.
-- [COMPLETATO] Aggiornare `vcinst.md`, il catalogo esteso, inventario e schede DSP.
-- [DA FARE] Esporre i meter a una GUI o ai controlli host quando verra' aggiunta l'interfaccia.
+## Ultima sessione (clap-validator-host)
+- [COMPLETATO] Corretto calcolo THD: eliminato falso 200% da impulso singolo; ora Goertzel su sinusoide Hann 8192 campioni con warm-up `latency + 4096`.
+- [COMPLETATO] Aggiunti 6 segnali calibrati (sine, sawtooth, triangle, square, impulse, dynamic_burst) × 3 livelli (-12/-6/0 VU = -18 dBFS).
+- [COMPLETATO] Aggiunto test per ogni parametro CLAP: valori statici min/25%/default/75%/max + sweep dinamico min↔max + step.
+- [COMPLETATO] `--update-docs` genera 15 `docs/plugins/*.md` + `plugins/*/README.txt` con misure a 0 VU e link SVG.
+- [COMPLETATO] Generati 60 SVG in `docs/assets/measurements/` (4 per plugin: bode, harmonics, transfer, transient).
+- [COMPLETATO] Generati CSV in `target/validation_data/` con colonne complete (`signal_type`, `param_mode`, `crest_factor_db`, `max_step_delta`, ecc.).
+- [COMPLETATO] HTML report rigenerato in `target/validation_report.html`.
+- [COMPLETATO] `cargo build --release --workspace` verde, `cargo test --workspace` verde (157+ test).
+- [COMPLETATO] 15 plugin `.so` in `target/release/`.
 
-## Obiettivo completato: protezione da panic nel DSP
-- [COMPLETATO] Aggiungere un guard condiviso che intercetti i panic Rust durante il processing audio.
-- [COMPLETATO] Integrare il guard nei plugin CLAP attualmente implementati.
-- [COMPLETATO] In caso di panic, silenziare il blocco compromesso e latched-bypass in pass-through dai blocchi successivi.
-- [COMPLETATO] Testare il guard: panic intercettato, latch permanente e callback DSP successivi non eseguiti.
-- [COMPLETATO] Documentare che panic=abort, segfault e corruzione memoria non sono intercettabili in-process.
-- [DA FARE] Salvare un commit locale dopo aver concordato il perimetro delle modifiche non ancora committate.
-
-## Nuovo obiettivo attivo: emulazione analogica `greg_a2a`
-- [COMPLETATO] Definire parametri e metadati CLAP con naming originale Greg Audio.
-- [COMPLETATO] Aggiungere il modulo opto condiviso con attacco dipendente dalla riduzione e rilascio a due stadi basato sul sample rate.
-- [COMPLETATO] Integrare stadio valvolare asimmetrico, oversampling, bypass allineato e protezione panic condivisa.
-- [COMPLETATO] Aggiornare scheda plugin, specifica API, schede DSP, inventario, README e host CLAP.
-- [COMPLETATO] Verificare formattazione, test workspace (37), Clippy, build release e test host CLAP nuovo/esistenti.
-- [DA FARE] Calibrare curva, tempi, risposta e armoniche con misure A/B su hardware reale.
-- Vincolo di fedeltà: la prima alpha è un modello ispirato alla topologia e ai comportamenti documentati, non una replica misurata; calibrare contro hardware reale e misure rimane necessario.
-
-## Obiettivo attivo: utility di polarita'
-- [COMPLETATO] Implementare `greg_phase` come plugin CLAP standalone mono/stereo.
-- [COMPLETATO] Riutilizzare `StereoFrame::invert_phase` per inversione L/R e inversione linkata.
-- [COMPLETATO] Aggiungere bypass click-free e dichiarare latenza zero.
-- [COMPLETATO] Verificare inversione indipendente, inversione linkata e bypass nell'host CLAP.
-- [COMPLETATO] Aggiornare scheda plugin, modulo DSP, inventario e README.
-
-## Ultimo modulo: utility Mid/Side
-- [COMPLETATO] Implementare `greg_ms_encoder` e `greg_ms_decoder` come plugin CLAP distinti.
-- [COMPLETATO] Riutilizzare la matrice M/S condivisa, documentare la scala ortonormale e il comportamento mono.
-- [COMPLETATO] Aggiungere bypass crossfade di 5 ms, trim M/S, bilanciamento L/R e inversione di polarita'.
-- [COMPLETATO] Verificare build, latenza zero e mapping M/S nell'host CLAP offline.
-- [COMPLETATO] Aggiornare schede TXT, inventario, README e documentazione del test host.
+## Da fare / note
+- [PARZIALE] `cargo clippy -- -D warnings`: rimangono 16 warning stile nel solo `clap-validator-host` (loop indexing, too-many-arguments, type complexity) e 5 in `core-dsp`/`greg_gui_core` preesistenti; il build release è pulito.
+- [DA FARE] Copiare i 15 `.clap` in `~/.clap/Analog-vibe/` (rinominando `libgreg_x.so` → `greg_x.clap`).
+- [DA FARE] Aggiornare `README.md` principale con la tabella riepilogativa delle misure finali.l test host.
 
 ## Obiettivo
 Creare una suite di plugin audio CLAP in Rust, con DSP senza interfaccia grafica nella fase iniziale e requisiti real-time. Allineare il catalogo breve e quello esteso.
