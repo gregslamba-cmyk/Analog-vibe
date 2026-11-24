@@ -477,10 +477,7 @@ impl Plugin for GregA3a {
         create_greg_editor_with_params(
             "Greg A3A",
             self.telemetry.clone(),
-            move |cx| {
-                let editor_data = EditorData { params: params_main.clone() };
-                editor_data.build(cx);
-            },
+            move |cx| {},
             |_cx| {},
             Some(param_defs),
             move |cx| EditorData { params: params_main.clone() }.build(cx),

@@ -1,5 +1,10 @@
 esegui queste task, in ordine. ogni volta che esegui un task di questo documento cancellalo e rinomina gli altri task in ordine, poi salva il file.
 
+task 1 — Chiusura Firma GUI `model_builder` sui 4 Plugin Rimasti (`greg-gate`, `greg-a3a`, `greg-limiter`, `greg-child`)
+Leggi `crates/greg_gui_core/src/lib.rs` (firma `create_greg_editor_with_params`, 6 argomenti) e `plugins/greg-bus-comp/src/lib.rs` (funzione `editor`).
+1. Correggi la chiamata a `create_greg_editor_with_params` (6 argomenti + clone dell'`Arc` prima della closure `model_builder`) in `plugins/greg-gate/src/lib.rs`, `plugins/greg-a3a/src/lib.rs`, `plugins/greg-limiter/src/lib.rs` e `plugins/greg-child/src/lib.rs`.
+2. Lancia `cargo build --release --workspace` (0 errori), copia tutti e 18 i `target/release/libgreg_*.so` in `~/.clap/Analog-vibe/greg_*.clap`, cancella questo `task 1` da `doit.txt` e fai `git add -A && git commit -m "[GUI Core] Completata migrazione model_builder su tutti e 18 i plugin" && git push`.
+
 Leggi `crates/greg_gui_core/src/lib.rs` (righe 670-920) e `plugins/greg-bus-comp/src/lib.rs` (funzione `editor`).
 
 Obiettivo: accendere la **GUI 2D Vizia reale di default** su tutti e 18 i plugin (incluso in VM/VirtualBox):
@@ -25,22 +30,7 @@ Correggi `tools/clap-validator-host/src/main.rs`:
 2. Invia i valori dello sweep in scala **normalizzata `[0.0 .. 1.0]`** (es. `0.0`, `0.25`, `0.5`, `0.75`, `1.0`) o mappando `(val - min) / (max - min)` prima di inviare `CLAP_EVENT_PARAM_VALUE`, verificando con `params.get_value()` che il parametro accetti davvero il nuovo valore senza `[warn]`.
 3. Compila solo `-p clap-validator-host` (`cargo build --release -p clap-validator-host`) e verifica su `target/release/libgreg_76.so` che i warning `did not accept` spariscano completamente!
 
-task 3 — Implementazione `MonoChannelProcessor` + `MultiChannelGraph<P>` & Detector Multicanale Adattivo (`plugin-support`)
-Leggi `ARCHITECTURE.md` (sezione *Pattern Multicanale a Grafo* e *Detector Multicanale Adattivo*) e `plugin-support/src/lib.rs`.
-
-Obiettivo: creare in `plugin-support` il motore multicanale a grafo pre-allocato (`MAX_AUDIO_CHANNELS = 8` / `16`) riutilizzabile da tutti i plugin esistenti e futuri (`f64`, `#![forbid(unsafe_code)]`, zero allocazioni in `process()`):
-1. **Trait `MonoChannelProcessor` & `MultiChannelGraph<P>`:**
-   - Rilevamento automatico dei canali attivi dalla traccia (`buffer.channels()`), sovrascrivibile manualmente tramite il parametro condiviso `Channel Setup` (`Auto`, `Mono`, `Stereo`, `LCR`, `Quad`, `5.0`, `5.1`, `7.0`, `7.1`).
-   - Pre-routing automatico con supporto `Pass-Through (0..N)` e codifica/decodifica ortonormale `Mid/Side` (`L/R ↔ M/S`), compensazione PDC al singolo campione per `Dry/Wet` e `BypassCrossfade` click-free.
-2. **Detector Multicanale Adattivo (`MultiChannelDetectorLink`):**
-   - Supporta le 4 modalità di link su N canali:
-     1. `Unlinked` (Multi-Mono / Dual Mono indipendente per canale).
-     2. `AllLinked` (Stereo Link / Bus Link comune su tutti i canali).
-     3. `SurroundStemLink` (per 5.1 / 7.1: calcola la gain reduction comune su Front + Surround escludendo il canale LFE `.1` per evitare pumping da sub).
-     4. `MidSide` (detector separato M/S).
-3. **Verifica:** Aggiungi test unitari deterministici per Mono, Stereo, M/S e 5.1 Surround (verifica esclusione LFE in `SurroundStemLink` e `0.0 in -> 0.0 out`), esegui `cargo test -p plugin-support`, cancella questo task da `doit.txt` e rinomina i successivi.
-
-task 4
+task 3
 Leggi `vcinst.md`, `plugin-support/src/lib.rs` e tutti i plugin di dinamica (`plugins/greg-gate/src/lib.rs`, `plugins/greg_76/src/lib.rs`, `plugins/greg-a2a/src/lib.rs`, `plugins/greg-a3a/src/lib.rs`, `plugins/greg_api_2500/src/lib.rs`, `plugins/greg-bus-comp/src/lib.rs`, `plugins/greg-child/src/lib.rs`, `plugins/greg_dbx_160/src/lib.rs`, `plugins/greg_dbx_165/src/lib.rs`).
 
 Obiettivo: completare la **Modern Extended Section** su tutti i compressori/gate e aggiungere l'**Override Manuale Canali (`Channel Setup`)** sull'intera suite:
@@ -53,7 +43,7 @@ Obiettivo: completare la **Modern Extended Section** su tutti i compressori/gate
      - `Channel Mode` (`Stereo Link`, `Dual Mono`, `Mid/Side` con codifica/decodifica M/S ortonormale prima e dopo la cella di guadagno).
 3. **Verifica (Regola di Velocità):** Compila e testa prima `-p greg-gate -p greg_76 -p clap-validator-host`, poi compila `--workspace --release`, aggiorna `~/.clap/Analog-vibe/greg_*.clap`, spunta `doit.txt` e fai `git commit` + `git push`.
 
-task 5
+task 4
 Leggi `vcinst.md`, `core-dsp/src/core_dsp_modules/dsp_graph.rs`, `tools/clap-validator-host/src/main.rs` e `plugins/greg_bay/src/lib.rs`.
 
 Obiettivo: trasformare **`plugins/greg_bay`** in un vero **Host CLAP Modulare & Patchbay con Salvataggio/Richiamo Catene**:
@@ -63,3 +53,22 @@ Obiettivo: trasformare **`plugins/greg_bay`** in un vero **Host CLAP Modulare & 
 2. **Salvataggio & Richiamo Catene/Routing (`Save Chain` / `Load Chain`):**
    - Implementa la serializzazione JSON (`serde_json`) dell'intera configurazione della patchbay (routing attivo, plugin/moduli caricati in ciascuno dei 4 slot, livelli/pan/mix e stato parametri dei sub-plugin CLAP tramite `CLAP_EXT_STATE`) in `~/.config/analog-vibe/greg_bay_chains/` con selettore di richiamo rapido ed esposizione nello stato CLAP (`CLAP_EXT_STATE`) affinché la DAW salvi l'intera catena nel progetto!
 3. **Verifica (Regola di Velocità):** Compila e testa prima `-p greg_bay -p clap-validator-host`, verifica `0.0 in -> 0.0 out` e assenza di NaN/Inf, aggiorna `~/.clap/Analog-vibe/greg_bay.clap`, spunta `doit.txt` e fai `git commit` + `git push`.
+
+Leggi `plugin-support/src/lib.rs`, `core-dsp/src/core_dsp_modules/resampler_bitdepth.rs` e `plugins/greg-gate/src/lib.rs`.
+1. **MIDI Bridge Sample-Accurate (`plugin-support`):** Aggiungi un helper zero-alloc per decodificare gli eventi `NoteEvent` (`NoteOn`, `NoteOff`, `MidiCC`, `PitchBend`, `ProgramChange` e `PolyModulation` CLAP) dentro `process()`, esponendo la porta MIDI Input (`MIDI_INPUTS = 1`) sui plugin che lo supportano.
+2. **MIDI Sidechain Trigger su `greg-gate`:** Permetti a `greg-gate` di aprirsi o fare ducking anche su comando `NoteOn` MIDI oltre che su audio interno/esterno.
+3. **Oversampling Adattivo Render Offline:** Aggiungi in `plugin-support` il rilevamento dello stato `process_mode == ProcessMode::Offline` per attivare automaticamente il profilo di oversampling massimo in fase di bounce/export.
+4. **Verifica:** Esegui `cargo test -p plugin-support -p greg-gate`, cancella `task 6` da `doit.txt` e fai `git commit` + `git push`.
+
+Leggi `plugin-support/src/lib.rs` e `core-dsp/src/core_dsp_modules/resampler_bitdepth.rs`.
+1. **MIDI Bridge Sample-Accurate (`plugin-support`):** Aggiungi un decoder zero-alloc per gli eventi `NoteEvent` (`NoteOn`, `NoteOff`, `MidiCC`, `PitchBend`, `ProgramChange` e `PolyModulation` CLAP) dentro `process()`, con porta `MIDI_INPUTS = 1` opzionale/attivabile sui plugin.
+2. **Oversampling Adattivo Render Offline:** Aggiungi in `plugin-support` il rilevamento automatico di `process_mode == ProcessMode::Offline` per commutare l'oversampling alla massima qualità (`8x` / `16x`) durante l'esportazione/bounce della DAW.
+3. **Verifica:** Esegui `cargo test -p plugin-support`, cancella `task 6` da `doit.txt` e rinomina `task 7` in `task 6`.
+
+task 5 — Integrazione MIDI su `greg-gate` (MIDI Trigger) & `greg_bay` (Program Change / MIDI Learn / Routing MIDI)
+Leggi `plugin-support/src/lib.rs`, `plugins/greg-gate/src/lib.rs` e `plugins/greg_bay/src/lib.rs`.
+1. **`greg-gate` (MIDI Sidechain Trigger):** Aggiungi la sorgente sidechain `MIDI Note` (con filtro nota/canale MIDI opzionale): ogni `NoteOn` apre il gate (o attiva il ducking ritmico) con inviluppo sample-accurate sincronizzato al millisecondo.
+2. **`greg_bay` (Cambio Scene via Program Change + MIDI Learn + Passthrough MIDI agli Slot):**
+   - Cambia istantaneamente catena/scena salvata alla ricezione di un `MIDI Program Change`.
+   - Aggiungi mapping `MIDI CC` rapido (`MIDI Learn`) sui controlli principali e inoltra gli eventi MIDI ai sub-plugin CLAP caricati nei 4 slot.
+3. **Verifica:** Compila e testa SOLO `-p greg-gate -p greg_bay`, aggiorna `~/.clap/Analog-vibe/greg_gate.clap` e `~/.clap/Analog-vibe/greg_bay.clap`, cancella questo task da `doit.txt` e fai `git commit` + `git push`.

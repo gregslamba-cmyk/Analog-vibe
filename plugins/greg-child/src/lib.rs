@@ -468,13 +468,8 @@ impl Plugin for GregChild {
         create_greg_editor_with_params(
             "Greg Child",
             self.telemetry.clone(),
+            move |cx| {},
             move |cx| {
-                let editor_data = EditorData { params: params_main.clone() };
-                editor_data.build(cx);
-            },
-            move |cx| {
-                let editor_data = EditorData { params: params_adv.clone() };
-                editor_data.build(cx);
                 ToggleSwitch::new(cx, EditorData::params, |p| &p.stereo_link);
                 ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_left);
                 ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_right);

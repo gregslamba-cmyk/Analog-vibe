@@ -148,13 +148,10 @@ impl Plugin for GregGate {
     }
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params_arc_main = self.params.clone();
-        let params_arc_adv = self.params.clone();
         create_greg_editor_with_params(
             "Greg Gate",
             self.telemetry.clone(),
             move |cx| {
-                let gui_data = GregGateGuiData { params: params_arc_main.clone() };
-                gui_data.build(cx);
                 VStack::new(cx, |cx| {
                     Label::new(cx, "Greg Gate").font_size(14.0).color(Color::rgb(255, 255, 255));
                     Label::new(cx, "Main Parameters").font_size(12.0).color(Color::rgb(210, 215, 225)).bottom(Pixels(6.0));
@@ -168,14 +165,13 @@ impl Plugin for GregGate {
                 .height(Pixels(268.0)).background_color(Color::rgb(34, 37, 42)).child_space(Pixels(10.0));
             },
             move |cx| {
-                let gui_data = GregGateGuiData { params: params_arc_adv.clone() };
-                gui_data.build(cx);
                 VStack::new(cx, |cx| {
                     Label::new(cx, "Advanced Parameters").font_size(12.0).color(Color::rgb(210, 215, 225)).bottom(Pixels(6.0));
                 })
                 .height(Pixels(200.0)).background_color(Color::rgb(28, 30, 35)).child_space(Pixels(10.0));
             },
             None,
+            move |cx| GregGateGuiData { params: params_arc_main.clone() }.build(cx),
         )
     }
     fn process(

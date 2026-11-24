@@ -90,3 +90,15 @@
   - [x] `loudness_metering`: engine ITU-R BS.1770-4 / EBU R128 (LUFS momentaneo, short-term, integrato, LRA, true-peak dBTP).
 - [x] **15 Plugin Alpha Operativi:** compilazione pulita, test unitari passanti, metering thread-safe integrato.
 - [x] **Riorganizzazione Documentazione Operativa:** catalogo completo e roadmap futura spostati in `docs/PLUGIN_CATALOG.md`, `TODO.md` creato per la gestione prioritaria dei task, `vcinst.md` snellito e focalizzato sulle regole architetturali inderogabili.
+
+## Pilastri v1.1 — Esperienza Studio & Stato dell'Arte
+- [ ] **Preset Browser, A/B Compare & Undo/Redo UI (`greg_gui_core`):** Selettore preset di fabbrica/utente per categoria, confronto rapido A/B con copia `A -> B` e cronologia Undo/Redo delle manopole.
+- [ ] **Curve Dinamiche & Analisi Visiva 60 FPS (`greg_gui_core`):** Curva di trasferimento su compressori/gate con pallino del livello istantaneo, grafico GR History nel tempo e curva EQ + analizzatore di spettro sovrapposto.
+- [ ] **Supporto MIDI Sample-Accurate & Poly-Modulation CLAP (`plugin-support` + `core-dsp`):** Gestione `NoteOn/Off`, `MidiCC` (MIDI Learn), `Program Change` (cambio scene in `greg_bay`), `MIDI Sidechain Trigger` su `greg-gate`/compressori e modulazioni polifoniche CLAP (`PolyModulation`), pronto anche per i futuri sampler/synth (`mpc_sampler_engine`).
+- [ ] **Oversampling Adattivo in Render Offline (`plugin-support`):** Rilevamento automatico della modalità *Offline Render* della DAW per commutare l'oversampling alla massima qualità (`8x` / `16x` lineare) durante l'esportazione del master.
+
+## Pilastri v1.1 — Esperienza Studio & Stato dell'Arte
+- [ ] **Preset Browser, A/B Compare & Undo/Redo UI (`greg_gui_core`):** Selettore preset di fabbrica/utente per categoria, confronto rapido A/B con copia `A -> B` e cronologia Undo/Redo delle manopole.
+- [ ] **Curve Dinamiche & Analisi Visiva 60 FPS (`greg_gui_core`):** Curva di trasferimento su compressori/gate con pallino del livello istantaneo, grafico GR History nel tempo e curva EQ + analizzatore di spettro sovrapposto.
+- [ ] **Supporto MIDI Sample-Accurate & Poly-Modulation CLAP (`plugin-support` + `core-dsp`):** Gestione `NoteOn/Off`, `MidiCC` (MIDI Learn), `Program Change` (cambio scene in `greg_bay`), `MIDI Sidechain Trigger` su `greg-gate`/compressori e modulazioni polifoniche CLAP (`PolyModulation`), pronto anche per i futuri sampler/synth (`mpc_sampler_engine`).
+- [ ] **Oversampling Adattivo in Render Offline (`plugin-support`):** Rilevamento automatico della modalità *Offline Render* della DAW per commutare l'oversampling alla massima qualità (`8x` / `16x` lineare) durante l'esportazione del master.

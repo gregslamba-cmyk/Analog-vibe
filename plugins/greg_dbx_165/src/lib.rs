@@ -546,8 +546,6 @@ impl Plugin for GregDbx165 {
             "Greg DBX 165",
             self.telemetry.clone(),
             move |cx| {
-                let gui_data = Dbx165GuiData { params: params_arc_main.clone() };
-                gui_data.build(cx);
                 VStack::new(cx, |cx| {
                     Label::new(cx, "Greg DBX 165").font_size(14.0).color(Color::rgb(255, 255, 255));
                     Label::new(cx, "Main Parameters").font_size(12.0).color(Color::rgb(210, 215, 225));
@@ -564,8 +562,6 @@ impl Plugin for GregDbx165 {
                 .height(Pixels(268.0)).background_color(Color::rgb(34, 37, 42)).child_space(Pixels(10.0));
             },
             move |cx| {
-                let gui_data = Dbx165GuiData { params: params_arc_adv.clone() };
-                gui_data.build(cx);
                 VStack::new(cx, |cx| {
                     Label::new(cx, "Advanced Parameters").font_size(12.0).color(Color::rgb(210, 215, 225));
                     EnumSwitch::new(cx, Dbx165GuiData::params, |p| &p.version).width(Pixels(115.0)).height(Pixels(24.0));
@@ -581,7 +577,7 @@ impl Plugin for GregDbx165 {
                 .height(Pixels(200.0)).background_color(Color::rgb(28, 30, 35)).child_space(Pixels(10.0));
             },
             Some(param_defs),
-            move |cx| EditorData { params: params_main.clone() }.build(cx),
+            move |cx| Dbx165GuiData { params: params_arc_main.clone() }.build(cx),
         )
     }
 

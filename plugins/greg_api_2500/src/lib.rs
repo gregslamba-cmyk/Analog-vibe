@@ -594,8 +594,6 @@ impl Plugin for GregApi2500 {
             "Greg API 2500",
             self.telemetry.clone(),
             move |cx| {
-                let editor_data = EditorData { params: params_main.clone() };
-                editor_data.build(cx);
                 RotaryKnob::new(cx, EditorData::params, |p| &p.input).width(Pixels(115.0)).height(Pixels(24.0));
                 RotaryKnob::new(cx, EditorData::params, |p| &p.threshold).width(Pixels(115.0)).height(Pixels(24.0));
                 EnumSwitch::new(cx, EditorData::params, |p| &p.ratio).width(Pixels(115.0)).height(Pixels(24.0));
@@ -610,8 +608,6 @@ impl Plugin for GregApi2500 {
                 EnumSwitch::new(cx, EditorData::params, |p| &p.oversampling).width(Pixels(115.0)).height(Pixels(24.0));
             },
             move |cx| {
-                let editor_data = EditorData { params: params_adv.clone() };
-                editor_data.build(cx);
                 ToggleSwitch::new(cx, EditorData::params, |p| &p.bypass).width(Pixels(115.0)).height(Pixels(24.0));
                 ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_left).width(Pixels(115.0)).height(Pixels(24.0));
                 ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_right).width(Pixels(115.0)).height(Pixels(24.0));

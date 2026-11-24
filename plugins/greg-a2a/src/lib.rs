@@ -477,8 +477,6 @@ impl Plugin for GregA2a {
             "Greg A2A",
             self.telemetry.clone(),
             move |cx| {
-                let editor_data = EditorData { params: params_main.clone() };
-                editor_data.build(cx);
                 RotaryKnob::new(cx, EditorData::params, |p| &p.peak_reduction);
                 RotaryKnob::new(cx, EditorData::params, |p| &p.gain);
                 EnumSwitch::new(cx, EditorData::params, |p| &p.mode);
@@ -486,8 +484,6 @@ impl Plugin for GregA2a {
                 EnumSwitch::new(cx, EditorData::params, |p| &p.oversampling);
             },
             move |cx| {
-                let editor_data = EditorData { params: params_adv.clone() };
-                editor_data.build(cx);
                 ToggleSwitch::new(cx, EditorData::params, |p| &p.bypass);
                 ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_left);
                 ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_right);

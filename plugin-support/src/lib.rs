@@ -77,3 +77,9 @@ pub const DYNAMICS_IO_LAYOUTS: [AudioIOLayout; 21] = [
 ];
 
 pub const MAX_AUDIO_CHANNELS: usize = 8;
+
+pub mod multichannel;
+pub use multichannel::{
+    ChannelSetup, MonoChannelProcessor, MultiChannelDetectorLink, MultiChannelGraph,
+};
+pub use core_dsp::core_dsp_modules::sidechain_processor::MultiChannelLinkMode;

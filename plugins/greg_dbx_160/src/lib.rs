@@ -573,8 +573,6 @@ impl Plugin for GregDbx160 {
             "Greg DBX 160",
             self.telemetry.clone(),
             move |cx| {
-                let editor_data = EditorData { params: params_main.clone() };
-                editor_data.build(cx);
                 VStack::new(cx, |cx| {
                     Label::new(cx, "Main Parameters").font_size(12.0).color(Color::rgb(210, 215, 225)).bottom(Pixels(6.0));
                     RotaryKnob::new(cx, EditorData::params, |p| &p.input).width(Pixels(115.0)).height(Pixels(24.0));
@@ -590,8 +588,6 @@ impl Plugin for GregDbx160 {
                 .child_space(Pixels(10.0));
             },
             move |cx| {
-                let editor_data = EditorData { params: params_adv.clone() };
-                editor_data.build(cx);
                 VStack::new(cx, |cx| {
                     Label::new(cx, "Advanced Parameters").font_size(12.0).color(Color::rgb(210, 215, 225)).bottom(Pixels(6.0));
                     ToggleSwitch::new(cx, EditorData::params, |p| &p.bypass).width(Pixels(115.0)).height(Pixels(24.0));
