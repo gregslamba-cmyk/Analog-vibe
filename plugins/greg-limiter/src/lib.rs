@@ -495,8 +495,6 @@ impl Plugin for GregLimiter {
             "Greg Limiter",
             self.telemetry.clone(),
             move |cx| {
-                let gui_data = GregLimiterGuiData { params: params_arc_main.clone() };
-                gui_data.build(cx);
                 VStack::new(cx, |cx| {
                     Label::new(cx, "Greg Limiter").font_size(14.0).color(Color::rgb(255, 255, 255));
                     Label::new(cx, "Main Parameters").font_size(12.0).color(Color::rgb(210, 215, 225));
@@ -511,8 +509,6 @@ impl Plugin for GregLimiter {
                 .height(Pixels(268.0)).background_color(Color::rgb(34, 37, 42)).child_space(Pixels(10.0));
             },
             move |cx| {
-                let gui_data = GregLimiterGuiData { params: params_arc_adv.clone() };
-                gui_data.build(cx);
                 VStack::new(cx, |cx| {
                     Label::new(cx, "Advanced Parameters").font_size(12.0).color(Color::rgb(210, 215, 225));
                     ToggleSwitch::new(cx, GregLimiterGuiData::params, |p| &p.external_sidechain).width(Pixels(115.0)).height(Pixels(24.0));
@@ -525,6 +521,7 @@ impl Plugin for GregLimiter {
                 .height(Pixels(200.0)).background_color(Color::rgb(28, 30, 35)).child_space(Pixels(10.0));
             },
             Some(param_defs),
+            move |cx| GregLimiterGuiData { params: params_arc_main.clone() }.build(cx),
         )
     }
 

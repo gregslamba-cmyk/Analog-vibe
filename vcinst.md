@@ -24,6 +24,7 @@ Prima di modificare o creare codice nel progetto, l'AI DEVE consultare i documen
 | **Guida Strumenti di Test** | [`docs/testing/clap_signal_host.txt`](file:///home/greg/Documenti/analog%20vibes/docs/testing/clap_signal_host.txt) | Documentazione dell'host di test offline per stress-test di buffer irregolari e latenza. |
 | **Guida DSP SDK `core-dsp`** | [`core-dsp/README.txt`](file:///home/greg/Documenti/analog%20vibes/core-dsp/README.txt) | Manuale completo per sviluppatori: precisione `f64`, 43 moduli per famiglia, esempi d'uso e test. |
 | **Guida Host Bridge `plugin-support`** | [`plugin-support/README.txt`](file:///home/greg/Documenti/analog%20vibes/plugin-support/README.txt) | Manuale per layout I/O (`SURROUND_IO_LAYOUTS`, `DYNAMICS_IO_LAYOUTS`), sidechain, metri e macro `export_greg_plugin!`. |
+| **Linee Guida Design & UI (`GUI_SPEC.md`)** | [`GUI_SPEC.md`](file:///home/greg/Documenti/analog%20vibes/GUI_SPEC.md) | Filosofia estetica studio, separazione Main vs `+ ADV`, telemetria 60 FPS e specifiche Studio GUI Designer. |
 | **Guida Motore GUI `greg_gui_core`** | [`crates/greg_gui_core/README.txt`](file:///home/greg/Documenti/analog%20vibes/crates/greg_gui_core/README.txt) | Manuale GUI Vizia, telemetria lock-free DSP → UI, fallback `GREG_NO_GUI=1` e schema JSON `GuiLayoutSpec` (`gui_layout.json`). |
 | **Guida Validatore `clap-validator-host`** | [`tools/clap-validator-host/README.txt`](file:///home/greg/Documenti/analog%20vibes/tools/clap-validator-host/README.txt) | Manuale del banco di collaudo universale CLAP (misure THD, armoniche H2–H7, report HTML/SVG e GUI Layout Designer). |
 | **Panoramica Suite Analog-Vibe** | [`README.md`](file:///home/greg/Documenti/analog%20vibes/README.md) e [`README.txt`](file:///home/greg/Documenti/analog%20vibes/README.txt) | Presentazione generale, elenco dei 18 plugin, requisiti di sistema, build release e Doppia Licenza. |
@@ -125,3 +126,17 @@ Ogni file sorgente `.rs` deve essere commentato secondo questo standard (con com
 2. **Doc-comment pubblici (`///`):** Ogni `struct`, `enum`, campo di parametri (`Params`) e funzione pubblica deve riportare descrizione, unità di misura esatta (es. `dB`, `ms`, `Hz`, `samples`, `ratio`) e garanzie real-time (es. zero allocazioni heap).
 3. **Commenti matematici DSP (`//`):** Ogni calcolo non banale in `initialize()` o `process()` (coefficienti filtri, costanti d'attacco/rilascio, curve non lineari, isteresi) deve spiegare la motivazione fisica, circuitale o acustica.
 4. **Divieto di commenti ovvi:** Vietato commentare operazioni banali (es. `x += 1; // increment x`). Commentare solo il **perché fisico o matematico**.
+
+---
+
+## 4. Checklist di Conformità Obbligatoria per Ogni Plugin
+
+Prima di considerare completato qualsiasi plugin della suite Analog-Vibe, verificare obbligatoriamente:
+1. **Override Manuale Canali (`Channel Setup`):** Presente su **TUTTI** i plugin (`Auto`, `Mono`, `Stereo`, `LCR`, `Quad`, `5.0`, `5.1`, `7.0`, `7.1`) per correggere manualmente eventuali errori di autodetect dell'host DAW.
+2. **Modern Extended Section su TUTTI i Processori di Dinamica (Compressori, Limiter, Gate/Expander):**
+   - `SC Source` (`Internal` / `External` con fallback automatico) + `SC Listen`
+   - Filtri Sidechain completi (`SC HPF`, `SC LPF`, `SC Bell` Freq/Q/Gain)
+   - `Channel Mode` (`Stereo Link`, `Dual Mono`, `Mid/Side`) + controllo `Mix / Dry-Wet`.
+3. **Composizione Modulare dei Channel Strip (`dsp_graph` + Riuso Moduli Singoli + Host CLAP/VST3):**
+   - I motori DSP dei singoli moduli (**Preamp**, **EQ**, **Compressore/Dynamics**, già accorpati per revisioni storiche come da Sez. 3) devono essere esportati con `crate-type = ["cdylib", "rlib"]` affinché lo stesso codice funzioni sia come **plugin singolo** sia come **blocco DSP dentro i Channel Strip**.
+   - Ogni **Channel Strip** (`greg_neve_*_strip`, `greg_ssl_*_strip`, `greg_api_*_strip`, ecc.) deve comporre tali moduli dentro `dsp_graph` (con ordine commutabile `Pre → EQ → Dyn` / `Pre → Dyn → EQ`), includere `aux_send` + `fader_console`, e integrare un **Sub-Host CLAP/VST3** per ospitare plugin esterni con PDC automatico al singolo campione.

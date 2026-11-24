@@ -1,31 +1,47 @@
-INVENTARIO MASTER DELLA SUITE AUDIO
-Ultimo controllo: 2026-11-19
-Catalogo di riferimento unico: vcinst.md
+INVENTARIO MASTER DELLA SUITE AUDIO ANALOG-VIBE
+Ultimo controllo: 2026-11-24
+Catalogo di riferimento unico: vcinst.md & docs/PLUGIN_CATALOG.md
 Ogni ID plugin ha una scheda in docs/plugins/<id>.txt.
 Ogni modulo riutilizzabile ha una scheda in docs/modules/<id>.txt.
 I riferimenti hardware e le specifiche documentate per le emulazioni analogiche sono raccolti in docs/specs/outboard_hardware_research.md.
 Stato "pianificato" significa non implementato; la presenza della scheda non equivale al completamento.
 
-Stato implementazione attuale: greg_76, greg_a2a, greg_a3a, greg_child, greg_limiter, greg_surgical_eq, greg_ms_encoder, greg_ms_decoder e greg_phase hanno crate CLAP alpha; gli altri plugin sono documentati ma non ancora implementati.
+================================================================================
+1. STATO IMPLEMENTAZIONE ATTUALE (18 PLUGIN COMPILATI IN RELEASE CLAP + VST3)
+================================================================================
+- Dinamica (10): greg_76 (Rev A/D/E/F + All-Buttons), greg_a2a (Silverface/Vintage), greg_a3a, greg_api_2500 (2500/2500+), greg_bus_comp, greg_child (670/660), greg_dbx_160 (160VU/160X/160A), greg_dbx_165 (165/165A PeakStop), greg_gate, greg_limiter.
+- Equalizzatori (2): greg_pultec (EQP-1A/EQP-1A3), greg_surgical_eq.
+- Matrici & Utility (3): greg_ms_encoder, greg_ms_decoder, greg_phase.
+- Console & Routing Modulare (3): greg_nl_ch (stadio console non lineare), greg_nl_mixer (console analogica modulare dinamica 24ch + 8 bus), greg_bay (modular patchbay & sub-host CLAP).
 
-COPERTURA RICHIESTA
-- Compressori: greg_76 (Rev D/E), greg_a2a, greg_a3a, greg_child (670/660), greg_bus_comp, greg_dbx_160 (160VU/160X/160A), greg_dbx_165 (165/165A PeakStop), greg_api_2500 (2500/2500+), greg_api_sr22 (SR22/SV12), greg_api_225l, greg_api_t25, greg_api_525 (525/525A), greg_api_527 (527/527A), greg_api_529, greg_harrison_comp, greg_manley_comp (Standard/Mastering), greg_multiband_comp (4 bande iniziali, espandibile), greg_lin_comp.
-- EQ e preamp: greg_pultec (EQP-1A/EQP-1A3), greg_ssl_eq (E/G), greg_neve_eq, greg_api_pre, greg_neve_pre, greg_harrison_pre, greg_harrison_eq, greg_manley_eq, greg_surgical_eq, greg_lin_eq.
-- Utility e creativi: greg_ms_encoder, greg_ms_decoder, greg_phase, greg_tape, greg_destroyer, greg_exciter, greg_low_enhancer, greg_pitch_clean, greg_pitch_formant, greg_space, greg_pingpong, greg_ir_reverb, greg_trans_mono, greg_trans_multi, greg_gate, greg_bus_summer, greg_limiter.
-- Restauro: greg_denoiser, greg_declipper, greg_dehummer, greg_declicker.
-- Channel strip completi: greg_neve_1073_strip, greg_neve_1081_strip, greg_neve_1084_strip, greg_neve_88rs_strip, greg_harrison_32c_strip, greg_harrison_mixbus_strip (software), greg_ssl_4000e_strip, greg_ssl_4000g_strip, greg_ssl_9000j_strip, greg_api_vision_strip, greg_api_legacy_plus_strip, greg_trident_a_range_strip, greg_trident_80b_strip, greg_amek_9098_strip, greg_mci_jh500_strip.
-- Moduli condivisi: routing_matrix, phase_inversion, filters, sidechain_processor, resampler_bitdepth, nonlinear_stages, transformer_hysteresis, psu_sag, analog_variance, realtime_controls, metering, surgical_eq, panic_protection, opto_compressor, vari_mu.
+================================================================================
+2. COPERTURA COMPLETA DEL CATALOGO (IMPLEMENTATI + PIANIFICATI)
+================================================================================
+- Compressori & Limiter:
+  greg_76 (Rev A/D/E/F), greg_a2a, greg_a3a, greg_child (670/660), greg_bus_comp, greg_dbx_160 (160VU/160X/160A), greg_dbx_165 (165/165A PeakStop), greg_api_2500 (2500/2500+), greg_api_sr22 (SR22/SV12), greg_api_225l, greg_api_t25, greg_api_525 (525/525A), greg_api_527 (527/527A), greg_api_529, greg_neve_comp (2254/33609 Diode-Bridge), greg_ssl_dyn (4000 VCA Comp + Expander/Gate), greg_harrison_comp, greg_manley_comp (Standard/Mastering), greg_multiband_comp (4 bande espandibile), greg_lin_comp, greg_limiter.
 
-RISULTATO DELL'AUDIT
-Il catalogo esteso includeva denoiser, pitch shift, spazio stereo, delay ping-pong, riverbero IR, transient mono/multibanda, gate, tape, exciter, subharmonic enhancer e distorsore. La suite Harrison resta esplicita come tre plugin di sezione; i nuovi strip completi sono aggiunti senza sostituirli. Anche Neve/API/SSL mantengono i componenti di sezione; i channel strip sono profili distinti. La coppia encoder/decoder M/S e la coppia EQ/comp passivi sono documentate separatamente.
-Mancavano esplicitamente un compressore multibanda a quattro bande espandibile e un limiter/maximizer: aggiunti come greg_multiband_comp e greg_limiter.
-L'inversione di polarita' e' ora elencata come utility/plugin greg_phase e come modulo condiviso phase_inversion.
-Il catalogo include inoltre denoiser, declipper, dehummer, declicker ed EQ/comp lineari che sono extra rispetto all'elenco utente.
+- EQ & Preamplificatori da Banco:
+  greg_pultec (EQP-1A/EQP-1A3), greg_ssl_pre, greg_ssl_eq (292 Pink / 242 Black E/G), greg_neve_pre, greg_neve_eq, greg_api_pre, greg_api_eq (550A/550B Proportional-Q + 560 Grafico), greg_harrison_pre, greg_harrison_eq, greg_manley_eq, greg_surgical_eq, greg_lin_eq.
 
-DA VALIDARE
-- Definire i formati effettivi supportati da greg_ir_reverb; "formati comuni" non specifica una lista.
-- Definire il numero massimo di bande del compressore multibanda.
-- Distinguere inversione di polarita' (latency zero) da rotazione/ritardo di fase.
-- Mantenere nomi originali per i prodotti; i riferimenti circuitali non sono nomi di plugin.
-- Accorpare le versioni/revisioni differenti della stessa outboard nel medesimo plugin con parametro/selettore di versione (es. DBX 160VU/160X/160A in greg_dbx_160, 165/165A in greg_dbx_165, API 2500/2500+ in greg_api_2500, 525/525A in greg_api_525, 527/527A in greg_api_527, SR22/SV12 in greg_api_sr22); non unificare modelli hardware intrinsecamente differenti.
-- Aggiornare ogni scheda TXT insieme all'API e ai test del relativo componente.
+- Moduli Serie 500 ("Lunchbox Classics"):
+  greg_gama_pre (preamp discreto con selettore trasformatori Nickel / Discrete / Steel), greg_silk_pre (preamp con circuito armonico Silk Red/Blue + HPF), greg_tg_pre (preamp stile console EMI TG12428), greg_air_eq (EQ con Air Band fino a 40 kHz), greg_xpress_comp (compressore Classe A con Warm Mode e Negative Ratios), greg_doublewide (compressore valvolare Vari-Mu 500), greg_tape_500 (emulatore nastro 500 con Silk + Blend).
+
+- Saturatori, Utility & Creativi:
+  greg_nl_ch, greg_nl_mixer, greg_bay, greg_tape (Master Tape 7.5/15/30 ips NAB/CCIR), greg_tube_drive (saturatore valvolare triodo/pentodo), greg_xfmr_box (color box trasformatori passivi UTC/Marinair/Carnhill/API), greg_destroyer, greg_exciter, greg_low_enhancer, greg_ms_encoder, greg_ms_decoder, greg_phase, greg_pitch_clean, greg_pitch_formant, greg_space, greg_pingpong, greg_ir_reverb, greg_trans_mono, greg_trans_multi, greg_gate.
+
+- Restauro Audio:
+  greg_denoiser, greg_declipper, greg_dehummer, greg_declicker.
+
+- Channel Strip Completi (riutilizzabili anche come strisce canale dentro greg_nl_mixer):
+  greg_neve_1073_strip, greg_neve_1081_strip, greg_neve_1084_strip, greg_neve_88rs_strip, greg_ssl_4000e_strip, greg_ssl_4000g_strip, greg_ssl_9000j_strip, greg_api_vision_strip, greg_api_legacy_plus_strip, greg_harrison_32c_strip, greg_harrison_mixbus_strip, greg_trident_a_range_strip, greg_trident_80b_strip, greg_amek_9098_strip, greg_mci_jh500_strip.
+
+- Moduli Condivisi (`core-dsp` — 44 moduli f64):
+  routing_matrix, aux_send, fader_console, phase_inversion, filters, zdf_filters, sidechain_processor, resampler_bitdepth, nonlinear_stages, transformer_hysteresis, component_models, psu_sag, analog_variance, analog_summing, dsp_graph, realtime_controls, metering, loudness_metering, loudness_rider, surgical_eq, linear_phase_fir, partitioned_convolver, fft_convolution, panic_protection, opto_compressor, vari_mu, cabinet_speaker, acoustic_room, spatial_3d, delay_lines, tempo_sync, fdn_reverb, tape_physics, pitch_shifter, spectral_analyzer, spectral_restoration, mix_mastering_fx, mpc_sampler_engine, plugin_export.
+
+================================================================================
+3. REGOLE ARCHITETTURALI & VALIDAZIONE
+================================================================================
+- Zero Marchi Registrati: mantenere nomi originali per i prodotti; i riferimenti circuitali non sono nomi commerciali dei plugin.
+- Accorpamento Versioni: unificare le revisioni storiche della stessa macchina in un unico plugin con selettore dedicato (es. 1176 Rev A/D/E/F, DBX 160VU/X/A, API 2500/2500+, API 550A/B); non unificare hardware intrinsecamente diversi.
+- Conformità Obbligatoria (vcinst.md Sez. 4): ogni plugin espone `Channel Setup` manuale (`Auto` + `Mono..7.1`); tutti i processori di dinamica espongono `SC Source`, `SC Listen`, `SC HPF/LPF/Bell`, `Channel Mode` (`Stereo Link / Dual Mono / Mid-Side`) e `Mix`.
+- Documentazione Sincronizzata: aggiornare ogni scheda TXT insieme all'API e ai test del relativo componente.

@@ -1,35 +1,18 @@
-task 5
-Leggi `vcinst.md`, `ARCHITECTURE.md`, `core-dsp/src/core_dsp_modules/analog_summing.rs`, `core-dsp/src/core_dsp_modules/component_models.rs`, `core-dsp/src/core_dsp_modules/zdf_filters.rs` e `plugins/greg_nl_mixer/src/lib.rs`.
+esegui queste task, in ordine. ogni volta che esegui un task di questo documento cancellalo e rinomina gli altri task in ordine, poi salva il file.
 
-Obiettivo: trasformare `plugins/greg_nl_mixer` in una **Console Analogica Completa a Tracce e Bus Dinamici** (fino a 24 canali stereo + 8 bus/send-return creabili sul momento) con **Channel Strip fedeli al banco di riferimento** (`Neve 8078`, `SSL 4000G`, `API 1608`), rispettando `#![forbid(unsafe_code)]`, precisione `f64` e **zero allocazioni heap nel thread audio `process()`**:
+task 1 — Fix GUI 2D Vizia Reale (`EditorData::build(cx)` + X11 Default)
+Leggi `crates/greg_gui_core/src/lib.rs` (righe 670-920) e `plugins/greg-bus-comp/src/lib.rs` (funzione `editor`).
 
-1. **Architettura Dinamica Zero-Alloc (`+ Add Channel` / `+ Add Bus`):**
-   - Pre-alloca in `initialize()` / `activate()` un pool dormiente fino a `24 canali stereo` e `8 bus stereo` (a consumo CPU = `0.0%` per gli slot inattivi).
-   - Di default attiva **4 Canali + 1 Master Bus**; esponi comandi lock-free / parametri per creare/attivare istantaneamente nuove tracce (`+ Add Channel`) e nuovi bus (`+ Add Bus`: modalità *Group Submix* oppure *External CLAP Aux Send/Return* mappati sulle porte aux esterne della DAW per collegare riverberi/delay esterni).
-
-2. **Channel Strip Fedeli al Banco di Riferimento (selezionabile globalmente o per singolo canale):**
-   - **Neve 8078 (`1073/1081` + `2254` style):**
-     - Preamp/Trasformatori: `CarnhillVtb9045` → Classe A `Neve2n3055_Bc108` (`MarinairLo1166`).
-     - EQ 3 Bande Induttore + HPF: HPF a scatti (`50/80/160/300 Hz`), Low Shelf (`35/60/110/220 Hz`), Mid Bell proporzionale (`0.36–7.2 kHz`), High Shelf armonico (`12 kHz`).
-     - Dinamica: Compressore/Limiter a ponte di diodi (attacco fisso musicale, rilascio auto, ratio `1.5:1..6:1`).
-   - **SSL 4000G (`292 Pink / 242 Black` + `4000 Dynamics` style):**
-     - Preamp/VCA: `Ne5534` → `Dbx202GoldCan`.
-     - EQ 4 Bande Parametriche + HPF/LPF: HPF (`18 dB/oct`), LPF (`12 dB/oct`), LF/HF commutabili Shelf/Bell, LMF/HMF con Q proporzionale e curva undershoot/overshoot serie G.
-     - Dinamica: Compressore VCA rapido (`Soft/Fast Attack`, `Release 0.1–4s`, `Ratio 1:1–∞:1`) + Expander/Gate integrato con isteresi.
-   - **API 1608 (`550B Proportional-Q` + `525/527` style):**
-     - Preamp/Trasformatori: `Api2520` Discrete Op-Amp → `Api2623`.
-     - EQ 4 Bande Proportional-Q: 7 frequenze selezionabili a scatti per banda + guadagno a scatti (`±2, ±4, ±6, ±9, ±12 dB`) con Q che si stringe automaticamente all'aumentare del boost/cut.
-     - Dinamica: Compressore discreto stile 525/527 (`Feedback` / `Feed-Forward` commutabile + auto-gain).
-
-3. **2 Insert Interni per Canale + Mandate + Master Bus Virtual Earth:**
-   - Ogni canale include `2 Insert Interni` (`Insert A` & `Insert B`, `Pre/Post EQ`) selezionabili tra i moduli `core-dsp` (*Pultec Low/High*, *Tape Saturation*, *1176 FET*, *LA-2A Opto*, *Soft Clipper*), `Pan`, `Mute`, `Solo`, `Fader` (`-∞ .. +10 dB`) e mandate verso i bus attivi (`Pre/Post Fader`).
-   - Somma finale tramite `AdjacentCrosstalkMatrix` + `VirtualEarthSummer` (`PSU Sag` condiviso) + Bus Compressor + Trasformatore di Mix.
-
-4. **Verifica & Deploy (rispettando la Regola di Velocità in `.clinerules`):**
-   - Compila e testa prima **solo** `-p greg_nl_mixer -p clap-validator-host` (`cargo test -p greg_nl_mixer` e `cargo build --release -p greg_nl_mixer -p clap-validator-host`), verifica `0.0 in -> 0.0 out` e zero NaN/Inf, poi aggiorna `~/.clap/Analog-vibe/greg_nl_mixer.clap`, spunta `doit.txt` e fai `git commit` + `git push`.
+Obiettivo: accendere la **GUI 2D Vizia reale di default** su tutti e 18 i plugin (incluso in VM/VirtualBox):
+1. In `crates/greg_gui_core/src/lib.rs`:
+   - In `is_gui_supported()`, rimuovi il controllo DMI su `VirtualBox`/`VMware`/`QEMU`/`KVM` (lascia `false` solo se `GREG_NO_GUI=1` o `DISPLAY` vuoto).
+   - Aggiungi un parametro `model_builder: impl Fn(&mut Context) + 'static + Send + Sync` (oppure `EditorData::build(cx)` nei plugin) chiamato **prima** di `param_grid(cx, defs)` e `(m_fn)(cx)` dentro `create_greg_editor_with_params`, risolvendo il panic `Failed to get data from context. Has it been built into the tree?` (`vizia_core/src/binding/lens.rs:38`)!
+   - Avvolgi l'intero corpo dentro la closure `move |cx, _| { ... }` passata a `create_vizia_editor` con `std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| { ... }))`, mostrando un `Label` sicuro di emergenza in caso di panic così `window_thread` non può mai abortire.
+2. **Verifica veloce (Regola in `.clinerules`):**
+   - Compila prima **solo** `-p greg-bus-comp -p clap-validator-host` e lancia `./target/release/clap-validator-host --check-gui target/release/libgreg_bus_comp.so` verificando che `EditorData` venga costruito senza panic!
+   - Solo quando passa al 100%, compila `cargo build --release --workspace`, copia tutti e 18 i `target/release/libgreg_*.so` in `~/.clap/Analog-vibe/greg_*.clap`, cancella questo task da `doit.txt` e fai `git commit` + `git push`.
 
 task 2
-
 Leggi `tools/clap-validator-host/src/main.rs` (intorno a `CLAP_EVENT_PARAM_VALUE`, `get_info` e `get_value`).
 
 Bug reale rilevato nell'output di `clap-validator-host`:
@@ -43,3 +26,26 @@ Correggi `tools/clap-validator-host/src/main.rs`:
 2. Invia i valori dello sweep in scala **normalizzata `[0.0 .. 1.0]`** (es. `0.0`, `0.25`, `0.5`, `0.75`, `1.0`) o mappando `(val - min) / (max - min)` prima di inviare `CLAP_EVENT_PARAM_VALUE`, verificando con `params.get_value()` che il parametro accetti davvero il nuovo valore senza `[warn]`.
 3. Compila solo `-p clap-validator-host` (`cargo build --release -p clap-validator-host`) e verifica su `target/release/libgreg_76.so` che i warning `did not accept` spariscano completamente!
 
+task 3
+Leggi `vcinst.md`, `plugin-support/src/lib.rs` e tutti i plugin di dinamica (`plugins/greg-gate/src/lib.rs`, `plugins/greg_76/src/lib.rs`, `plugins/greg-a2a/src/lib.rs`, `plugins/greg-a3a/src/lib.rs`, `plugins/greg_api_2500/src/lib.rs`, `plugins/greg-bus-comp/src/lib.rs`, `plugins/greg-child/src/lib.rs`, `plugins/greg_dbx_160/src/lib.rs`, `plugins/greg_dbx_165/src/lib.rs`).
+
+Obiettivo: completare la **Modern Extended Section** su tutti i compressori/gate e aggiungere l'**Override Manuale Canali (`Channel Setup`)** sull'intera suite:
+1. **Override Canali (`Channel Setup` in `plugin-support` + tutti i 18 plugin):**
+   - Aggiungi un controllo condiviso `Channel Setup` (`Auto`, `Mono (1ch)`, `Stereo (2ch)`, `LCR (3ch)`, `Quad (4ch)`, `5.0`, `5.1`, `7.0`, `7.1`) che sovrascrive il conteggio canali rilevato dall'host DAW quando diverso da `Auto`, riconfigurando in modo safe `RoutingMatrix` senza allocazioni in `process()`.
+2. **Sidechain Esterna, Filtri SC e Stereo Link / Dual Mono / Mid-Side su `greg-gate` e TUTTI i Compressori:**
+   - Aggiungi su **`greg-gate`** e su tutti gli **8 compressori** (nella sezione Extended/Modern):
+     - `SC Source` (`Internal` / `External` con fallback automatico a `Internal` se la porta aux non è connessa) e `SC Listen` (`Off` / `On`).
+     - `SC HPF Freq` (`20..500 Hz`), `SC LPF Freq` (`1000..20000 Hz`), `SC Bell Freq` (`60..8000 Hz`) e `SC Bell Gain` (`-12..+12 dB`).
+     - `Channel Mode` (`Stereo Link`, `Dual Mono`, `Mid/Side` con codifica/decodifica M/S ortonormale prima e dopo la cella di guadagno).
+3. **Verifica (Regola di Velocità):** Compila e testa prima `-p greg-gate -p greg_76 -p clap-validator-host`, poi compila `--workspace --release`, aggiorna `~/.clap/Analog-vibe/greg_*.clap`, spunta `doit.txt` e fai `git commit` + `git push`.
+
+task 4
+Leggi `vcinst.md`, `core-dsp/src/core_dsp_modules/dsp_graph.rs`, `tools/clap-validator-host/src/main.rs` e `plugins/greg_bay/src/lib.rs`.
+
+Obiettivo: trasformare **`plugins/greg_bay`** in un vero **Host CLAP Modulare & Patchbay con Salvataggio/Richiamo Catene**:
+1. **Sub-Host CLAP Interno nei 4 Slot (`libloading` + ABI CLAP):**
+   - Oltre ai moduli DSP interni (`Pultec`, `1176`, `LA-2A`, `Neve`, `Tape`, `Surgical EQ`, `Spatial 3D`), consenti a ciascuno dei 4 slot di caricare **qualsiasi plugin `.clap` esterno** scansionato da `~/.clap/` (istanziato nel thread non-audio/inizializzazione, mai allocando in `process()`), inserendolo nel grafo `dsp_graph.rs` con **PDC automatico al singolo campione** (sommando le latenze `CLAP_EXT_LATENCY` dei rami e dichiarando la latenza totale all'host).
+   - Esponi anche controlli di guadagno/mix per slot e routing tra i 4 slot (Seriale, Split Parallelo, Mid/Side, Crossover 2-Bande, Doppio Parallelo, Invertito).
+2. **Salvataggio & Richiamo Catene/Routing (`Save Chain` / `Load Chain`):**
+   - Implementa la serializzazione JSON (`serde_json`) dell'intera configurazione della patchbay (routing attivo, plugin/moduli caricati in ciascuno dei 4 slot, livelli/pan/mix e stato parametri dei sub-plugin CLAP tramite `CLAP_EXT_STATE`) in `~/.config/analog-vibe/greg_bay_chains/` con selettore di richiamo rapido ed esposizione nello stato CLAP (`CLAP_EXT_STATE`) affinché la DAW salvi l'intera catena nel progetto!
+3. **Verifica (Regola di Velocità):** Compila e testa prima `-p greg_bay -p clap-validator-host`, verifica `0.0 in -> 0.0 out` e assenza di NaN/Inf, aggiorna `~/.clap/Analog-vibe/greg_bay.clap`, spunta `doit.txt` e fai `git commit` + `git push`.

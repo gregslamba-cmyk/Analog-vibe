@@ -513,13 +513,11 @@ impl Plugin for GregBusComp {
         create_greg_editor_with_params(
             "Greg Bus Comp",
             self.telemetry.clone(),
-            move |cx| {
-                let editor_data = EditorData { params: params_main.clone() };
-                editor_data.build(cx);
+            move |_| {
+                // EditorData is built via the dedicated `model_builder` argument,
+                // which is invoked before the parameter grid is created.
             },
             move |cx| {
-                let editor_data = EditorData { params: params_adv.clone() };
-                editor_data.build(cx);
                 ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_left);
                 ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_right);
                 ToggleSwitch::new(cx, EditorData::params, |p| &p.external_sidechain);
@@ -531,6 +529,7 @@ impl Plugin for GregBusComp {
                 RotaryKnob::new(cx, EditorData::params, |p| &p.sidechain_gain);
             },
             Some(param_defs),
+            move |cx| EditorData { params: params_main.clone() }.build(cx),
         )
     }
 

@@ -447,3 +447,8 @@ pub struct VirtualEarthSummer {
 }
 ```
 
+---
+
+## Nuovi Moduli Console & Routing (`core-dsp`)
+- **`aux_send` (`core_dsp_modules::aux_send`):** Deviazione di segnale multi-mandata Pre/Post-Fader a zero allocazioni heap, con smussamento anti-zipper del livello di mandata (`-∞ .. +6 dB`) e instradamento verso bus interni o porte Aux esterne CLAP/VST3.
+- **`fader_console` (`core_dsp_modules::fader_console`):** Stadio fader professionale da console analogica (`-∞ .. +10 dB` con legge balistica reale da banco), leggi di Pan costante (`-3.0 dB`, `-4.5 dB`, `-6.0 dB`), `Mute` click-free e gestione `Solo / Solo-Safe`.

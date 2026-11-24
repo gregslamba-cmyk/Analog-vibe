@@ -472,15 +472,12 @@ impl Plugin for GregPultec {
         create_greg_editor_with_params(
             "Greg Pultec",
             self.telemetry.clone(),
-            move |cx| {
-                let editor_data = EditorData { params: params_main.clone() };
-                editor_data.build(cx);
+            move |_| {
+                // EditorData is built via the dedicated `model_builder` argument.
             },
-            move |cx| {
-                let editor_data = EditorData { params: params_adv.clone() };
-                editor_data.build(cx);
-            },
+            move |cx| {},
             Some(param_defs),
+            move |cx| EditorData { params: params_main.clone() }.build(cx),
         )
     }
 
