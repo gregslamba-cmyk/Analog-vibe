@@ -21,6 +21,9 @@ members = [
     "crates/greg_gui_core",
     "tools/clap-signal-host",
     "tools/clap-validator-host",
+    "plugins/greg_nl_ch",
+    "plugins/greg_nl_mixer",
+    "plugins/greg_bay",
 ]
 
 [workspace.package]

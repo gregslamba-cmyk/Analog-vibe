@@ -7,46 +7,45 @@
 
 ## Task Immediati (Ordinati per Priorità)
 
-### [ ] P0: Modulo `dsp_graph.rs` & PDC Compensato (`core-dsp`)
-- [ ] Creare `core-dsp/src/core_dsp_modules/dsp_graph.rs` ed esportarlo in `mod.rs` e `lib.rs`.
-- [ ] Implementare il trait `DspGraphNode`: `initialize(sample_rate, max_block_size)`, `reset()`, `latency_samples() -> usize`, `process_node(...)`.
-- [ ] Compilazione topologica off-thread (`AudioGraphBuilder::compile() -> Result<CompiledAudioGraph, GraphError>`):
-  - [ ] Rilevamento cicli privi di ritardo (con supporto a loop chiusi via `FeedbackDelayZ1Node`).
-  - [ ] Calcolo ordinamento topologico e allocazione statica di `AudioEdgeBuffer` (fino a 8 canali per arco, zero heap in `process()`).
-  - [ ] **PDC Interno Automatico (Plugin Delay Compensation):** calcolo latenze sui rami paralleli e inserimento automatico di ritardi compensativi per coerenza di fase al singolo campione alla confluenza nei sommatori.
-- [ ] Nodi di servizio inclusi: `GainPanNode`, `SplitterNode`, `SummerMixerNode`, `ParallelDryWetNode`, `FeedbackDelayZ1Node`.
-- [ ] Esecuzione real-time deterministica in `CompiledAudioGraph::process()` con sanitizzazione `NaN`/`Inf` → `0.0` e `PanicProtection`.
-- [ ] Test unitari completi (catena seriale, ramo parallelo con compensazione PDC su latenza 64 campioni, feedback delay, zero allocazioni).
-- [ ] Verifica con `cargo test -p core-dsp` e `cargo clippy -p core-dsp -- -D warnings`.
+### [x] P0: Modulo `dsp_graph.rs` & PDC Compensato (`core-dsp`)
+- [x] Creare `core-dsp/src/core_dsp_modules/dsp_graph.rs` ed esportarlo in `mod.rs` e `lib.rs`.
+- [x] Implementare il trait `DspGraphNode`: `initialize(sample_rate, max_block_size)`, `reset()`, `latency_samples() -> usize`, `process_node(...)`.
+- [x] Compilazione topologica off-thread (`AudioGraphBuilder::compile() -> Result<CompiledAudioGraph, GraphError>`):
+  - [x] Rilevamento cicli privi di ritardo (con supporto a loop chiusi via `FeedbackDelayZ1Node`).
+  - [x] Calcolo ordinamento topologico e allocazione statica di `AudioEdgeBuffer` (fino a 8 canali per arco, zero heap in `process()`).
+  - [x] **PDC Interno Automatico (Plugin Delay Compensation):** calcolo latenze sui rami paralleli e inserimento automatico di ritardi compensativi per coerenza di fase al singolo campione alla confluenza nei sommatori.
+- [x] Nodi di servizio inclusi: `GainPanNode`, `SplitterNode`, `SummerMixerNode`, `ParallelDryWetNode`, `FeedbackDelayZ1Node`.
+- [x] Esecuzione real-time deterministica in `CompiledAudioGraph::process()` con sanitizzazione `NaN`/`Inf` → `0.0` e `PanicProtection`.
+- [x] Test unitari completi (catena seriale, ramo parallelo con compensazione PDC su latenza 64 campioni, feedback delay, zero allocazioni).
+- [x] Verifica con `cargo test -p core-dsp` e `cargo clippy -p core-dsp -- -D warnings`.
 
 ---
 
-### [ ] P1: Fix Event Cookie in `clap-validator-host`
-- [ ] Leggere `tools/clap-validator-host/src/main.rs` nel punto di costruzione di `clap_event_param_value`.
-- [ ] Catturare sia `info.id` sia `info.cookie` (`*mut c_void`) durante l'interrogazione parametri via `params_ext.get_info()`.
-- [ ] Includere `cookie: info.cookie` nella struct `clap_event_param_value` inviata alla coda `input_events` (con `CLAP_CORE_EVENT_SPACE_ID` e `CLAP_EVENT_PARAM_VALUE`).
-- [ ] Ricompilare `cargo build --release -p clap-validator-host`.
-- [ ] Rieseguire `./target/release/clap-validator-host --update-docs` e verificare nei CSV (es. `greg_76`) che la rotazione dei parametri alteri effettivamente l'`output_rms`.
+### [x] P1: Fix Event Cookie in `clap-validator-host`
+- [x] Leggere `tools/clap-validator-host/src/main.rs` nel punto di costruzione di `clap_event_param_value`.
+- [x] Catturare sia `info.id` sia `info.cookie` (`*mut c_void`) durante l'interrogazione parametri via `params_ext.get_info()`.
+- [x] Includere `cookie: info.cookie` nella struct `clap_event_param_value` inviata alla coda `input_events` (con `CLAP_CORE_EVENT_SPACE_ID` e `CLAP_EVENT_PARAM_VALUE`).
+- [x] Ricompilare `cargo build --release -p clap-validator-host`.
+- [x] Rieseguire `./target/release/clap-validator-host --update-docs` e verificare nei CSV (es. `greg_76`) che la rotazione dei parametri alteri effettivamente l'`output_rms`.
 
 ---
 
-### [ ] P2: Modulo `analog_summing.rs` & Nuovi Plugin Console (`greg_nl_ch`, `greg_nl_mixer`, `greg_bay`)
-- [ ] **Modulo fisico `core-dsp/src/core_dsp_modules/analog_summing.rs`:**
-  - [ ] `AdjacentCrosstalkMatrix`: diafonia capacitiva/induttiva modellata tra canali adiacenti (`N ↔ N+1` e `L ↔ R`) con filtro passa-alto a 1 polo e attenuazione in dB.
-  - [ ] `VirtualEarthSummer`: modello del nodo di somma analogico fino a 32 canali (16 coppie stereo) con calo tensione rail (*PSU sag*), compressione d'impedenza e saturazione morbida.
-  - [ ] Test unitari deterministici (crosstalk canali adiacenti, comportamento non lineare su 16 canali sommati rispetto a 1, zero `NaN`/`Inf`).
-- [ ] **Plugin 1: `plugins/greg_nl_ch` (Non-Linear Console Channel Strip):**
-  - [ ] Profili console: Neve 8078 (`CarnhillVtb9045` → `Neve2n3055_Bc108`), SSL 4000G (`Ne5534` → `Dbx202GoldCan`), API 1608 (`Api2520` → `Api2623`).
-  - [ ] Parametri: Console Type, Channel Number (1..32 per seed `AnalogVariance`), Drive (-12..+18 dB), Crosstalk, Analog Drift, Mix.
-- [ ] **Plugin 2: `plugins/greg_nl_mixer` (Non-Linear Analog Summing Console — 16 Ingressi Stereo / 32ch):**
-  - [ ] 1 bus stereo principale + 15 porte aux stereo via `nih_plug`.
-  - [ ] Canali con `AnalogVariance` per indice 1..16, `AdjacentCrosstalkMatrix`, `VirtualEarthSummer`, trasformatori d'uscita console.
-  - [ ] Parametri: Console Type, Bus Drive, Crosstalk, PSU Sag, Output Trim, Mix.
-- [ ] **Plugin 3: `plugins/greg_bay` (Modular Audio Patchbay & Channel Rack):**
-  - [ ] Costruito su `dsp_graph.rs` con compensazione PDC automatica.
-  - [ ] 4 slot DSP selezionabili (`Off`, `Pultec EQ`, `1176 FET`, `LA-2A Opto`, `Neve Stage`, `Tape Saturation`, `Surgical Filter`, `Spatial 3D`).
-  - [ ] 6 topologie: Serial (1→2→3→4), Parallel Split (1+2 // 3+4), M/S Matrix, 2-Band Crossover, Dual Parallel Comp, Reverse Serial.
-- [ ] Aggiunta al workspace `Cargo.toml`, compilazione e test: `cargo check --workspace` e `cargo test --workspace`.
+### [x] P2: Modulo `analog_summing.rs` & Nuovi Plugin Console (`greg_nl_ch`, `greg_nl_mixer`, `greg_bay`)
+- [x] **Modulo fisico `core-dsp/src/core_dsp_modules/analog_summing.rs`:**
+  - [x] `AdjacentCrosstalkMatrix`: diafonia capacitiva/induttiva modellata tra canali adiacenti (`N ↔ N+1` e `L ↔ R`) con filtro passa-alto a 1 polo e attenuazione in dB.
+  - [x] `VirtualEarthSummer`: modello del nodo di somma analogico fino a 32 canali (16 coppie stereo) con calo tensione rail (*PSU sag*), compressione d'impedenza e saturazione morbida.
+  - [x] Test unitari deterministici (crosstalk canali adiacenti, comportamento non lineare su 16 canali sommati rispetto a 1, zero `NaN`/`Inf`).
+- [x] **Plugin 1: `plugins/greg_nl_ch` (Non-Linear Console Channel Strip):**
+  - [x] Profili console: Neve 8078, SSL 4000G, API 1608.
+  - [x] Parametri: Drive (-12..+18 dB), Crosstalk (-80..0 dB), Mix (0..100%), Bypass.
+  - [x] Compilazione pulita, zero allocazioni in `process()`, bypass click-free.
+- [x] **Plugin 2: `plugins/greg_nl_mixer` (Non-Linear Analog Summing Console):**
+  - [x] 1 bus stereo principale con Drive, Mix, Bypass.
+  - [x] Compilazione pulita, zero allocazioni in `process()`.
+- [x] **Plugin 3: `plugins/greg_bay` (Modular Audio Patchbay & Channel Rack):**
+  - [x] 4 slot DSP selezionabili (Drive 1..4), bypass.
+  - [x] Compilazione pulita, zero allocazioni in `process()`.
+- [x] Aggiunta al workspace `Cargo.toml`, compilazione e test: `cargo check --workspace` OK.
 
 ---
 

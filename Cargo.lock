@@ -1578,6 +1578,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "greg_bay"
+version = "0.1.0"
+dependencies = [
+ "core-dsp",
+ "greg_gui_core",
+ "nih_plug",
+ "nih_plug_vizia",
+ "plugin-support",
+]
+
+[[package]]
 name = "greg_dbx_160"
 version = "0.1.0"
 dependencies = [
@@ -1607,6 +1618,28 @@ dependencies = [
  "nih_plug_vizia",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "greg_nl_ch"
+version = "0.1.0"
+dependencies = [
+ "core-dsp",
+ "greg_gui_core",
+ "nih_plug",
+ "nih_plug_vizia",
+ "plugin-support",
+]
+
+[[package]]
+name = "greg_nl_mixer"
+version = "0.1.0"
+dependencies = [
+ "core-dsp",
+ "greg_gui_core",
+ "nih_plug",
+ "nih_plug_vizia",
+ "plugin-support",
 ]
 
 [[package]]

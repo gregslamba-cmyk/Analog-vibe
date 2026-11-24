@@ -92,3 +92,15 @@ Obiettivo: eseguire una **Code Review Strutturale, di Sicurezza Real-Time e di F
 
 Produci un report ordinato con **Severità (Critica / Logica / Pulizia)**, **File e Riga esatta**, e il **Piano di Correzione** prima di toccare i file.
 
+task 5
+Leggi `TODO.md` e `tools/clap-validator-host/src/main.rs`.
+
+Obiettivo:
+1. Rimuovi il vecchio pannello Designer dal report di test `target/validation_report.html` (che deve mostrare esclusivamente le misure strumentali, i grafici SVG e i dati CSV).
+2. Genera invece un'applicazione standalone separata e focalizzata: **`target/gui_designer.html`** (apribile anche con `--designer`), dedicata alla progettazione visiva di **un singolo plugin alla volta** senza report di test:
+   - Selettore singolo plugin in alto (`greg_76`, `greg-a2a`, ..., `greg_bay`).
+   - Barra laterale sinistra con anteprima visiva dei widget (manopole rotative, fader/slider, switch, meter `IN`/`OUT`/`GR`, spettro) trascinabili sul canvas.
+   - **Smart Guides magnetiche** (allineamento automatico alla stessa altezza `Y`, stesso asse `X`, centro finestra e riferimenti fissi) + griglia configurabile.
+   - **Menu contestuale con Tasto Destro (`Right-Click`)** su ogni controllo per assegnare il parametro CLAP (`param_id`), cambiare tipo/stile widget, duplicare o rimuovere.
+   - **Selettore Colori completo** (sfondo, superficie, accento, testo, manopole) e **Tasto "Salva `gui_layout.json`"** (con salvataggio diretto tramite `showSaveFilePicker` se supportato dal browser + fallback download `.json` automatico).
+

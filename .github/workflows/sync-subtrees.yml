@@ -1,0 +1,30 @@
+name: Sync Subtrees to Standalone Repos
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push core-dsp to analog-vibe-dsp
+        run: |
+          git subtree split --prefix=core-dsp -b split-dsp
+          git push https://x-access-token:${{ secrets.SUBTREE_TOKEN }}@github.com/gregslamba-cmyk/analog-vibe-dsp.git split-dsp:main --force
+
+      - name: Push clap-validator-host
+        run: |
+          git subtree split --prefix=tools/clap-validator-host -b split-validator
+          git push https://x-access-token:${{ secrets.SUBTREE_TOKEN }}@github.com/gregslamba-cmyk/clap-validator-host.git split-validator:main --force
+
+      - name: Push greg_gui_core to clap-gui-designer
+        run: |
+          git subtree split --prefix=crates/greg_gui_core -b split-gui
+          git push https://x-access-token:${{ secrets.SUBTREE_TOKEN }}@github.com/gregslamba-cmyk/clap-gui-designer.git split-gui:main --force
