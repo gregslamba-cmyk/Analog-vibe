@@ -353,3 +353,97 @@ impl MasteringTelemetryPublisher {
 
 Thread-safe audio→UI communication via `[AtomicU64; 9]` stores with `Ordering::Relaxed`. Zero locks, zero heap in `process_sample`. Silence-at-rest: all meters read `-120 dBFS` / `-70 LUFS` before signal present.
 
+---
+
+## 42. `dsp_graph` — Topological Audio Graph & Automatic PDC Engine
+
+### Guarantees
+- Real-time execution via `CompiledAudioGraph::process()`: zero heap allocations (`Vec::new()`, `Box::new()`), zero locks, pre-allocated `AudioEdgeBuffer` up to `MAX_AUDIO_CHANNELS = 8` channels.
+- Cycle validation: cycle detection during `AudioGraphBuilder::compile()` forbids illegal un-delayed loops, while allowing explicit feedback loops via `FeedbackDelayZ1Node`.
+- Automatic Plugin Delay Compensation (PDC): calculates cumulative branch latency across parallel execution paths and automatically injects sample-accurate delay compensation nodes before summing nodes.
+- Full `NaN`/`Inf` sanitization and `PanicProtection` per-node execution boundary.
+
+### Public Signatures
+
+```rust
+pub const MAX_AUDIO_CHANNELS: usize = 8;
+
+pub trait DspGraphNode {
+    fn initialize(&mut self, sample_rate: f64, max_block_size: usize);
+    fn reset(&mut self);
+    fn latency_samples(&self) -> usize;
+    fn process_node(
+        &mut self,
+        inputs: &[&[f64]],
+        outputs: &mut [&mut [f64]],
+        num_channels: usize,
+        num_samples: usize,
+    );
+    fn offload_eligible(&self) -> bool;
+    fn node_name(&self) -> &'static str;
+}
+
+// Built-in Nodes
+pub struct GainPanNode; // smoothed gain + pan node
+pub struct SplitterNode; // 1-to-N parallel signal splitter
+pub struct SummerMixerNode; // N-to-1 summing mixer
+pub struct ParallelDryWetNode; // phase-aligned parallel dry/wet crossfader
+pub struct FeedbackDelayZ1Node; // 1-sample feedback delay for closed loops
+
+pub struct AudioGraphBuilder {
+    pub fn new() -> Self;
+    pub fn add_node(&mut self, node: Box<dyn DspGraphNode + Send>) -> usize;
+    pub fn connect(&mut self, from_node: usize, from_port: usize, to_node: usize, to_port: usize);
+    pub fn compile(self, sample_rate: f64, max_block_size: usize) -> Result<CompiledAudioGraph, GraphError>;
+}
+
+pub struct CompiledAudioGraph {
+    pub fn process(&mut self, inputs: &[&[f64]], outputs: &mut [&mut [f64]], num_channels: usize, num_samples: usize);
+    pub fn reset(&mut self);
+    pub fn total_latency_samples(&self) -> usize;
+}
+
+#[derive(Debug)]
+pub enum GraphError {
+    CycleDetected,
+    InvalidNodeIndex(usize),
+    NoNodes,
+    ChannelCountExceeded,
+}
+```
+
+---
+
+## 43. `analog_summing` — Physical Non-Linear Console Summing & Crosstalk
+
+### Guarantees
+- `AdjacentCrosstalkMatrix`: models physical capacitive and inductive bleeding between adjacent console channels (`N ↔ N+1`) and stereo pairs (`L ↔ R`) via one-pole high-pass coupling filters with calibrated attenuation in dB. Zero heap in `process()`.
+- `VirtualEarthSummer`: models the non-linear physics of a 32-channel (16 stereo pairs) virtual earth summing mix bus. Dynamically computes instantaneous power supply rail droop (PSU sag) proportional to total summed current, bus impedance compression, and smooth saturation before the master output stage. Zero `NaN`/`Inf`.
+
+### Public Signatures
+
+```rust
+pub struct AdjacentCrosstalkMatrix {
+    pub fn new(crosstalk_db: f64, sample_rate: f64) -> Self;
+    pub fn set_crosstalk_db(&mut self, db: f64);
+    pub fn initialize(&mut self, sample_rate: f64);
+    pub fn reset(&mut self);
+    pub fn process(&mut self, channels: &mut [&mut [f64]], num_samples: usize);
+}
+
+pub struct VirtualEarthSummer {
+    pub fn new(max_channels: usize, sample_rate: f64) -> Self;
+    pub fn set_bus_drive(&mut self, drive_db: f64);
+    pub fn set_psu_sag(&mut self, sag_amount: f64);
+    pub fn initialize(&mut self, sample_rate: f64);
+    pub fn reset(&mut self);
+    pub fn process_sum(
+        &mut self,
+        stereo_pairs: &[(&[f64], &[f64])],
+        out_left: &mut [f64],
+        out_right: &mut [f64],
+        num_samples: usize,
+    );
+}
+```
+

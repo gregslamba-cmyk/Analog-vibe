@@ -1,3 +1,6 @@
+ogni volta che esegui un task di questo documento cancellalo e rinomina gli altri task in ordine, poi salva il file
+
+task 1
 Leggi `vcinst.md`, `ARCHITECTURE.md` e `core-dsp/src/core_dsp_modules/mod.rs`.
 
 Obiettivo: creare il nuovo modulo `core-dsp/src/core_dsp_modules/dsp_graph.rs` (esportato in `mod.rs` e `lib.rs`, mantenendo `#![forbid(unsafe_code)]`, elaborazione interna `f64` e zero allocazioni nel path real-time `process()`):
@@ -19,4 +22,73 @@ Obiettivo: creare il nuovo modulo `core-dsp/src/core_dsp_modules/dsp_graph.rs` (
 4. **Test Unitari & Documentazione:**
    - Testa catene seriali (`A → B → C`), rami paralleli con sommatore (`Dry + Wet` con verifica compensazione automatica PDC quando un ramo ha latenza `64` campioni!), rilevamento di cicli non validi e loop con `FeedbackDelayZ1Node`.
    - Aggiorna `ARCHITECTURE.md` e `STATE.md`, ed esegui `cargo test -p core-dsp` e `cargo clippy -p core-dsp -- -D warnings`.
+
+task 2
+
+Leggi `tools/clap-validator-host/src/main.rs` dove viene costruito `clap_event_param_value`.
+
+Dai CSV generati (`Input_sine` e `Output_sine` da `0.0` a `1.0` danno tutti lo stesso `output_rms = 0.169630`), emerge che `nih_plug` ignora gli eventi `CLAP_EVENT_PARAM_VALUE` perché manca il campo `cookie` esatto letto da `clap_param_info`!
+
+Correggi `tools/clap-validator-host/src/main.rs`:
+1. Quando interroghi i parametri con `params_ext.get_info(plugin, idx, &mut info)`, salva sia `info.id` sia `info.cookie` (`*mut c_void`).
+2. Quando invii `clap_event_param_value` nella `input_events` queue, imposta sia `param_id: info.id` sia `cookie: info.cookie` (e assicurati che `header.space_id == CLAP_CORE_EVENT_SPACE_ID`, `header.type_ == CLAP_EVENT_PARAM_VALUE`, `header.size == std::mem::size_of::<clap_event_param_value>() as u32`).
+3. Ricompila `cargo build --release -p clap-validator-host`, riesegui `./target/release/clap-validator-host --update-docs` e verifica nel CSV di `greg_76` che ruotando `Output` da `0.0` a `1.0` l'`output_rms` cambi realmente!
+
+task 2
+
+Leggi `vcinst.md`, `ARCHITECTURE.md`, `Cargo.toml`, `core-dsp/src/core_dsp_modules/mod.rs`, `core-dsp/src/core_dsp_modules/component_models.rs`, `core-dsp/src/core_dsp_modules/analog_variance.rs` e `core-dsp/src/core_dsp_modules/dsp_graph.rs`.
+
+Obiettivo: mantenere `core-dsp` snello ed essenziale (aggiungendo solo le equazioni fisiche pure della somma non lineare e della diafonia multi-canale) e assemblare sopra ai moduli già esistenti i **3 nuovi plugin CLAP + VST3 nativi** (`plugins/greg_nl_ch`, `plugins/greg_nl_mixer`, `plugins/greg_bay`), rispettando `#![forbid(unsafe_code)]`, elaborazione interna `f64`, zero allocazioni in `process()` e fallback automatico GUI:
+
+### 1. Solo la Fisica Pura in `core-dsp`: `core-dsp/src/core_dsp_modules/analog_summing.rs`
+- Non duplicare profili Neve/SSL/API nel core (i loro stadi sono già in `component_models.rs`). Implementa solo due primitive matematiche riutilizzabili e pre-allocate (zero heap in `process()`):
+  - **`AdjacentCrosstalkMatrix`:** Modella la diafonia capacitiva/induttiva reale tra canali adiacenti (`ch N ↔ ch N+1` e stereo `L ↔ R`) tramite accoppiamento filtrato sulle alte frequenze (one-pole HPF di accoppiamento + attenuazione calibrata in dB).
+  - **`VirtualEarthSummer`:** Modella la fisica del nodo di somma analogico (*virtual earth mix bus*) fino a `32 canali` (`16 coppie stereo`): calcola il carico istantaneo dell'alimentatore condiviso (*rail droop / PSU sag* proporzionale alla corrente totale sommata), la compressione d'impedenza di bus e la saturazione morbida del nodo di somma prima dello stadio d'uscita.
+- Esportalo in `mod.rs` e `lib.rs` con test unitari deterministici (verifica crosstalk tra canali adiacenti, verifica comportamento non lineare quando si sommano 16 segnali rispetto a 1 segnale solo, zero `NaN`/`Inf`).
+
+### 2. Plugin 1: `plugins/greg_nl_ch` (Non-Linear Console Channel Strip)
+- Assembla direttamente i modelli esistenti di `component_models.rs` + `AnalogVariance`:
+  - **`Neve 8078`:** `CarnhillVtb9045` → `Neve2n3055_Bc108`
+  - **`SSL 4000G`:** `SolidStateModel::Ne5534` → `Dbx202GoldCan`
+  - **`API 1608`:** `SolidStateModel::Api2520` → `TransformerModel::Api2623`
+- Parametri esposti: `Console Type` (`Neve 8078` / `SSL 4000G` / `API 1608`), `Channel Number` (`1..32`, guida il seed deterministico di `AnalogVariance`), `Drive` (`-12 dB .. +18 dB` con auto-gain opzionale), `Crosstalk`, `Analog Drift` e `Mix`.
+
+### 3. Plugin 2: `plugins/greg_nl_mixer` (Non-Linear Analog Summing Console — 16 Stereo Inputs / 32ch)
+- Espone via `nih_plug` 1 porta principale stereo + **15 porte aux/sidechain stereo** (totale **16 ingressi stereo = 32 canali**, funzionante anche se l'host collega solo la porta principale).
+- Per ogni coppia stereo collegata applica il relativo stadio di canale (`component_models.rs` con `AnalogVariance` per indice canale `1..16`), poi applica `AdjacentCrosstalkMatrix`, quindi somma tutto nel `VirtualEarthSummer` e chiude con il trasformatore di mix della console selezionata (`MarinairLo1166` per Neve, `Ne5534` per SSL, `Api2623` per API).
+- Parametri esposti: `Console Type`, `Bus Drive`, `Crosstalk`, `PSU Sag`, `Output Trim` e `Mix`.
+
+### 4. Plugin 3: `plugins/greg_bay` (Modular Audio Patchbay & Channel Rack)
+- **Zero nuovo codice nel core:** usa direttamente `dsp_graph.rs` (`AudioGraphBuilder` → `CompiledAudioGraph`, con compensazione automatica PDC) collegando fino a **4 slot DSP selezionabili** tra i moduli già presenti in `core-dsp` (`Off`, `Pultec EQ`, `1176 FET`, `LA-2A Opto`, `Neve Console Stage`, `Tape Saturation`, `Surgical Filter`, `Spatial 3D`) in **6 topologie di routing pre-compilate**:
+  - `Serial (1 → 2 → 3 → 4)`, `Parallel Split (1+2 // 3+4)`, `Mid/Side Matrix (1+2 Mid // 3+4 Side)`, `2-Band Crossover (Low 1+2 // High 3+4)`, `Dual Parallel Comp (Dry + 1+2 + 3+4)`, `Reverse Serial (4 → 3 → 2 → 1)`.
+- Parametri esposti: `Routing Topology`, `Slot 1..4 Module`, `Drive`, `Parallel Blend`, `Crossover Freq`, `Output Gain` e `Mix`.
+
+### 5. Integrazione & Verifica
+- Aggiungi `"plugins/greg_nl_ch"`, `"plugins/greg_nl_mixer"` e `"plugins/greg_bay"` a `members` in `Cargo.toml`.
+- Esegui `cargo check --workspace`, `cargo test --workspace` e `cargo build --release --workspace` (0 errori, 0 warning), poi collauda i 3 nuovi plugin anche con `./target/release/clap-validator-host --update-docs`.
+- Aggiorna `ARCHITECTURE.md` e `STATE.md`.
+
+task 3
+
+Metti Cline in **Plan Mode** (sola lettura/analisi prima di applicare fix).
+
+Leggi `vcinst.md`, `ARCHITECTURE.md`, `STATE.md`, tutti i 15 `plugins/*/src/lib.rs` e `core-dsp/src/`.
+
+Obiettivo: eseguire una **Code Review Strutturale, di Sicurezza Real-Time e di Flusso del Segnale** sull'intero workspace prima della release finale:
+
+1. **Audit Ordine degli Stadi & Chiamate DSP nei 15 Plugin:**
+   - Verifica per ciascuno dei 9 plugin analogici (`greg_76`, `greg-a2a`, `greg-a3a`, `greg_api_2500`, `greg-bus-comp`, `greg-child`, `greg_dbx_160`, `greg_dbx_165`, `greg-pultec`) e dei 6 digitali/utility che:
+     - L'ordine reale degli stadi hardware/algoritmici sia rispettato (es. input transformer → detector/gain cell → makeup stage → output transformer → DC blocker / metering).
+     - Nessun metodo venga chiamato con unità sbagliate (dB vs lineare, Hz vs radianti, ms vs secondi) o fuori ordine rispetto a `initialize()` / `reset()`.
+     - Tutte le revisioni selezionabili (`Rev A/D/E/F`, `160 VU/X/A`, `4000 E/G`, `Old/New`) commutino realmente i componenti fisici.
+
+2. **Audit Sicurezza Real-Time & Memory Safety:**
+   - Conferma `#![forbid(unsafe_code)]` su `core-dsp`, `plugin-support`, `greg_gui_core` e tutti e 15 i plugin.
+   - Cerca qualsiasi potenziale allocazione heap, `.unwrap()`, `.expect()`, indicizzazione non protetta o mancata sanitizzazione `NaN`/`Inf` all'interno di `process()`.
+   - Verifica che tutti gli stati per-canale supportino dinamicamente `1..8` canali (`Mono → 7.1`) senza condividere stato tra canali diversi.
+
+3. **Audit Pulizia & Struttura Repository:**
+   - Segnala eventuali directory duplicate o file orfani nella root (`core_dsp/`, script temporanei) e warning di `cargo clippy --workspace --all-targets`.
+
+Produci un report ordinato con **Severità (Critica / Logica / Pulizia)**, **File e Riga esatta**, e il **Piano di Correzione** prima di toccare i file.
 

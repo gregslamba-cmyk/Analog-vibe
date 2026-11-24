@@ -1,3 +1,17 @@
+## Stato aggiornato (2026-11-24) — Riallineamento Completo Documentazione Tecnica
+- [COMPLETATO] `README.md` & `README.txt`: riscritti in modo esaustivo per chiarire il legame architetturale tra i 18 plugin CLAP + VST3 di Analog-Vibe e la libreria condivisa a 64-bit `core-dsp`, con `plugin-support` e `greg_gui_core`, elenco completo dei 18 plugin, requisiti di sistema, build release, comandi di collaudo e modello di Doppia Licenza (GPLv3 + Commerciale).
+- [COMPLETATO] `core-dsp/README.txt`: guida approfondita all'SDK DSP (`f64`, `#![forbid(unsafe_code)]`, zero allocazioni/lock nel thread audio, `Mono → 7.1`), categorizzazione dettagliata di tutti i moduli per famiglia (component_models, cabinet_speaker, acoustic_room, spatial_3d, loudness_metering, dsp_graph, analog_summing), esempi d'uso e comandi di test.
+- [COMPLETATO] `plugin-support/README.txt`: manuale del bridge `nih-plug`, layout I/O (`SURROUND_IO_LAYOUTS`, `DYNAMICS_IO_LAYOUTS`), sidechain aux, bridge metering/GR atomico e macro unificata `export_greg_plugin!`.
+- [COMPLETATO] `crates/greg_gui_core/README.txt`: guida al motore grafico vettoriale Vizia, telemetria lock-free DSP → UI (60 FPS), fallback nativo host (`GREG_NO_GUI=1`) e specifica formale completa dello schema JSON `GuiLayoutSpec` (`gui_layout.json`).
+- [COMPLETATO] `tools/clap-validator-host/README.txt`: manuale del banco di collaudo universale CLAP (ABI C nativa, stress-test blocchi, 6 segnali sintetici, THD%, armoniche H2-H7, saturazione -12 VU -> +18 VU, report HTML/SVG e GUI Layout Designer Drag & Drop).
+- [COMPLETATO] `ARCHITECTURE.md`: aggiunte sezioni 42 (`dsp_graph` & PDC automatico) e 43 (`analog_summing` Virtual Earth).
+- [COMPLETATO] `docs/PLUGIN_CATALOG.md`, `TODO.md` e `vcinst.md` verificati e allineati.
+
+## Stato aggiornato (2026-11-24) — Riorganizzazione Documentazione Operativa
+- [COMPLETATO] `docs/PLUGIN_CATALOG.md`: creato catalogo dedicato con i 15 plugin alpha implementati, la lista completa dei plugin pianificati (Dinamiche/EQ/Pre, Channel Strip, Utility/Creativi/Spazio/Restauro), le regole tassative di accorpamento revisioni hardware, e la roadmap dettagliata dei 7 progetti futuri post-Analog-Vibe.
+- [COMPLETATO] `TODO.md`: creato file operativo prioritizzato nella root del repository con task immediati (P0 `dsp_graph.rs` & PDC, P1 Event Cookie fix `clap-validator-host`, P2 `analog_summing.rs` & console plugins, P3 code review & safety audit, P4 release packaging) e tracciamento milestone completate.
+- [COMPLETATO] `vcinst.md`: snellito e focalizzato esclusivamente sulle regole architetturali inderogabili (`f64`, `#![forbid(unsafe_code)]`, zero allocazioni real-time, routing dinamico Mono → 7.1, fallback GUI 2D, catena analogica e commento del codice) e sul metodo operativo obbligatorio (`Leggi TODO.md -> Esegui il task attivo -> Spunta [x] in TODO.md -> Aggiorna STATE.md`).
+
 ## Stato aggiornato (2026-11-23) — Rimodellazione Componenti Fisici (`doit.txt` Step 1)
 - [COMPLETATO] `greg_76`: aggiunto enum `Revision` (Rev A, Rev D, Rev E, Rev F, All-Buttons) con selezione input transformer (UtcO12 solo Rev A/All-Buttons), JFET model (Fet2n5457), output stage per revisione (Tube ECC83/SS Neve2n3055Bc108 vs Solid-State API2520), e output transformer UTC A10. `cargo check --workspace` verde, test passano.
 - [COMPLETATO] `greg-a2a`: aggiunti `TubeStage` Ecc83_12ax7 + Ecc81_12at7 in serie, `input_transformers` UtcHa100x e `output_transformers` UtcA10; initialized/reset in `initialize()`/`reset()`; catena `process()` aggiornata. `cargo check -p greg-a2a` verde.
@@ -27,7 +41,7 @@
   - `MasteringTelemetrySnapshot` (9 campi: momentary/short-term/integrated LUFS, LRA, true-peak dBTP, crest factor, PSR, phase correlation, dominant peak Hz).
   - `MasteringTelemetryPublisher` con `[AtomicU64; 9]` Relaxed stores per thread-safe audio→UI.
   - 4 test unitari passanti.
-- [COMPLETATO] `cargo test -p core-dsp --lib`: 157 test passanti, 0 errori.
+- [COMPLETATO] `cargo test -p core-dsp`: **163 test passanti, 0 errori** (incluse 6 nuovi test per `dsp_graph`).
 - [COMPLETATO] `cargo clippy -p core-dsp -- -D warnings`: 0 warning.
 - [COMPLETATO] `ARCHITECTURE.md`: aggiunte sezioni 40 (`spatial_3d`) e 41 (`loudness_metering`) con firme pubbliche complete.
 
@@ -35,7 +49,7 @@
 ## Stato aggiornato (2026-11-23) — Allineamento documentazione (passo 2)
 - [COMPLETATO] `README.md`: riscritto header, sezione "Stato attuale" (15 plugin CLAP/VST3 nativi Mono→7.1 + 32 moduli DSP condivisi + cabinet_speaker/acoustic_room/component_models), requisiti X11/OpenGL, lista test host estesa a tutti i 15 plugin.
 - [COMPLETATO] `vcinst.md`: aggiornata sezione "Moduli DSP condivisi" con tutti i moduli reali; rimossa sezione "Pianificati" (ora tutti implementati); aggiunta sezione "Nuovi Moduli DSP Condivisi Implementati".
-- [COMPLETATO] `cargo test -p core-dsp`: 130 test passanti, 0 errori.
+- [COMPLETATO] `cargo test -p core-dsp`: **163 test passanti, 0 errori** (incluse 6 nuovi test per `dsp_graph`).
 - [COMPLETATO] `cargo clippy -p core-dsp -- -D warnings`: 0 warning.
 - [COMPLETATO] `cargo doc --no-deps --workspace`: compila senza errori.
 - [COMPLETATO] `cargo test --workspace --lib`: tutti i test passano.
