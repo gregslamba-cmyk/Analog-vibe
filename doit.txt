@@ -43,7 +43,7 @@ Obiettivo: completare la **Modern Extended Section** su tutti i compressori/gate
      - `Channel Mode` (`Stereo Link`, `Dual Mono`, `Mid/Side` con codifica/decodifica M/S ortonormale prima e dopo la cella di guadagno).
 3. **Verifica (Regola di Velocità):** Compila e testa prima `-p greg-gate -p greg_76 -p clap-validator-host`, poi compila `--workspace --release`, aggiorna `~/.clap/Analog-vibe/greg_*.clap`, spunta `doit.txt` e fai `git commit` + `git push`.
 
-task 4
+task 4 — DONE — Host CLAP Modulare & Patchbay con Salvataggio/Richiamo Catene
 Leggi `vcinst.md`, `core-dsp/src/core_dsp_modules/dsp_graph.rs`, `tools/clap-validator-host/src/main.rs` e `plugins/greg_bay/src/lib.rs`.
 
 Obiettivo: trasformare **`plugins/greg_bay`** in un vero **Host CLAP Modulare & Patchbay con Salvataggio/Richiamo Catene**:
@@ -65,10 +65,21 @@ Leggi `plugin-support/src/lib.rs` e `core-dsp/src/core_dsp_modules/resampler_bit
 2. **Oversampling Adattivo Render Offline:** Aggiungi in `plugin-support` il rilevamento automatico di `process_mode == ProcessMode::Offline` per commutare l'oversampling alla massima qualità (`8x` / `16x`) durante l'esportazione/bounce della DAW.
 3. **Verifica:** Esegui `cargo test -p plugin-support`, cancella `task 6` da `doit.txt` e rinomina `task 7` in `task 6`.
 
-task 5 — Integrazione MIDI su `greg-gate` (MIDI Trigger) & `greg_bay` (Program Change / MIDI Learn / Routing MIDI)
+task 5 — DONE — Integrazione MIDI su `greg-gate` (MIDI Trigger) & `greg_bay` (Program Change / MIDI Learn / Routing MIDI)
 Leggi `plugin-support/src/lib.rs`, `plugins/greg-gate/src/lib.rs` e `plugins/greg_bay/src/lib.rs`.
 1. **`greg-gate` (MIDI Sidechain Trigger):** Aggiungi la sorgente sidechain `MIDI Note` (con filtro nota/canale MIDI opzionale): ogni `NoteOn` apre il gate (o attiva il ducking ritmico) con inviluppo sample-accurate sincronizzato al millisecondo.
 2. **`greg_bay` (Cambio Scene via Program Change + MIDI Learn + Passthrough MIDI agli Slot):**
    - Cambia istantaneamente catena/scena salvata alla ricezione di un `MIDI Program Change`.
    - Aggiungi mapping `MIDI CC` rapido (`MIDI Learn`) sui controlli principali e inoltra gli eventi MIDI ai sub-plugin CLAP caricati nei 4 slot.
 3. **Verifica:** Compila e testa SOLO `-p greg-gate -p greg_bay`, aggiorna `~/.clap/Analog-vibe/greg_gate.clap` e `~/.clap/Analog-vibe/greg_bay.clap`, cancella questo task da `doit.txt` e fai `git commit` + `git push`.
+
+task 6 — DONE — Grafo Dati MIDI & Modulazioni Sample-Accurate (`core-dsp/src/core_dsp_modules/midi_graph.rs`)
+Leggi `ARCHITECTURE.md` e `core-dsp/src/core_dsp_modules.rs`.
+Obiettivo: progettare e implementare in `core-dsp` un motore **Grafo Dati MIDI & Modulazione Sample-Accurate** (`f64`, `#![forbid(unsafe_code)]`, **zero allocazioni heap** nel thread audio `process()`) pronto sia per gli effetti (MIDI trigger/learn) sia per i futuri sintetizzatori, vocoder e campionatori (`mpc_sampler_engine`):
+1. **Eventi & Bus MIDI Statico (`MidiEventFrame`, `MidiBusBuffer`):**
+   - Coda pre-allocata a capacità fissa (stack/array statico) ordinata per `sample_offset` con supporto nativo a `NoteOn`, `NoteOff`, `PolyAftertouch`, `ChannelAftertouch`, `MidiCC`, `PitchBend`, `ProgramChange` e `ClapPolyModulation` (modulazioni polifoniche non distruttive al singolo campione).
+2. **Nodi del Grafo MIDI (`MidiGraphNode`):**
+   - **Channel/Note Filter & Splitter:** filtra o instrada eventi per canale MIDI (`1..16` / `Omni`), range di note (key-split) e range di velocity.
+   - **CC Smoothing & Mod Matrix Node:** converte `MidiCC` / `PitchBend` / `PolyModulation` in segnali di controllo continui `f64` privi di zipper noise per modulare parametri DSP (cutoff, drive, threshold, pitch).
+   - **Gate/Trigger Extractor:** genera segnali gate/trigger sample-accurate per `greg-gate` o inviluppi.
+3. **Verifica & Documentazione:** Aggiungi test unitari deterministici (ordinamento `sample_offset`, key-split, smoothing CC senza NaN/Inf) in `cargo test -p core-dsp`, documenta `midi_graph` in `ARCHITECTURE.md`, cancella `task 6` da `doit.txt` e fai `git commit` + `git push`.

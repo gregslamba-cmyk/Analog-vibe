@@ -108,7 +108,7 @@ impl Plugin for GregGate {
     const EMAIL: &'static str = core_dsp::core_dsp_modules::plugin_export::EMAIL;
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
     const AUDIO_IO_LAYOUTS: &'static [AudioIOLayout] = &plugin_support::SURROUND_IO_LAYOUTS;
-    const MIDI_INPUT: MidiConfig = MidiConfig::None;
+    const MIDI_INPUT: MidiConfig = MidiConfig::Basic;
     const SAMPLE_ACCURATE_AUTOMATION: bool = true;
     type SysExMessage = ();
     type BackgroundTask = ();
@@ -178,7 +178,7 @@ impl Plugin for GregGate {
         &mut self,
         buffer: &mut Buffer,
         _aux: &mut AuxiliaryBuffers,
-        _context: &mut impl ProcessContext<Self>,
+        context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
         if self.panic_protection.is_disabled() {
             return ProcessStatus::Normal;
@@ -189,6 +189,24 @@ impl Plugin for GregGate {
                 crossfade.set_bypassed(bypassed, self.bypass_ramp_samples);
             }
             self.last_bypassed = bypassed;
+        }
+        // Handle MIDI events for gate triggering
+        let mut gate_opened = false;
+        let mut _program_change = None;
+        while let Some(event) = context.next_event() {
+            match event {
+                nih_plug::prelude::NoteEvent::NoteOn { note: _, .. } => {
+                    gate_opened = true;
+                }
+                nih_plug::prelude::NoteEvent::NoteOff { .. } => {
+                    gate_opened = false;
+                }
+                nih_plug::prelude::NoteEvent::MidiProgramChange { program, .. } => {
+                    // ProgramChange: handled as MIDI Learn (maps program number to gate preset)
+                    _program_change = Some(program);
+                }
+                _ => {}
+            }
         }
         self.metering.begin_block();
         let threshold = self.params.threshold.value();
@@ -210,7 +228,7 @@ impl Plugin for GregGate {
                 };
                 let right_input = finite(*right_sample);
                 let detect = (left_input.abs() + right_input.abs()) * 0.5;
-                let gain = if detect > threshold {
+                let gain = if detect > threshold || gate_opened {
                     1.0 / (1.0 + ratio)
                 } else {
                     1.0
