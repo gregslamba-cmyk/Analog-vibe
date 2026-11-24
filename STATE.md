@@ -6,6 +6,7 @@
 - [COMPLETATO] `tools/clap-validator-host/README.txt`: manuale del banco di collaudo universale CLAP (ABI C nativa, stress-test blocchi, 6 segnali sintetici, THD%, armoniche H2-H7, saturazione -12 VU -> +18 VU, report HTML/SVG e GUI Layout Designer Drag & Drop).
 - [COMPLETATO] `ARCHITECTURE.md`: aggiunte sezioni 42 (`dsp_graph` & PDC automatico) e 43 (`analog_summing` Virtual Earth).
 - [COMPLETATO] `docs/PLUGIN_CATALOG.md`, `TODO.md` e `vcinst.md` verificati e allineati.
+- [COMPLETATO] Verifica istruzioni AI & indirizzamento completo: perfezionato `vcinst.md` con tabella esaustiva di indirizzamento a tutti i file di ricerca hardware (`docs/specs/outboard_hardware_research.md`), alla guida fisica dei componenti (`docs/specs/Guida_Componenti_Audio_Fisica_Acustica.pdf`), alle schede plugin/moduli (`docs/plugins/`, `docs/modules/`), alla roadmap (`docs/PLUGIN_CATALOG.md`), all'architettura (`ARCHITECTURE.md`) e ai file `README.txt`, vincolando l'AI anche in `.clinerules.md` e `TODO.md` al ciclo operativo obbligatorio.
 
 ## Stato aggiornato (2026-11-24) — Riorganizzazione Documentazione Operativa
 - [COMPLETATO] `docs/PLUGIN_CATALOG.md`: creato catalogo dedicato con i 15 plugin alpha implementati, la lista completa dei plugin pianificati (Dinamiche/EQ/Pre, Channel Strip, Utility/Creativi/Spazio/Restauro), le regole tassative di accorpamento revisioni hardware, e la roadmap dettagliata dei 7 progetti futuri post-Analog-Vibe.

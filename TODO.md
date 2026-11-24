@@ -1,7 +1,7 @@
 # TODO — Coda Operativa di Sviluppo Analog-Vibe
 
 > **Metodo Operativo Obbligatorio per l'Agente:**
-> `Leggi TODO.md -> Esegui il task attivo -> Spunta [x] in TODO.md -> Aggiorna STATE.md`
+> `1. Leggi TODO.md -> 2. Consulta Guida_Componenti_Audio_Fisica_Acustica.pdf e outboard_hardware_research.md -> 3. Esegui il task attivo -> 4. Spunta [x] in TODO.md -> 5. Aggiorna STATE.md -> 6. Aggiorna documentazione e README.txt`
 
 ---
 
