@@ -501,6 +501,7 @@ impl Plugin for GregA2a {
                 RotaryKnob::new(cx, EditorData::params, |p| &p.analog_drift);
             },
             Some(param_defs),
+            move |cx| EditorData { params: params_main.clone() }.build(cx),
         )
     }
 

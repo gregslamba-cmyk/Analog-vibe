@@ -624,6 +624,7 @@ impl Plugin for GregApi2500 {
                 RotaryKnob::new(cx, EditorData::params, |p| &p.sc_gain).width(Pixels(115.0)).height(Pixels(24.0));
             },
             Some(param_defs),
+            move |cx| EditorData { params: params_main.clone() }.build(cx),
         )
     }
 

@@ -452,3 +452,15 @@ pub struct VirtualEarthSummer {
 ## Nuovi Moduli Console & Routing (`core-dsp`)
 - **`aux_send` (`core_dsp_modules::aux_send`):** Deviazione di segnale multi-mandata Pre/Post-Fader a zero allocazioni heap, con smussamento anti-zipper del livello di mandata (`-∞ .. +6 dB`) e instradamento verso bus interni o porte Aux esterne CLAP/VST3.
 - **`fader_console` (`core_dsp_modules::fader_console`):** Stadio fader professionale da console analogica (`-∞ .. +10 dB` con legge balistica reale da banco), leggi di Pan costante (`-3.0 dB`, `-4.5 dB`, `-6.0 dB`), `Mute` click-free e gestione `Solo / Solo-Safe`.
+
+---
+
+## Pattern Multicanale a Grafo (`MonoChannelProcessor` + `MultiChannelGraph<P>`)
+- **Principio:** Ogni plugin istanzia un array pre-allocato in `initialize()` di `N` motori mono indipendenti (`[P; MAX_AUDIO_CHANNELS]`, dove `P: MonoChannelProcessor`) gestiti da un grafo interno (`MultiChannelGraph<P>`).
+- **Flusso del Grafo:**
+  1. **Pre-Routing (`RoutingMatrix`):** Pass-through diretto `0..N` oppure codifica ortonormale `Mid/Side` (`L/R → M/S`) prima dei motori mono.
+  2. **Detector Link Opzionale:** Per i processori dinamici in modalità `Stereo Link` / `Surround Link`, il grafo calcola la gain reduction condivisa tra i canali attivi lasciando indipendenti gli stadi fisici (trasformatori, valvole, filtri).
+  3. **Post-Routing & PDC:** Decodifica `M/S → L/R` (se attiva), compensazione latenza Dry/Wet al singolo campione e `BypassCrossfade` click-free.
+  4. **Detector Multicanale Adattivo (`N` canali):**
+     - Rilevamento automatico dei canali attivi (`buffer.channels()`, sovrascrivibile tramite `Channel Setup`).
+     - Supporto a 4 logiche di link del detector: **Unlinked (Multi-Mono)**, **All-Linked (Stereo/Bus Link)**, **Surround 5.1/7.1 Stem Link** (esclude il canale LFE `.1` dal trigger comune per evitare pumping da sub) e **Mid/Side (`M/S`)**.

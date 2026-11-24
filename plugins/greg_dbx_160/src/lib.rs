@@ -606,6 +606,7 @@ impl Plugin for GregDbx160 {
                 .child_space(Pixels(10.0));
             },
             Some(param_defs),
+            move |cx| EditorData { params: params_main.clone() }.build(cx),
         )
     }
 

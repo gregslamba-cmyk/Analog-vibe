@@ -521,6 +521,7 @@ impl Plugin for GregLimiter {
                 .height(Pixels(200.0)).background_color(Color::rgb(28, 30, 35)).child_space(Pixels(10.0));
             },
             Some(param_defs),
+            move |cx| EditorData { params: params_main.clone() }.build(cx),
             move |cx| GregLimiterGuiData { params: params_arc_main.clone() }.build(cx),
         )
     }

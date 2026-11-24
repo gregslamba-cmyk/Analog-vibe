@@ -483,6 +483,7 @@ impl Plugin for GregA3a {
             },
             |_cx| {},
             Some(param_defs),
+            move |cx| EditorData { params: params_main.clone() }.build(cx),
         )
     }
 

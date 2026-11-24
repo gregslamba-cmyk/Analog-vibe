@@ -487,6 +487,7 @@ impl Plugin for GregChild {
                 RotaryKnob::new(cx, EditorData::params, |p| &p.sidechain_gain);
             },
             Some(param_defs),
+            move |cx| EditorData { params: params_main.clone() }.build(cx),
         )
     }
 
