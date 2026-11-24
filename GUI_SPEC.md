@@ -1,51 +1,22 @@
-# GUI_SPEC.md - ARCHITETTURA INTERFACCIA GRAFICA COMUNE (GREG ANALOG SUITE)
+# GUI_SPEC.md — LINEE GUIDA DESIGN & ARCHITETTURA UI ANALOG-VIBE
 
-## 1. OBIETTIVO E STACK TECNOLOGICO
-- **Framework:** `nih_plug_vizia` (basato su `baseview` + rendering vettoriale GPU/CPU **FemtoVG**).
-- **Multipiattaforma:** Linux (X11/Wayland), Windows, macOS.
-- **Zero impatto sul thread Audio:** Nessun lock o allocazione in `process()`. Telemetria tramite `AtomicU32` (meter) e ring-buffer lock-free pre-allocato in `initialize()` (spettrometro FFT).
+## 1. Filosofia Estetica & Ergonomia Studio
+- **Stile Hardware Autentico ma Leggibile:** Pannelli scuri antiriflesso (`#181A1F` / `#20232A`), accenti caldi ambra/ottone (`#E5A93B`), scale graduate nitide e feedback visivo immediato senza affaticamento in lunghe sessioni di mix.
+- **Identità Visiva per Famiglia Hardware:**
+  - *Vintage Tube / Opto (`greg-a2a`, `greg-child`, `greg-pultec`):* manopole stile Bakelite / Chickenhead, tonalità calde e VU meter ambrati.
+  - *British Console / FET (`greg_76`, `greg-bus-comp`, `Neve/SSL`):* selettori a scatti colorati (stile Marconi/SSL) e indicatori LED ad alto contrasto.
+  - *Surgical / Modern (`greg-surgical-eq`, `greg-limiter`, `greg_bay`):* grafica tecnica pulita, curve vettoriali nitide e lettura numerica diretta.
+- **Gerarchia a Due Livelli:**
+  - **Main Panel (sempre visibile):** solo i controlli primari dell'unità hardware reale + meter `IN` / `OUT` / `GR`.
+  - **Pannello Avanzato a Scomparsa (`+ ADV`):** parametri fisici nascosti del circuito (*Transformer Iron %*, *Analog Drift*, *PSU Sag*, *Oversampling*), per mantenere il pannello principale pulito e fedelissimo all'originale.
 
----
+## 2. Regole Tecniche Vizia & Real-Time Safety (`crates/greg_gui_core`)
+- **Zero-Crash UI Thread:** Registra sempre il `Model` Vizia (`EditorData.build(cx)`) nel `Context` prima di istanziare widget/slider e avvolgi la closure `cx` in `std::panic::catch_unwind` affinché `window_thread` non possa mai abortire la DAW.
+- **Telemetria Lock-Free (60 FPS):** Scritture dal thread audio `process()` esclusivamente tramite `AtomicU32` / `AtomicBool` con `Ordering::Relaxed`; sanitizzazione obbligatoria `if v.is_finite() { v } else { 0.0 }` prima del disegno.
+- **Layout JSON Esterno (`gui_layout.json`):** Supporto completo a coordinate assolute (`GuiLayoutSpec`) con fallback automatico alla griglia procedurale se il JSON manca o è invalido.
 
-## 2. LAYOUT GENERALE DELLA FINESTRA (DIMENSIONI FISSE, AREA CENTRALE PERSISTENTE)
-
-```text
-+---------------------------------------------------------------------------------------+
-
-| [HEADER]  Nome Plugin | Preset | Routing (Mono/St/M-S/Dual/Multi) | OS | [ + ADV ]    |
-+----------+-----------------------------------------------------------------+----------+
-
-|          |                                                                 |          |
-|   OUT    |                  MAIN PANEL (Sempre visibile)                   |    IN    |
-|  METER   |           (Controlli originali Hardware: Knob/Btn/Slider)       |  METER   |
-|  (SX)    |                                                                 |   (DX)   |
-|  1..N ch +-----------------------------------------------------------------+  1..N ch |
-|          |             ADVANCED PANEL (Espansione verso il basso)          |          |
-|          |   (Sidechain EQ/Filtri | Saturazione/Drift | Spettrometro FFT)  |          |
-+----------+-----------------------------------------------------------------+----------+
-
-| [FOOTER]  Phase Correlation Meter (-1 .. 0 .. +1) | Gain Reduction (-dB)              |
-+---------------------------------------------------------------------------------------+
-```
-
-### Dettaglio Specifiche:
-1. **Comportamento Pannello `[ + ADV ]` (Area Centrale Persistente):**
-   - Il **Main Panel** rimane **sempre visibile e accessibile** nella parte centrale superiore.
-   - Premendo `[ + ADV ]` nell'header, la finestra si **espande verso il basso** mostrando il cassetto **Advanced Panel** sotto il Main Panel (mentre le colonne Meter SX/DX si estendono verticalmente per accompagnare l'intera altezza della finestra).
-   - Ripremendo `[ - ADV ]`, la finestra si richiude alla dimensione compatta originale.
-
-2. **Colonne Meter OUT (SX) e IN (DX) — Multicanale Dinamico (Tutti i Canali):**
-   - I meter mostrano **simultaneamente tutte le barre dei canali attivi** negoziati con la DAW host (es. 1 barra in Mono, 2 in Stereo/M-S/Dual Mono, 6 in 5.1, 8 in 7.1, fino a `MAX_CHANNELS = 16`).
-   - La larghezza delle singole barre si adatta automaticamente alla larghezza fissa della colonna meter (es. 16 px ciascuna in Stereo, 4–6 px affiancate in Multicanale 8ch/16ch).
-   - Ogni canale ha barra istantanea (verde -> giallo -> rosso), tacca di **Peak Hold** (decadimento 1.5s) e lettura numerica del picco massimo + indicatore **Clip** (> 0.0 dBFS) resettabile al click.
-
-3. **Footer Bar — Phase Correlation & Gain Reduction (Negativo):**
-   - **Phase Correlation Meter:** Scala `-1.0` (rosso) <-> `0.0` (giallo) <-> `+1.0` (verde).
-   - **Gain Reduction (GR) Meter (in negativo):** Lettura da `0.0 dB` verso `-30.0 dB` (colore ambra/rosso) + readout numerico negativo (es. `-4.2 dB`), visibile sui moduli di dinamica.
-
-4. **Primitive Controlli Standardizzate (`crates/greg_gui_core`):**
-   - `GregKnob`: Controllo rotativo vettoriale (continuo o a scatti), `Shift + Drag` per regolazione fine, doppio click per reset, valore numerico visibile.
-   - `GregButton`: Interruttore toggle o selettore multi-posizione (es. Ratio 1176, mode switch).
-   - `GregSlider`: Fader lineare orizzontale/verticale.
-   - `GregSpectrum`: Spettrometro FFT real-time (2048/4096 punti su thread GUI) attivo solo nei plugin che lo richiedono e solo quando il pannello Advanced è aperto.
-
+## 3. Specifiche Studio GUI Designer Standalone (`target/gui_designer.html`)
+- **Separato dai Report di Test:** Nessun grafico Bode/THD nella vista Designer; area di lavoro focalizzata su **un singolo plugin alla volta**.
+- **Libreria Widget a Sinistra:** Anteprima reale trascinabile di manopole rotative, fader, switch, meter (`IN`, `OUT`, `GR`) e spettro.
+- **Smart Guides Magnetiche & Riferimenti Fissi:** Allineamento automatico alla stessa altezza (`Y`), stesso centro (`X`) e bordi/sezioni della finestra.
+- **Menu Contestuale Tasto Destro (`Right-Click`):** Assegnazione diretta del parametro CLAP (`param_id`), cambio stile widget, duplicazione ed eliminazione, più selettore colori e tasto **Salva `gui_layout.json`**.

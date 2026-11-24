@@ -195,6 +195,19 @@
 - [COMPLETATO] `cargo build --release --workspace` verde, `cargo test --workspace` verde (157+ test).
 - [COMPLETATO] 15 plugin `.so` in `target/release/`.
 
+## Ultima sessione (2026-11-24) — GUI Designer + GUI Status + Mastering Vibe
+- [COMPLETATO] `crates/greg_gui_core`: fix panic containment nel Vizia window thread — `catch_unwind(AssertUnwindSafe(|| ...))` ora esegue INSIDE la closure del window thread (`create_vizia_editor`), fallback `create_fallback_editor` gestito dal panic catch, mai abort del thread. `cargo check -p greg_gui_core` verde.
+- [COMPLETATO] `tools/clap-validator-host`: rimossi Designer dal `validation_report.html`; aggiunti flag CLI `--designer <plugin_name>` (genera `target/gui_designer.html` standalone) e `--check-gui` (colonna `GUI Status` OK/N/A in HTML + CSV report).
+- [COMPLETATO] `tools/clap-validator-host`: rimosso `designer::generate_gui_designer_html` da report; ora usato solo via `--designer` flag.
+- [COMPLETED] `--designer greg_76` genera `target/gui_designer.html` correttamente (validato su file).
+- [COMPLETED] `--check-gui` esegue full validation sweep: 18 plugin, 0 NaN rows, report generato con colonna GUI Status.
+- [COMPLETED] `docs/PLUGIN_CATALOG.md`: aggiunta nota **"Mastering Vibe"** al Progetto 7 (Mastering Suite & Immersive Audio Processor) — variante focalizzata sul calore analogico, saturazione musicale, risposta vintage e imaging spaziale.
+
+## Da fare / note
+- [PARZIALE] `cargo clippy -- -D warnings`: rimangono 16 warning stile nel solo `clap-validator-host` (loop indexing, too-many-arguments, type complexity) e 5 in `core-dsp`/`greg_gui_core` preesistenti; il build release è pulito.
+- [DA FARE] Copiare i 15 `.clap` in `~/.clap/Analog-vibe/` (rinominando `libgreg_x.so` → `greg_x.clap`).
+- [DA FARE] Aggiornare `README.md` principale con la tabella riepilogativa delle misure finali.l test host.
+
 ## Da fare / note
 - [PARZIALE] `cargo clippy -- -D warnings`: rimangono 16 warning stile nel solo `clap-validator-host` (loop indexing, too-many-arguments, type complexity) e 5 in `core-dsp`/`greg_gui_core` preesistenti; il build release è pulito.
 - [DA FARE] Copiare i 15 `.clap` in `~/.clap/Analog-vibe/` (rinominando `libgreg_x.so` → `greg_x.clap`).

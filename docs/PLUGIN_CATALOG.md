@@ -174,3 +174,4 @@ Al completamento della suite Analog-Vibe, l'infrastruttura condivisa (`core-dsp`
 ### Progetto 7: Mastering Suite & Immersive Audio Processor
 - **Obiettivo:** Workstation di mastering all-in-one per formati stereo e immersivi fino a 7.1.4.
 - **Innovazione DSP:** Metering integrale ITU-R BS.1770-4 / EBU R128 (Integrated LUFS, LRA, Short-Term, Momentary), True-Peak limiting inter-sample a fase lineare con lookahead a bassissima distorsione, correzione stereo ellittica e monitoraggio di correlazione di fase per la conformità broadcast.
+- **Mastering Vibe:** Una variante focalizzata sull'emulazione caratteristica del calore analogico, con saturazione musicale controllata, risposta in frequenza "vintage" e imaging spaziale ottimizzato per il contenuto voci e strumenti acustici.

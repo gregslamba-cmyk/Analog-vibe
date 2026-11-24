@@ -1,70 +1,45 @@
-esegui queste task, in ordine. ogni volta che esegui un task di questo documento cancellalo e rinomina gli altri task in ordine, poi salva il file.
+task 5
+Leggi `vcinst.md`, `ARCHITECTURE.md`, `core-dsp/src/core_dsp_modules/analog_summing.rs`, `core-dsp/src/core_dsp_modules/component_models.rs`, `core-dsp/src/core_dsp_modules/zdf_filters.rs` e `plugins/greg_nl_mixer/src/lib.rs`.
 
-task 1
-Leggi `crates/greg_gui_core/src/lib.rs` (tutto il file).
+Obiettivo: trasformare `plugins/greg_nl_mixer` in una **Console Analogica Completa a Tracce e Bus Dinamici** (fino a 24 canali stereo + 8 bus/send-return creabili sul momento) con **Channel Strip fedeli al banco di riferimento** (`Neve 8078`, `SSL 4000G`, `API 1608`), rispettando `#![forbid(unsafe_code)]`, precisione `f64` e **zero allocazioni heap nel thread audio `process()`**:
 
-Obiettivo: rendere `greg_gui_core` **100% a prova di crash di default ("Zero-Crash by Design")** per tutti e 18 i plugin CLAP/VST3, senza dover passare variabili d'ambiente manuali:
+1. **Architettura Dinamica Zero-Alloc (`+ Add Channel` / `+ Add Bus`):**
+   - Pre-alloca in `initialize()` / `activate()` un pool dormiente fino a `24 canali stereo` e `8 bus stereo` (a consumo CPU = `0.0%` per gli slot inattivi).
+   - Di default attiva **4 Canali + 1 Master Bus**; esponi comandi lock-free / parametri per creare/attivare istantaneamente nuove tracce (`+ Add Channel`) e nuovi bus (`+ Add Bus`: modalità *Group Submix* oppure *External CLAP Aux Send/Return* mappati sulle porte aux esterne della DAW per collegare riverberi/delay esterni).
 
-1. **Rilevamento Automatico dell'Ambiente Grafico (`is_gui_supported()`):**
-   - Crea una funzione privata `fn is_gui_supported() -> bool` chiamata all'inizio sia di `create_greg_editor` sia di `create_greg_editor_with_params`:
-     - Se `GREG_FORCE_GUI=1` (o `true`) è impostato → restituisci `true` (permette test forzati della GUI anche su VM).
-     - Se `GREG_NO_GUI=1` (o `true`) è impostato → restituisci `false`.
-     - Se `DISPLAY` è vuoto o non impostato (es. sessione headless o Wayland puro senza X11) → restituisci `false`.
-     - Se il sistema gira su hypervisor/VM noto (controllando `/sys/class/dmi/id/product_name` o `/sys/class/dmi/id/sys_vendor` per `VirtualBox`, `VMware`, `QEMU`, `KVM`, `Parallels` senza errore se il file non esiste) → restituisci `false` di default (così Reaper, Bitwig e Ardour in VM aprono subito l'interfaccia nativa della DAW al 100% stabile senza crash OpenGL/X11!).
+2. **Channel Strip Fedeli al Banco di Riferimento (selezionabile globalmente o per singolo canale):**
+   - **Neve 8078 (`1073/1081` + `2254` style):**
+     - Preamp/Trasformatori: `CarnhillVtb9045` → Classe A `Neve2n3055_Bc108` (`MarinairLo1166`).
+     - EQ 3 Bande Induttore + HPF: HPF a scatti (`50/80/160/300 Hz`), Low Shelf (`35/60/110/220 Hz`), Mid Bell proporzionale (`0.36–7.2 kHz`), High Shelf armonico (`12 kHz`).
+     - Dinamica: Compressore/Limiter a ponte di diodi (attacco fisso musicale, rilascio auto, ratio `1.5:1..6:1`).
+   - **SSL 4000G (`292 Pink / 242 Black` + `4000 Dynamics` style):**
+     - Preamp/VCA: `Ne5534` → `Dbx202GoldCan`.
+     - EQ 4 Bande Parametriche + HPF/LPF: HPF (`18 dB/oct`), LPF (`12 dB/oct`), LF/HF commutabili Shelf/Bell, LMF/HMF con Q proporzionale e curva undershoot/overshoot serie G.
+     - Dinamica: Compressore VCA rapido (`Soft/Fast Attack`, `Release 0.1–4s`, `Ratio 1:1–∞:1`) + Expander/Gate integrato con isteresi.
+   - **API 1608 (`550B Proportional-Q` + `525/527` style):**
+     - Preamp/Trasformatori: `Api2520` Discrete Op-Amp → `Api2623`.
+     - EQ 4 Bande Proportional-Q: 7 frequenze selezionabili a scatti per banda + guadagno a scatti (`±2, ±4, ±6, ±9, ±12 dB`) con Q che si stringe automaticamente all'aumentare del boost/cut.
+     - Dinamica: Compressore discreto stile 525/527 (`Feedback` / `Feed-Forward` commutabile + auto-gain).
 
-2. **Barriera Anti-Panic Interna al Thread X11 (`window_thread`):**
-   - Dentro la closure `cx` passata a `create_vizia_editor` (sia in `create_greg_editor` sia in `create_greg_editor_with_params`), avvolgi l'intera costruzione dei widget (`VStack` / `HStack` / `ParamSlider` / `Label`) in `std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| { ... }))`.
-   - Se la costruzione dovesse mai generare un panic interno, intercettalo silenziosamente dentro il thread UI e mostra un semplice `Label::new(cx, "Analog-Vibe DSP Active (Fallback UI)")` invece di far abortire `window_thread` (che causerebbe `RecvError` in `baseview` e il crash della DAW).
-   - Elimina ogni `.unwrap()`, `.expect()` o accesso diretto `[i]` sui parametri e sanitizza ogni valore meter con `if v.is_finite() { v } else { 0.0 }`.
+3. **2 Insert Interni per Canale + Mandate + Master Bus Virtual Earth:**
+   - Ogni canale include `2 Insert Interni` (`Insert A` & `Insert B`, `Pre/Post EQ`) selezionabili tra i moduli `core-dsp` (*Pultec Low/High*, *Tape Saturation*, *1176 FET*, *LA-2A Opto*, *Soft Clipper*), `Pan`, `Mute`, `Solo`, `Fader` (`-∞ .. +10 dB`) e mandate verso i bus attivi (`Pre/Post Fader`).
+   - Somma finale tramite `AdjacentCrosstalkMatrix` + `VirtualEarthSummer` (`PSU Sag` condiviso) + Bus Compressor + Trasformatore di Mix.
 
-3. **Compilazione Release, Deploy & Push:**
-   - Esegui `cargo test -p greg_gui_core` e `cargo build --release --workspace` (0 errori, 0 warning).
-   - Copia tutti e 18 i `target/release/libgreg_*.so` in `~/.clap/Analog-vibe/greg_*.clap`.
-   - Esegui `git add -A && git commit -m "[GUI Core] Blindatura Zero-Crash by Design: auto-detection VM/Wayland + catch_unwind interno al thread UI" && git push`.
+4. **Verifica & Deploy (rispettando la Regola di Velocità in `.clinerules`):**
+   - Compila e testa prima **solo** `-p greg_nl_mixer -p clap-validator-host` (`cargo test -p greg_nl_mixer` e `cargo build --release -p greg_nl_mixer -p clap-validator-host`), verifica `0.0 in -> 0.0 out` e zero NaN/Inf, poi aggiorna `~/.clap/Analog-vibe/greg_nl_mixer.clap`, spunta `doit.txt` e fai `git commit` + `git push`.
 
 task 2
-Leggi `vcinst.md`, `ARCHITECTURE.md`, `STATE.md`, tutti i 18 `plugins/*/src/lib.rs` e `core-dsp/src/`.
 
-Obiettivo: eseguire una **Code Review Strutturale, di Sicurezza Real-Time e di Flusso del Segnale** sull'intero workspace e applicare eventuali correzioni:
+Leggi `tools/clap-validator-host/src/main.rs` (intorno a `CLAP_EVENT_PARAM_VALUE`, `get_info` e `get_value`).
 
-1. **Audit Ordine degli Stadi & Chiamate DSP nei 18 Plugin:**
-   - Verifica per ciascuno dei plugin analogici (`greg_76`, `greg-a2a`, `greg-a3a`, `greg_api_2500`, `greg-bus-comp`, `greg-child`, `greg_dbx_160`, `greg_dbx_165`, `greg-pultec`, `greg_nl_ch`, `greg_nl_mixer`), modulari (`greg_bay`) e digitali/utility che:
-     - L'ordine reale degli stadi hardware/algoritmici sia rispettato (es. input transformer → detector/gain cell → makeup stage → output transformer → DC blocker / metering).
-     - Nessun metodo venga chiamato con unità sbagliate (dB vs lineare, Hz vs radianti, ms vs secondi) o fuori ordine rispetto a `initialize()` / `reset()`.
-     - Tutte le revisioni selezionabili (`Rev A/D/E/F`, `160 VU/X/A`, `4000 E/G`, `Neve/SSL/API`) commutino realmente i componenti fisici.
+Bug reale rilevato nell'output di `clap-validator-host`:
+`[warn] parameter Input did not accept 0; current value is 0.5`
+`[warn] parameter Ratio did not accept 2.25; current value is 0`
 
-2. **Audit Sicurezza Real-Time & Memory Safety:**
-   - Conferma `#![forbid(unsafe_code)]` su `core-dsp`, `plugin-support`, `greg_gui_core` e tutti e 18 i plugin.
-   - Cerca e rimuovi qualsiasi potenziale allocazione heap, `.unwrap()`, `.expect()`, indicizzazione non protetta o mancata sanitizzazione `NaN`/`Inf` all'interno di `process()`.
-   - Verifica che tutti gli stati per-canale supportino dinamicamente `1..8` canali (`Mono → 7.1`) senza condividere stato tra canali diversi.
+Motivo: `nih_plug` nel wrapper CLAP usa valori **normalizzati `[0.0 .. 1.0]`** per `CLAP_EVENT_PARAM_VALUE` / `get_value` (o richiede l'esatto `info.cookie` estratto da `clap_param_info`), mentre `clap-validator-host` inviava valori grezzi fuori da `[0.0 .. 1.0]` (es. `2.25`, `3.0`, `4.0`) o un `cookie` non corrispondente!
 
-3. **Audit Pulizia & Struttura Repository:**
-   - Rimuovi eventuali directory duplicate o file orfani nella root e verifica `cargo clippy --workspace --all-targets -- -D warnings` e `cargo test --workspace`.
-
-task 3
-Leggi `TODO.md` e `tools/clap-validator-host/src/main.rs`.
-
-Obiettivo:
-1. Rimuovi il vecchio pannello Designer dal report di test `target/validation_report.html` (che deve mostrare esclusivamente le misure strumentali, i grafici SVG e i dati CSV).
-2. Genera invece un'applicazione standalone separata e focalizzata: **`target/gui_designer.html`** (apribile anche con `--designer`), dedicata alla progettazione visiva di **un singolo plugin alla volta** senza report di test:
-   - Selettore singolo plugin in alto (`greg_76`, `greg-a2a`, ..., `greg_bay`).
-   - Barra laterale sinistra con anteprima visiva dei widget (manopole rotative, fader/slider, switch, meter `IN`/`OUT`/`GR`, spettro) trascinabili sul canvas.
-   - **Smart Guides magnetiche** (allineamento automatico alla stessa altezza `Y`, stesso asse `X`, centro finestra e riferimenti fissi) + griglia configurabile.
-   - **Menu contestuale con Tasto Destro (`Right-Click`)** su ogni controllo per assegnare il parametro CLAP (`param_id`), cambiare tipo/stile widget, duplicare o rimuovere.
-   - **Selettore Colori completo** (sfondo, superficie, accento, testo, manopole) e **Tasto "Salva `gui_layout.json`"** (con salvataggio diretto tramite `showSaveFilePicker` se supportato dal browser + fallback download `.json` automatico).
-
-task 4
-Leggi `tools/clap-validator-host/src/main.rs` e `crates/greg_gui_core/src/lib.rs`.
-
-Obiettivo: aggiungere la **Validazione Automatica dell'Interfaccia Grafica (`CLAP_EXT_GUI`)** dentro `clap-validator-host` (eseguita sia con flag `--check-gui` sia inclusa nel report di `--update-docs`):
-
-1. **Test Protocollo `clap.gui` (`CLAP_EXT_GUI`):**
-   - Interroga `plugin.get_extension(CLAP_EXT_GUI)` su ciascuno dei 18 plugin compilati.
-   - Verifica `is_api_supported("x11", false)`, `create("x11", false)`, `get_size()` (controllando `width >= 200 && height >= 100`) e `destroy()`.
-2. **Test Apertura Finestra Reale / Virtuale (`GREG_FORCE_GUI=1`):**
-   - Quando disponibile un server X11 (`DISPLAY` attivo, oppure avviato tramite `xvfb-run`), crea una finestra X11 dummy padre, chiama `set_parent()` + `show()`, attende `150 ms` verificando che il thread UI non generi panic né crash, quindi chiama `hide()` e `destroy()`.
-3. **Validazione Schema `gui_layout.json`:**
-   - Se esiste un `gui_layout.json` per il plugin, verifica che sia deserializzabile in `GuiLayoutSpec` e che ogni `param_id` referenziato esista realmente nella lista parametri CLAP del plugin.
-4. **Report & CI:**
-   - Aggiungi la colonna **`GUI Status` (`PASS / FALLBACK / FAIL`)** nella tabella riepilogativa di `target/validation_report.html` e aggiorna `.github/workflows/` (o `TODO.md`) affinché la validazione GUI sia parte integrante della suite di collaudo.
+Correggi `tools/clap-validator-host/src/main.rs`:
+1. Salva `info.cookie` da `clap_param_info` per ciascun parametro e passalo esattamente dentro `clap_event_param_value.cookie`.
+2. Invia i valori dello sweep in scala **normalizzata `[0.0 .. 1.0]`** (es. `0.0`, `0.25`, `0.5`, `0.75`, `1.0`) o mappando `(val - min) / (max - min)` prima di inviare `CLAP_EVENT_PARAM_VALUE`, verificando con `params.get_value()` che il parametro accetti davvero il nuovo valore senza `[warn]`.
+3. Compila solo `-p clap-validator-host` (`cargo build --release -p clap-validator-host`) e verifica su `target/release/libgreg_76.so` che i warning `did not accept` spariscano completamente!
 
