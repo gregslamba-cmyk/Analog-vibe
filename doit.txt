@@ -1,12 +1,6 @@
 esegui queste task, in ordine. ogni volta che esegui un task di questo documento cancellalo e rinomina gli altri task in ordine, poi salva il file.
 
-task 1 — Fix Sweep Parametri CLAP in `clap-validator-host`
-Leggi `tools/clap-validator-host/src/main.rs` (intorno a `CLAP_EVENT_PARAM_VALUE`, `get_info` e `get_value`).
-1. Salva `info.cookie` da `clap_param_info` per ciascun parametro e passalo dentro `clap_event_param_value.cookie`.
-2. Invia i valori dello sweep in scala normalizzata `[0.0 .. 1.0]` affinché `params.get_value()` accetti ogni parametro senza `[warn] parameter ... did not accept`.
-3. Compila SOLO `-p clap-validator-host` e verifica su `target/release/libgreg_76.so`, cancella `task 1` da `doit.txt` e rinomina i successivi.
-
-task 2 — Audit & Bonifica Totale Marchi Registrati (`mpc_sampler_engine` → `sampler_engine`, 4 Plugin Compilati & Stringhe UI)
+task 1 — Audit & Bonifica Totale Marchi Registrati (`mpc_sampler_engine` → `sampler_engine`, 4 Plugin Compilati & Stringhe UI)
 Leggi `vcinst.md` (regola Zero Marchi Registrati) e `docs/INVENTARIO.txt`.
 1. **Rinomina Modulo Sampler (`core-dsp`):** Rinomina `core-dsp/src/core_dsp_modules/mpc_sampler_engine.rs` in `sampler_engine.rs` (`MpcSamplerEngine` → `SamplerEngine`, `MpcPad` → `SamplerPad`), aggiornando `core_dsp_modules.rs`, `ARCHITECTURE.md`, `README.md`, `README.txt` e `docs/INVENTARIO.txt`.
 2. **Rinomina i 4 Plugin Compilati con Nomi Produttore (mantenendo `greg-child`):**
@@ -18,18 +12,18 @@ Leggi `vcinst.md` (regola Zero Marchi Registrati) e `docs/INVENTARIO.txt`.
 4. **Sblocco Limiti Canali nei Motori Core (`core-dsp` + `plugin-support`):** Porta `MAX_AUDIO_CHANNELS` (in `dsp_graph.rs` e `plugin-support/src/lib.rs`) da `8` a `128` e rendi `VirtualEarthSummer` / `AdjacentCrosstalkMatrix` (`analog_summing.rs`) configurabili dinamicamente in `initialize()` oltre i 32 canali (zero limiti fissi).
 5. **Verifica:** Esegui `cargo test --workspace` e `cargo build --release --workspace`, rimuovi i 4 vecchi `.clap` da `~/.clap/Analog-vibe/`, copia tutti e 18 i nuovi `.clap`, cancella `task 2` da `doit.txt` e fai `git commit` + `git push`.
 
-task 3 — Crate Host Multi-Formato (`crates/greg_plugin_host`: CLAP, LV2, LADSPA, VST3, AUv2) + Integrazione in `greg_bay`
+task 2 — Crate Host Multi-Formato (`crates/greg_plugin_host`: CLAP, LV2, LADSPA, VST3, AUv2) + Integrazione in `greg_bay`
 Leggi `ARCHITECTURE.md` (sezione *Crate Host Multi-Formato*), `tools/clap-validator-host/src/main.rs` e `plugins/greg_bay/src/lib.rs`.
 1. Crea `crates/greg_plugin_host` con trait uniforme `HostedPlugin` + adattatore `DspGraphNode` (zero allocazioni in `process_block`, PDC automatico, `get_state`/`set_state`) e backend per **CLAP**, **LV2/LADSPA**, **VST3** e **AUv2** (`#[cfg(target_os = "macos")]`).
 2. Collega `greg_plugin_host` agli slot di `plugins/greg_bay` accanto ai moduli interni.
 3. **Verifica:** Esegui `cargo test -p greg_plugin_host -p greg_bay`, cancella `task 3` da `doit.txt` e fai `git commit` + `git push`.
 
-task 4 — Mattoni Core per Controllo Dinamico & Risonanze (`auto_gain_matcher`, `transient_splitter`, `resonance_suppressor`, `inter_plugin_bus`)
+task 3 — Mattoni Core per Controllo Dinamico & Risonanze (`auto_gain_matcher`, `transient_splitter`, `resonance_suppressor`, `inter_plugin_bus`)
 Leggi `ARCHITECTURE.md` (sezione *Moduli di Controllo Dinamico, Risonanze & Comunicazione Inter-Plugin*), `core-dsp/src/core_dsp_modules/metering.rs`, `core-dsp/src/core_dsp_modules/spectral_restoration.rs` e `plugin-support/src/lib.rs`.
 1. Implementa `auto_gain_matcher` in `metering.rs` (`enabled = false` di default), `transient_splitter.rs` (`transient + sustain == input`), `resonance_suppressor` in `spectral_restoration.rs` (con maschere di blocco/esclusione per banda/frequenza per `greg_resonance_killer_eq`) e `inter_plugin_bus` in `plugin-support`.
 2. **Verifica:** Esegui `cargo test -p core-dsp -p plugin-support`, cancella `task 4` da `doit.txt` e fai `git commit` + `git push`.
 
-task 5 — Mattoni Core per Console & Mini-DAW (`console_mixer`, `transport_timeline` & `disk_streamer`)
+task 4 — Mattoni Core per Console & Mini-DAW (`console_mixer`, `transport_timeline` & `disk_streamer`)
 Leggi `ARCHITECTURE.md` (sezione *Mattoni per Console & Mini-DAW*), `core-dsp/src/core_dsp_modules/analog_summing.rs` e `plugin-support/src/lib.rs`.
 1. **`console_mixer.rs` (`core-dsp`):** Fader logaritmico reale (`-∞ .. +12 dB`) anti-zipper, Pan Law (`0 / -3 / -4.5 / -6 dB`), numero illimitato/configurabile in `prepare()` di Aux Send Pre/Post-Fader per canale, Gruppi Bus gerarchici (Canale → Group Bus → Master) con PDC automatico, Mute/Solo (SIP/AFL/PFL) e VCA Group Faders.
 2. **`transport_timeline.rs` (`core-dsp`):** Timeline sample-accurate (Play/Stop/Rec, Loop, Tempo Map, Bar/Beat/Sample), playback multi-traccia di clip audio & MIDI con fade/crossfade equal-power e curve di automazione sample-accurate (`Linear`, `Exp`, `SCurve`, `Step`).
@@ -37,14 +31,14 @@ Leggi `ARCHITECTURE.md` (sezione *Mattoni per Console & Mini-DAW*), `core-dsp/sr
 4. **Sblocco Limiti Canali nei Motori Core (`core-dsp` + `plugin-support`):** Porta `MAX_AUDIO_CHANNELS` (in `dsp_graph.rs` e `plugin-support/src/lib.rs`) da `8` a `128` e rendi `VirtualEarthSummer` / `AdjacentCrosstalkMatrix` (`analog_summing.rs`) configurabili dinamicamente in `initialize()` oltre i 32 canali (zero limiti fissi).
 5. **Verifica:** Aggiungi test unitari deterministici (`cargo test -p core-dsp -p plugin-support`), cancella `task 5` da `doit.txt` e fai `git commit -m "[Core DSP & Support] Aggiunti console_mixer, transport_timeline e disk_streamer per mini-DAW" && git push`.
 
-task 6 — Documentazione Standalone per Subtree GitHub (`core-dsp/README.md`, `core-dsp/ARCHITECTURE.md` & Satelliti)
+task 5 — Documentazione Standalone per Subtree GitHub (`core-dsp/README.md`, `core-dsp/ARCHITECTURE.md` & Satelliti)
 Leggi `ARCHITECTURE.md`, `core-dsp/README.txt`, `crates/greg_gui_core/README.txt` e `tools/clap-validator-host/README.txt`.
 Obiettivo: dotare i 3 repository standalone sincronizzati via GitHub Subtree di documentazione Markdown nativa e auto-contenuta per gli sviluppatori esterni:
 1. **`core-dsp/README.md` & `core-dsp/ARCHITECTURE.md` (`analog-vibe-dsp`):** Crea una guida completa per sviluppatori esterni con installazione Cargo, garanzie real-time (`f64`, `#![forbid(unsafe_code)]`, zero allocazioni), mappa completa di tutti i moduli DSP (inclusi `neural_capture`, `spatial_3d` 128ch, `sampler_engine`, `synth_engine`, `console_mixer`, `transport_timeline`), esempi compilabili e nota Dual Licensing (`GPLv3` + Commerciale).
 2. **`crates/greg_gui_core/README.md` (`clap-gui-designer`) & `tools/clap-validator-host/README.md` (`clap-validator-host`):** Converti e arricchisci in Markdown pulito le rispettive guide tecniche per GitHub.
 3. **Verifica:** Esegui `cargo test --doc -p core-dsp`, cancella questo task da `doit.txt` e fai `git commit -m "[Docs] Aggiunti README.md e ARCHITECTURE.md standalone per i repository subtree" && git push`.
 
-task 7 — Cargo Feature Flags Modulari & Audit Matematico Multi-Sample-Rate in `core-dsp`
+task 6 — Cargo Feature Flags Modulari & Audit Matematico Multi-Sample-Rate in `core-dsp`
 Leggi `core-dsp/Cargo.toml`, `core-dsp/src/core_dsp_modules.rs` e `core-dsp/ARCHITECTURE.md`.
 Obiettivo: rendere `core-dsp` compilabile a moduli tramite **Cargo Feature Flags** (mantenendo `default = ["full"]` per retrocompatibilità totale con il workspace) ed eseguire un audit matematico rigoroso su tutti i moduli:
 1. **Cargo Feature Flags (`core-dsp/Cargo.toml` & `core_dsp_modules.rs`):**
@@ -58,7 +52,7 @@ Obiettivo: rendere `core-dsp` compilabile a moduli tramite **Cargo Feature Flags
    - Aggiungi un test deterministico di budget CPU worst-case (128 canali / 64 voci synth sotto il tempo reale).
 4. **Documentazione & Commit:** Aggiorna `core-dsp/README.md` con la tabella delle feature flags, cancella questo task da `doit.txt` e fai `git commit -m "[Core DSP] Aggiunte Cargo Feature Flags modulari e audit multi-sample-rate" && git push`.
 
-task 8 — Enciclopedia Completa delle Scale Mondiali (`music_theory.rs`) & Griglie Metriche (`3/4`, `4/4`, `12/8`, Dispari)
+task 7 — Enciclopedia Completa delle Scale Mondiali (`music_theory.rs`) & Griglie Metriche (`3/4`, `4/4`, `12/8`, Dispari)
 Leggi `ARCHITECTURE.md` (sezione *Enciclopedia Musicale Mondiale & Griglie Metriche*), `core-dsp/src/core_dsp_modules/tempo_sync.rs` e `core-dsp/src/core_dsp_modules/synth_engine/mod.rs`.
 Obiettivo: creare in `core-dsp` il modulo `music_theory.rs` ed estendere la gestione metrica (`f64`, `#![forbid(unsafe_code)]`, **zero allocazioni heap** nel thread audio `process()`):
 1. **`music_theory.rs` — Tutte le Tradizioni Musicali del Mondo:**
