@@ -9,8 +9,8 @@ Stato "pianificato" significa non implementato; la presenza della scheda non equ
 ================================================================================
 1. STATO IMPLEMENTAZIONE ATTUALE (18 PLUGIN COMPILATI IN RELEASE CLAP + VST3)
 ================================================================================
-- Dinamica (10): greg_76 (Rev A/D/E/F + All-Buttons), greg_a2a (Silverface/Vintage), greg_a3a, greg_api_2500 (2500/2500+), greg_bus_comp, greg_child (670/660), greg_dbx_160 (160VU/160X/160A), greg_dbx_165 (165/165A PeakStop), greg_gate, greg_limiter.
-- Equalizzatori (2): greg_pultec (EQP-1A/EQP-1A3), greg_surgical_eq.
+- Dinamica (10): greg_76 (Rev A/D/E/F + All-Buttons), greg_a2a (Silverface/Vintage), greg_a3a, greg_2500 (2500/2500+), greg_bus_comp, greg_child (670/660), greg_160 (160VU/160X/160A), greg_165 (165/165A PeakStop), greg_gate, greg_limiter.
+- Equalizzatori (2): greg_eqp1a (EQP-1A/EQP-1A3), greg_surgical_eq.
 - Matrici & Utility (3): greg_ms_encoder, greg_ms_decoder, greg_phase.
 - Console & Routing Modulare (3): greg_nl_ch (stadio console non lineare), greg_nl_mixer (console analogica modulare dinamica 24ch + 8 bus), greg_bay (modular patchbay & sub-host CLAP).
 
@@ -18,13 +18,13 @@ Stato "pianificato" significa non implementato; la presenza della scheda non equ
 2. COPERTURA COMPLETA DEL CATALOGO (IMPLEMENTATI + PIANIFICATI)
 ================================================================================
 - Compressori & Limiter:
-  greg_76 (Rev A/D/E/F), greg_a2a, greg_a3a, greg_child (670/660), greg_bus_comp, greg_dbx_160 (160VU/160X/160A), greg_dbx_165 (165/165A PeakStop), greg_api_2500 (2500/2500+), greg_api_sr22 (SR22/SV12), greg_api_225l, greg_api_t25, greg_api_525 (525/525A), greg_api_527 (527/527A), greg_api_529, greg_neve_comp (2254/33609 Diode-Bridge), greg_ssl_dyn (4000 VCA Comp + Expander/Gate), greg_harrison_comp, greg_manley_comp (Standard/Mastering), greg_multiband_comp (4 bande espandibile), greg_lin_comp, greg_limiter.
+  greg_76 (Rev A/D/E/F), greg_a2a, greg_a3a, greg_child (670/660), greg_bus_comp, greg_160 (160VU/160X/160A), greg_165 (165/165A PeakStop), greg_2500 (2500/2500+), greg_sr22 (SR22/SV12), greg_225l, greg_t25, greg_525 (525/525A), greg_527 (527/527A), greg_529, greg_2254_comp (2254/33609 Diode-Bridge), greg_4000_dyn (4000 VCA Comp + Expander/Gate), greg_32c_comp, greg_vari_mu_comp (Standard/Mastering), greg_multiband_comp (4 bande espandibile), greg_lin_comp, greg_limiter.
 
 - EQ & Preamplificatori da Banco:
-  greg_pultec (EQP-1A/EQP-1A3), greg_ssl_pre, greg_ssl_eq (292 Pink / 242 Black E/G), greg_neve_pre, greg_neve_eq, greg_api_pre, greg_api_eq (550A/550B Proportional-Q + 560 Grafico), greg_harrison_pre, greg_harrison_eq, greg_manley_eq, greg_surgical_eq, greg_lin_eq.
+  greg_eqp1a (EQP-1A/EQP-1A3), greg_4000_pre, greg_292_242_eq (292 Pink / 242 Black E/G), greg_1073_pre, greg_1073_1081_eq, greg_512_pre, greg_550_560_eq (550A/550B Proportional-Q + 560 Grafico), greg_32c_pre, greg_32c_eq, greg_massive_eq, greg_surgical_eq, greg_lin_eq.
 
 - Moduli Serie 500 ("Lunchbox Classics"):
-  greg_gama_pre (preamp discreto con selettore trasformatori Nickel / Discrete / Steel), greg_silk_pre (preamp con circuito armonico Silk Red/Blue + HPF), greg_tg_pre (preamp stile console EMI TG12428), greg_air_eq (EQ con Air Band fino a 40 kHz), greg_xpress_comp (compressore Classe A con Warm Mode e Negative Ratios), greg_doublewide (compressore valvolare Vari-Mu 500), greg_tape_500 (emulatore nastro 500 con Silk + Blend).
+  greg_gama_pre (preamp discreto con selettore trasformatori Nickel / Discrete / Steel), greg_redblue_pre (preamp con circuito armonico Silk Red/Blue + HPF), greg_12428_pre (preamp stile console EMI TG12428), greg_air_eq (EQ con Air Band fino a 40 kHz), greg_xpress_comp (compressore Classe A con Warm Mode e Negative Ratios), greg_doublewide (compressore valvolare Vari-Mu 500), greg_tape_500 (emulatore nastro 500 con Silk + Blend).
 
 - Saturatori, Utility & Creativi:
   greg_nl_ch, greg_nl_mixer, greg_bay, greg_tape (Master Tape 7.5/15/30 ips NAB/CCIR), greg_tube_drive (saturatore valvolare triodo/pentodo), greg_xfmr_box (color box trasformatori passivi UTC/Marinair/Carnhill/API), greg_destroyer, greg_exciter, greg_low_enhancer, greg_ms_encoder, greg_ms_decoder, greg_phase, greg_pitch_clean, greg_pitch_formant, greg_space, greg_pingpong, greg_ir_reverb, greg_trans_mono, greg_trans_multi, greg_gate.
@@ -33,10 +33,10 @@ Stato "pianificato" significa non implementato; la presenza della scheda non equ
   greg_denoiser, greg_declipper, greg_dehummer, greg_declicker.
 
 - Channel Strip Completi (riutilizzabili anche come strisce canale dentro greg_nl_mixer):
-  greg_neve_1073_strip, greg_neve_1081_strip, greg_neve_1084_strip, greg_neve_88rs_strip, greg_ssl_4000e_strip, greg_ssl_4000g_strip, greg_ssl_9000j_strip, greg_api_vision_strip, greg_api_legacy_plus_strip, greg_harrison_32c_strip, greg_harrison_mixbus_strip, greg_trident_a_range_strip, greg_trident_80b_strip, greg_amek_9098_strip, greg_mci_jh500_strip.
+  greg_1073_strip, greg_1081_strip, greg_1084_strip, greg_88rs_strip, greg_4000e_strip, greg_4000g_strip, greg_9000j_strip, greg_vision_strip, greg_legacy_strip, greg_32c_strip, greg_mixbus_strip, greg_a_range_strip, greg_80b_strip, greg_9098_strip, greg_jh500_strip.
 
 - Moduli Condivisi (`core-dsp` — 44 moduli f64):
-  routing_matrix, aux_send, fader_console, phase_inversion, filters, zdf_filters, sidechain_processor, resampler_bitdepth, nonlinear_stages, transformer_hysteresis, component_models, psu_sag, analog_variance, analog_summing, dsp_graph, realtime_controls, metering, loudness_metering, loudness_rider, surgical_eq, linear_phase_fir, partitioned_convolver, fft_convolution, panic_protection, opto_compressor, vari_mu, cabinet_speaker, acoustic_room, spatial_3d, delay_lines, tempo_sync, fdn_reverb, tape_physics, pitch_shifter, spectral_analyzer, spectral_restoration, mix_mastering_fx, mpc_sampler_engine, plugin_export.
+  routing_matrix, aux_send, fader_console, phase_inversion, filters, zdf_filters, sidechain_processor, resampler_bitdepth, nonlinear_stages, transformer_hysteresis, component_models, psu_sag, analog_variance, analog_summing, dsp_graph, realtime_controls, metering, loudness_metering, loudness_rider, surgical_eq, linear_phase_fir, partitioned_convolver, fft_convolution, panic_protection, opto_compressor, vari_mu, cabinet_speaker, acoustic_room, spatial_3d, delay_lines, tempo_sync, fdn_reverb, tape_physics, pitch_shifter, spectral_analyzer, spectral_restoration, mix_mastering_fx, sampler_engine, plugin_export, synth_engine.
 
 ================================================================================
 3. REGOLE ARCHITETTURALI & VALIDAZIONE

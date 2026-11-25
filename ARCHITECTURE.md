@@ -449,6 +449,97 @@ pub struct VirtualEarthSummer {
 
 ---
 
+## 44. `synth_engine` — Universal Polyphonic Synthesis Engine (MPE + Step Sequencer)
+
+### Guarantees
+- `f64` internal processing, `#![forbid(unsafe_code)]`, zero heap allocation in `process()`.
+- PolyBLEP-antialiased oscillators (sine, square, saw, triangle, deterministic noise).
+- Multimode ZDF state-variable filter (LowPass / HighPass / BandPass / Notch).
+- ADSR envelope with sample-rate-scaled attack/decay/release and gate hysteresis.
+- MPE (MIDI Polyphonic Expression) manager: per-note pitch-bend, timbre (CC74), and pressure with configurable zones.
+- Step sequencer with per-step trigger, roll, gate, probability, and BPM-synced timing via `tempo_sync`.
+- NaN/Inf sanitized to `0.0`; digital silence at rest (`0.0 in -> 0.0 out`).
+
+### Public Signatures
+
+```rust
+pub struct Oscillator { /* phase, waveform, seed */ }
+pub enum OscillatorWaveform { Sine, Square, Saw, Triangle, Noise }
+impl Oscillator {
+    pub fn new(waveform: OscillatorWaveform) -> Self;
+    pub fn reset(&mut self);
+    pub fn process(&mut self, freq_hz: f64, sample_rate: f64) -> f64; // BLEP
+}
+
+pub enum FilterMode { LowPass, HighPass, BandPass, Notch }
+pub struct MultiModeFilter { /* ZdfSvf + mode */ }
+impl MultiModeFilter {
+    pub fn new() -> Self;
+    pub fn configure(&mut self, sample_rate: f64, freq_hz: f64, q: f64, mode: FilterMode) -> bool;
+    pub fn set_mode(&mut self, mode: FilterMode);
+    pub fn reset(&mut self);
+    pub fn process(&mut self, input: f64) -> f64;
+}
+
+pub enum EnvelopeStage { Idle, Attack, Decay, Sustain, Release }
+pub struct AdsrEnvelope { /* stage, value, coeffs, gate */ }
+impl AdsrEnvelope {
+    pub fn new() -> Self;
+    pub fn configure(&mut self, sample_rate: f64, attack_ms: f64, decay_ms: f64, sustain: f64, release_ms: f64) -> bool;
+    pub fn set_gate(&mut self, gate: bool);
+    pub fn reset(&mut self);
+    pub fn process(&mut self) -> f64;
+    pub fn is_idle(&self) -> bool;
+}
+
+pub struct Voice { /* oscillator + filter + envelope + params */ }
+impl Voice {
+    pub fn new(note_number: u8, velocity: f64, sample_rate: f64) -> Self;
+    pub fn note_on(&mut self, note_number: u8, velocity: f64, sample_rate: f64);
+    pub fn note_off(&mut self, sample_rate: f64);
+    pub fn set_waveform(&mut self, waveform: OscillatorWaveform);
+    pub fn set_filter_mode(&mut self, mode: FilterMode);
+    pub fn reset(&mut self);
+    pub fn process(&mut self) -> f64;
+}
+
+pub struct MpeZone { lower_channel: u8, upper_channel: u8, pitch_bend_range_semitones: f64, per_note_pitch_bend: bool }
+impl MpeZone {
+    pub fn new(lower: u8, upper: u8, range: f64) -> Self;
+    pub fn default_lower() -> Self;
+    pub fn default_upper() -> Self;
+    pub fn contains_channel(&self, ch: u8) -> bool;
+}
+
+pub struct MpeManager { lower_zone: MpeZone, upper_zone: MpeZone, note_states: [MpeNoteState; 128] }
+impl MpeManager {
+    pub fn new() -> Self;
+    pub fn configure_zones(&mut self, lower: MpeZone, upper: MpeZone);
+    pub fn handle_note_on(&mut self, channel: u8, note: u8, velocity: f64);
+    pub fn handle_note_off(&mut self, channel: u8, note: u8);
+    pub fn handle_pitch_bend(&mut self, channel: u8, value: i16);
+    pub fn handle_cc74(&mut self, channel: u8, value: u8);
+    pub fn handle_pressure(&mut self, channel: u8, value: u8);
+    pub fn get_note_state(&self, note: u8) -> MpeNoteState;
+    pub fn reset(&mut self);
+}
+
+pub fn pitch_bend_to_ratio(bend: f64, range_semitones: f64) -> f64;
+pub fn timbre_to_filter_mod(timbre: f64, base_freq: f64, max_mod: f64) -> f64;
+pub fn pressure_to_amp_mod(pressure: f64) -> f64;
+
+pub struct SynthEngine { voices: [Voice; 64], num_voices: usize, sample_rate: f64, mpe: MpeManager }
+impl SynthEngine {
+    pub fn new(sample_rate: f64, max_voices: usize) -> Self;
+    pub fn reset(&mut self);
+    pub fn set_sample_rate(&mut self, sample_rate: f64);
+    pub fn note_on(&mut self, note: u8, velocity: f64) -> bool;
+    pub fn note_off(&mut self, note: u8);
+}
+```
+
+---
+
 ## Nuovi Moduli Console & Routing (`core-dsp`)
 - **`aux_send` (`core_dsp_modules::aux_send`):** Deviazione di segnale multi-mandata Pre/Post-Fader a zero allocazioni heap, con smussamento anti-zipper del livello di mandata (`-∞ .. +6 dB`) e instradamento verso bus interni o porte Aux esterne CLAP/VST3.
 - **`fader_console` (`core_dsp_modules::fader_console`):** Stadio fader professionale da console analogica (`-∞ .. +10 dB` con legge balistica reale da banco), leggi di Pan costante (`-3.0 dB`, `-4.5 dB`, `-6.0 dB`), `Mute` click-free e gestione `Solo / Solo-Safe`.
@@ -464,3 +555,17 @@ pub struct VirtualEarthSummer {
   4. **Detector Multicanale Adattivo (`N` canali):**
      - Rilevamento automatico dei canali attivi (`buffer.channels()`, sovrascrivibile tramite `Channel Setup`).
      - Supporto a 4 logiche di link del detector: **Unlinked (Multi-Mono)**, **All-Linked (Stereo/Bus Link)**, **Surround 5.1/7.1 Stem Link** (esclude il canale LFE `.1` dal trigger comune per evitare pumping da sub) e **Mid/Side (`M/S`)**.
+
+---
+
+## Evoluzioni v2.0 Previste per `core-dsp` (Neural, Object-Based 128ch, Smart Sampler)
+- **`neural_capture` (`core_dsp_modules::neural_capture`):** Inferenza real-time zero-alloc in Rust puro per modelli già addestrati (`.nam` / `RTNeural` / `LSTM` / `WaveNet` caricati in `initialize()`) + identificazione matematica rapida *Hammerstein-Wiener* senza addestramento GPU.
+- **`spatial_3d` & `routing_matrix` (128 Canali Object-Based):** Estensione dei buffer statici da `8` a `128` canali (7.1.4, 9.1.6, Atmos object-based) con `AudioObjectPanner` (Azimuth, Elevation, Distance, Spread) smussato e downmix HRIR binaurale simultaneo.
+- **`mpc_sampler_engine` & `pitch_shifter` (Smart Multisample & Round-Robin):** Generazione di round-robin organici anti-mitragliatrice (micro-variazioni di fase, risonanza ZDF e transiente), interpolazione continua su 127 velocity layer da 2–4 sample reali e trasposizione *formant-preserving*.
+
+---
+
+## Crate Host Multi-Formato (`crates/greg_plugin_host`)
+- **Motivazione:** Mantiene `core-dsp` puro (`#![forbid(unsafe_code)]`), isolando il caricamento dinamico FFI (`libloading`) in una crate dedicata riutilizzabile da `greg_bay`, `greg_nl_mixer` e dai Channel Strip.
+- **Formati supportati:** **CLAP** (priorità 1, multi-piattaforma), **LV2 / LADSPA** (Linux nativo), **VST3** (COM ABI) e **AUv2** (`#[cfg(target_os = "macos")]`).
+- **Integrazione Grafo:** Ogni istanza implementerà il trait `DspGraphNode` di `core-dsp`, garantendo PDC automatico al singolo campione, isolamento nel thread non-audio per allocazioni/scansione e serializzazione dello stato binario.
