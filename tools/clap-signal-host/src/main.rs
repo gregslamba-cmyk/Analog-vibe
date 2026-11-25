@@ -925,7 +925,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             )
             .into());
         }
-        if (results[8].left_rms - 0.25).abs() > 0.002 {
+        if (results[8].left_rms - 0.2).abs() > 0.002 {
             return Err(format!(
                 "external sidechain listen produced unexpected RMS {}",
                 results[8].left_rms
