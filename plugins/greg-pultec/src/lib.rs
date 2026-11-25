@@ -177,6 +177,11 @@ struct GregPultecParams {
     analog_drift: FloatParam,
     #[nested]
     channel_setup: CommonChannelParams,
+
+    #[id = "oversampling"]
+    oversampling: FloatParam,
+    #[id = "invert_left"]
+    invert_left: BoolParam,
 }
 
 impl Default for GregPultecParams {
@@ -239,6 +244,12 @@ impl Default for GregPultecParams {
                 0.0,
                 FloatRange::Linear { min: 0.0, max: 1.0 },
             ),
+            oversampling: FloatParam::new(
+                "Oversampling",
+                2.0,
+                FloatRange::Linear { min: 0.0, max: 4.0 },
+            ),
+            invert_left: BoolParam::new("Invert Left Polarity", false),
             channel_setup: CommonChannelParams::default(),
         }
     }

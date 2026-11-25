@@ -34,6 +34,10 @@ struct GregBayParams {
     slot_4_module: EnumParam<SlotModule>,
     #[id = "bypass"]
     bypass: BoolParam,
+    #[id = "oversampling"]
+    oversampling: FloatParam,
+    #[id = "invert_left"]
+    invert_left: BoolParam,
     channel_setup: CommonChannelParams,
 }
 
@@ -66,6 +70,12 @@ impl Default for GregBayParams {
             slot_3_module: EnumParam::new("Slot 3 Module", SlotModule::None),
             slot_4_module: EnumParam::new("Slot 4 Module", SlotModule::None),
             bypass: BoolParam::new("Bypass", false),
+            oversampling: FloatParam::new(
+                "Oversampling",
+                1.0,
+                FloatRange::Linear { min: 0.0, max: 4.0 },
+            ),
+            invert_left: BoolParam::new("Invert Left Polarity", false),
             channel_setup: CommonChannelParams::default(),
         }
     }

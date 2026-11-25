@@ -28,6 +28,7 @@ const DEFAULT_CHANNELS: usize = 4;
 #[derive(Params)]
 struct GregNlMixerParams {
     console_type: IntParam,
+    #[id = "bypass"]
     bypass: BoolParam,
     mix: FloatParam,
     master_drive_db: FloatParam,
@@ -54,6 +55,10 @@ struct GregNlMixerParams {
     bus_comp_ratio: [FloatParam; MAX_BUSES],
     bus_mode: [IntParam; MAX_BUSES],
     channel_setup: CommonChannelParams,
+    #[id = "oversampling"]
+    oversampling: FloatParam,
+    #[id = "invert_left"]
+    invert_left: BoolParam,
 }
 impl Default for GregNlMixerParams {
     fn default() -> Self {
@@ -88,6 +93,8 @@ impl Default for GregNlMixerParams {
             bus_comp_thresh: std::array::from_fn(|_| f_lin("Bus Comp Thresh", -24.0, -48.0, 0.0)),
             bus_comp_ratio: std::array::from_fn(|_| f_lin("Bus Comp Ratio", 1.0, 1.0, 20.0)),
             bus_mode: std::array::from_fn(|_| i_lin("Bus Mode", 0)),
+            oversampling: f_lin("Oversampling", 2.0, 0.0, 4.0),
+            invert_left: BoolParam::new("Invert Left Polarity", false),
             channel_setup: CommonChannelParams::default(),
         }
     }

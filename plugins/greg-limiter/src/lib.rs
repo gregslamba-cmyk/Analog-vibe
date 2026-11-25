@@ -1,6 +1,6 @@
 #![allow(unknown_lints, semicolon_in_expressions_from_non_local_macros)]
 
-use std::{array, sync::Arc};
+use std::{sync::Arc};
 use std::sync::atomic::Ordering;
 
 use core_dsp::core_dsp_modules::{
@@ -210,10 +210,10 @@ impl Default for GregLimiterParams {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 struct PeakLimiter {
-    input_ring: [f32; LOOKAHEAD_MAX_SAMPLES],
-    key_ring: [f32; LOOKAHEAD_MAX_SAMPLES],
+    input_ring: Box<[f32; LOOKAHEAD_MAX_SAMPLES]>,
+    key_ring: Box<[f32; LOOKAHEAD_MAX_SAMPLES]>,
     cursor: usize,
     lookahead_samples: usize,
     gain: f32,
@@ -223,8 +223,8 @@ struct PeakLimiter {
 impl Default for PeakLimiter {
     fn default() -> Self {
         Self {
-            input_ring: [0.0; LOOKAHEAD_MAX_SAMPLES],
-            key_ring: [0.0; LOOKAHEAD_MAX_SAMPLES],
+            input_ring: Box::new([0.0_f32; LOOKAHEAD_MAX_SAMPLES]),
+            key_ring: Box::new([0.0_f32; LOOKAHEAD_MAX_SAMPLES]),
             cursor: 0,
             lookahead_samples: 0,
             gain: 1.0,
@@ -297,12 +297,12 @@ impl PeakLimiter {
 struct GregLimiter {
     params: Arc<GregLimiterParams>,
     routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix,
-    limiters: [PeakLimiter; plugin_support::MAX_AUDIO_CHANNELS],
-    sidechains: [SidechainProcessor<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    limiters: Vec<PeakLimiter>,
+    sidechains: Vec<SidechainProcessor<f32>>,
     last_sidechain_settings: SidechainSettings,
-    oversamplers: [Oversampler<f32>; plugin_support::MAX_AUDIO_CHANNELS],
-    bypass_crossfades: [BypassCrossfade<f32>; plugin_support::MAX_AUDIO_CHANNELS],
-    dry_delays: [LatencyDelay<f32, 4096>; plugin_support::MAX_AUDIO_CHANNELS],
+    oversamplers: Vec<Oversampler<f32>>,
+    bypass_crossfades: Vec<BypassCrossfade<f32>>,
+    dry_delays: Vec<LatencyDelay<f32, 4096>>,
     sample_rate: f32,
     last_oversampling: Oversampling,
     last_lookahead: f32,
@@ -319,17 +319,17 @@ impl Default for GregLimiter {
         Self {
             params: Arc::new(GregLimiterParams::default()),
             routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix::default(),
-            limiters: [PeakLimiter::default(); plugin_support::MAX_AUDIO_CHANNELS],
-            sidechains: array::from_fn(|_| SidechainProcessor::default()),
+            limiters: (0..plugin_support::MAX_AUDIO_CHANNELS).map(|_| PeakLimiter::default()).collect(),
+            sidechains: (0..plugin_support::MAX_AUDIO_CHANNELS).map(|_| SidechainProcessor::default()).collect(),
             last_sidechain_settings: SidechainSettings {
                 filter: ScFilter::HighPass,
                 frequency: 80.0,
                 q: 0.707,
                 gain: 0.0,
             },
-            oversamplers: [Oversampler::default(); plugin_support::MAX_AUDIO_CHANNELS],
-            bypass_crossfades: [BypassCrossfade::default(); plugin_support::MAX_AUDIO_CHANNELS],
-            dry_delays: [LatencyDelay::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            oversamplers: (0..plugin_support::MAX_AUDIO_CHANNELS).map(|_| Oversampler::default()).collect(),
+            bypass_crossfades: (0..plugin_support::MAX_AUDIO_CHANNELS).map(|_| BypassCrossfade::default()).collect(),
+            dry_delays: (0..plugin_support::MAX_AUDIO_CHANNELS).map(|_| LatencyDelay::default()).collect(),
             sample_rate: 0.0,
             last_oversampling: Oversampling::X4,
             last_lookahead: 5.0,

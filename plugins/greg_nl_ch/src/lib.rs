@@ -17,6 +17,11 @@ struct GregNlChParams {
     #[id = "mix"] mix: FloatParam,
     #[id = "bypass"] bypass: BoolParam,
     channel_setup: CommonChannelParams,
+
+    #[id = "oversampling"]
+    oversampling: FloatParam,
+    #[id = "invert_left"]
+    invert_left: BoolParam,
 }
 
 impl Default for GregNlChParams {
@@ -27,6 +32,12 @@ impl Default for GregNlChParams {
             mix: FloatParam::new("Mix", 1.0, FloatRange::Linear { min: 0.0, max: 1.0 }),
             bypass: BoolParam::new("Bypass", false),
             channel_setup: CommonChannelParams::default(),
+            oversampling: FloatParam::new(
+                "Oversampling",
+                2.0,
+                FloatRange::Linear { min: 0.0, max: 4.0 },
+            ),
+            invert_left: BoolParam::new("Invert Left Polarity", false),
         }
     }
 }

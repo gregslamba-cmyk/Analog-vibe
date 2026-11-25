@@ -34,6 +34,11 @@ struct GregGateParams {
     bypass: BoolParam,
     #[nested]
     dynamics: DynamicsExtendedParams,
+
+    #[id = "oversampling"]
+    oversampling: FloatParam,
+    #[id = "invert_left"]
+    invert_left: BoolParam,
 }
 impl Default for GregGateParams {
     fn default() -> Self {
@@ -78,6 +83,12 @@ impl Default for GregGateParams {
                 .with_unit(" %"),
             bypass: BoolParam::new("Bypass", false),
             dynamics: DynamicsExtendedParams::default(),
+            oversampling: FloatParam::new(
+                "Oversampling",
+                1.0,
+                FloatRange::Linear { min: 0.0, max: 4.0 },
+            ),
+            invert_left: BoolParam::new("Invert Left Polarity", false),
         }
     }
 }
