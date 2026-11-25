@@ -22,3 +22,8 @@ Consulta `vcinst.md` (e `GUI_SPEC.md` quando lavori sulla UI) per i dettagli com
 
 ## Regole GUI 2D (`greg_gui_core`)
 - Applica sempre lo standard definito in `GUI_SPEC.md` (*Standard Layout & Interazione GUI 2D v2*): celle `VStack` a 3 fasce non sovrapposte, `KnobSize::Large` (64px) e `KnobSize::Medium` (48px) attivi (`Small` 36px predisposto ma non usato nei layout base), `DropdownSelect` per scelte discrete, `Ratio` come manopola continua sui compressori, drag relativo fluido (`200px` = corsa completa) senza redraw inutili, valore GR reale in dB nel footer e altezza finestra calcolata sulle righe effettive.
+
+## Regola Obbligatoria Stress-Test Host (`clap-signal-host` 18/18 PASS)
+- Prima di **ogni** `git commit` che modifichi `core-dsp`, `plugin-support`, `crates/greg_gui_core` o qualsiasi plugin in `plugins/`, è **obbligatorio** compilare in release (`cargo build --release --workspace`) ed eseguire `clap-signal-host` su tutti e 18 i binari `target/release/libgreg_*.so`:
+  `for so in target/release/libgreg_*.so; do cargo run --release -q -p clap-signal-host -- "$so" || exit 1; done`
+- Nessun task può essere segnato come completato se anche un solo plugin fallisce `clap-signal-host` (stack overflow, parametro mancante o deviazione RMS/fase/bypass).
