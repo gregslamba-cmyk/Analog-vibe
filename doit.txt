@@ -1,19 +1,6 @@
 # DOIT — Chiusura Definitiva 10/10 & Build Release
 
-task 1 — Eccellenza Matematica 10/10 State-of-the-Art su Tutti i Moduli Core (`core-dsp`)
-Leggi `ARCHITECTURE.md` (sezione *Algoritmi Matematici 10/10 State-of-the-Art*) e i moduli coinvolti in `core-dsp/src/core_dsp_modules/`.
-Aggiungi modalità matematiche di riferimento mondiale mantenendo 100% retrocompatibili tutte le API esistenti (`f64`, `#![forbid(unsafe_code)]`, zero allocazioni in `process()`):
-1. `nonlinear_stages.rs`: **ADAA 1° & 2° Ordine** (`process_adaa1()`, `process_adaa2()`) per saturatori (`tanh`, soft-clip, hard-clip, wavefolder) con fallback $|x_n - x_{n-1}| < 10^{-7}$ + test FFT anti-aliasing.
-2. `pitch_shifter.rs`: modalità `PitchQualityMode::PolyphonicStudio` con Peak Phase-Locking verticale attorno ai picchi spettrali, rilevamento transienti con reset di fase e inviluppo formanti cepstrale.
-3. `fdn_reverb.rs`: diffusore Velvet-Noise / All-Pass pre-allocato, modulazione LFO asimmetrica incommensurabile e damping ZDF multi-banda.
-4. `spectral_restoration.rs`: modalità di riduzione rumore **MMSE-LSA (Ephraim-Malah)** per eliminare il *musical noise*.
-5. `tape_physics.rs`: **Head-Bump risonante** dipendente da velocità (`7.5 / 15 / 30 ips`) e filtro gap-loss / auto-smagnetizzazione.
-6. `synth_engine.rs`: oscillatori band-limited analitici **PolyBLEP & PolyBLAMP** (Saw, Square, Triangle) a zero aliasing anche a 1x.
-7. `spatial_3d.rs`: interpolazione sferica **HRIR bilineare** continua su griglia azimut/elevazione pre-allocata.
-8. `component_models.rs`: **Dual-Stage Program-Dependent Release** (doppio stadio RC accoppiato) per bus compression naturale.
-9. Verifica `cargo test -p core-dsp` (`0` errori), cancella questo task da `doit.txt`, rinomina i successivi e fai `git commit -m "[Core DSP] Eccellenza matematica 10/10: ADAA, Pitch PolyphonicStudio, MMSE-LSA, PolyBLEP, Head-Bump, HRIR bilineare e Dual-Stage" && git push`.
-
-task 2 — Fix Grafico GUI 2D (`crates/greg_gui_core`) + Build Release Completa & Installazione Atomica in `~/.clap/Analog-vibe/`
+task 1 — Fix Grafico GUI 2D (`crates/greg_gui_core`) + Build Release Completa & Installazione Atomica in `~/.clap/Analog-vibe/`
 Leggi `crates/greg_gui_core/src/lib.rs` (e i moduli widget in `crates/greg_gui_core/src/`).
 1. Disponi verticalmente con `VStack` senza sovrapposizioni in `RotaryKnob`, `EnumSwitch` e `ToggleSwitch` (in alto Label bianco centrato, al centro controllo grafico, in basso Value ambra centrato).
 2. Sostituisci il placeholder fisso `"GR_DB_FMT"` in basso a destra con il binding dinamico reale della Gain Reduction in dB (es. `"-0.0 dB"`).
@@ -21,9 +8,9 @@ Leggi `crates/greg_gui_core/src/lib.rs` (e i moduli widget in `crates/greg_gui_c
 4. Esegui `cargo test --workspace` e `cargo build --release --workspace` (`0` errori), rimuovi da `~/.clap/Analog-vibe/` eventuali vecchi file (`greg_api_2500.clap`, `greg_dbx_160.clap`, `greg_dbx_165.clap`, `greg_pultec.clap`, `greg-pultec.clap`) e installa tutti e 18 i nuovi `.clap` con `install -m 755 target/release/libgreg_*.so ~/.clap/Analog-vibe/greg_*.clap` (evita SIGBUS in Reaper).
 5. Cancella questo task da `doit.txt`, rinomina il successivo e fai `git commit -m "[GUI & Release] Fix sovrapposizioni GUI 2D, GR_DB_FMT e installazione atomica 18 plugin release" && git push`.
 
-task 3 — Sigillo Finale Anti-Scettici 10/10 (`clippy`, `rustdoc`, `rustfmt`, Zero Stub & Vetrina GitHub Pulita)
+task 2 — Sigillo Finale Anti-Scettici 10/10 (`clippy`, `rustdoc`, `rustfmt`, Zero Stub & Vetrina GitHub Pulita)
 Obiettivo: rendere l'intero repository inattaccabile prima della divulgazione pubblica:
 1. Esegui `cargo clippy --workspace --all-targets -- -D warnings` e risolvi ogni warning su tutti i crate (incluso `plugin-support/src/multichannel.rs:120` e `core-dsp`).
 2. Esegui `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace` e `cargo test --doc -p core-dsp -p plugin-support` sistemando tutti i tag/backtick nei doc-comment.
-3. Scansiona il codice di produzione verificando **zero** `todo!()`, `unimplemented!()`, `// TODO`, `// FIXME` o stub vuoti, ed esegui `cargo fmt --all`.
+3. Scansiona il codice di produzione verificando **zero** `todo!()`, `unimplemented!()`, `// TODO`, `// FIXME` o stub vuote, ed esegui `cargo fmt --all`.
 4. Aggiorna i nomi dei 4 plugin rinominati nel `README.md` e nei doc (`greg_2500`, `greg_160`, `greg_165`, `greg-eqp1a`), rimuovi i file sporchi nella root (`re`, `doit.tex`, cartella vuota `vibes`) aggiungendo i pattern temporanei a `.gitignore`, svuota `doit.txt` e fai `git commit -m "[Quality 10/10] Zero warning clippy/rustdoc, zero stub, vetrina GitHub e docs allineati" && git push`.

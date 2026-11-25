@@ -20,3 +20,24 @@
 - **Libreria Widget a Sinistra:** Anteprima reale trascinabile di manopole rotative, fader, switch, meter (`IN`, `OUT`, `GR`) e spettro.
 - **Smart Guides Magnetiche & Riferimenti Fissi:** Allineamento automatico alla stessa altezza (`Y`), stesso centro (`X`) e bordi/sezioni della finestra.
 - **Menu Contestuale Tasto Destro (`Right-Click`):** Assegnazione diretta del parametro CLAP (`param_id`), cambio stile widget, duplicazione ed eliminazione, più selettore colori e tasto **Salva `gui_layout.json`**.
+
+---
+
+## Standard Layout & Interazione GUI 2D (`greg_gui_core` v2)
+- **3 Dimensioni Manopola (`KnobSize`):**
+  - `KnobSize::Large` (`64px`): Controlli primari / *hero* (es. `Threshold`, `Output / Makeup`, `Drive / Trim`, Gain EQ principali).
+  - `KnobSize::Medium` (`48px`): Controlli secondari / dinamici (`Input`, `Ratio` continuo, `Attack`, `Release`, `Mix`, Frequenze).
+  - `KnobSize::Small` (`36px`): Predisposto nel motore grafico per rifiniture future, **non utilizzato** nei layout base attuali.
+- **Cella Controllo Non Sovrapposta (`VStack` a 3 fasce centrate):**
+  1. Top (`18px`): Label parametro bianca centrata (`hoverable(false)`).
+  2. Center (`48px–68px`): Controllo grafico (`RotaryKnob`, `DropdownSelect`, `ToggleSwitch`).
+  3. Bottom (`18px`): Valore formattato ambra centrato (`hoverable(false)`).
+- **Menu a Tendina (`DropdownSelect`) & Interazione Mouse:**
+  - Tutti i parametri discreti / enum (`Oversampling`, `Model / Revision`, `Topology`, `Filter Type`, `Knee`) usano `DropdownSelect` cliccabile con menu a tendina.
+  - I parametri continui (incluso `Ratio` sui compressori) usano `RotaryKnob` con drag verticale relativo fluido (`200.0 px` per tutta la corsa `0.0..1.0`, `0.1x` con `Shift`) e `cx.needs_redraw()` emesso **solo** al cambio effettivo del valore.
+  - Il footer mostra il valore dinamico reale della Gain Reduction in dB (`format!("{:.1} dB", gr_db)`), mai placeholder statici, e l'altezza della finestra si adatta alle righe effettive della griglia.
+- **4 Archetipi di Layout Standardizzati:**
+  1. **Compressori & Dinamica (10 plugin):** `Threshold` + `Output/Makeup` (`Large`); `Input`, `Ratio` (rotativo), `Attack`, `Release`, `Mix` (`Medium`); selettori modalità in `DropdownSelect`; `Stereo Link` / `Sidechain` in `ToggleSwitch`.
+  2. **Equalizzatori (2 plugin):** Gain principali (`Large`), Frequenze/Q/Attenuazione (`Medium`), curve/filtri/fase in `DropdownSelect`.
+  3. **Canali & Console (3 plugin):** `Drive/Trim` + `Master/Output` (`Large`), `Crosstalk/Sat` (`Medium`), `Console Model` / `Topology` in `DropdownSelect`.
+  4. **Matrici & Fase (3 plugin):** Controllo primario (`Gain` / `Phase Shift` in `Large`), secondario (`Width` / `Micro-Delay` in `Medium`), polarità in `ToggleSwitch`.
