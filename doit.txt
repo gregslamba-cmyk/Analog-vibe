@@ -1,16 +1,8 @@
 # DOIT — Chiusura Definitiva 10/10 & Build Release
 
-task 1 — Fix Grafico GUI 2D (`crates/greg_gui_core`) + Build Release Completa & Installazione Atomica in `~/.clap/Analog-vibe/`
-Leggi `crates/greg_gui_core/src/lib.rs` (e i moduli widget in `crates/greg_gui_core/src/`).
-1. Disponi verticalmente con `VStack` senza sovrapposizioni in `RotaryKnob`, `EnumSwitch` e `ToggleSwitch` (in alto Label bianco centrato, al centro controllo grafico, in basso Value ambra centrato).
-2. Sostituisci il placeholder fisso `"GR_DB_FMT"` in basso a destra con il binding dinamico reale della Gain Reduction in dB (es. `"-0.0 dB"`).
-3. Calcola automaticamente l'altezza della finestra in base alle righe effettive dei controlli eliminando lo spazio vuoto in eccesso.
-4. Esegui `cargo test --workspace` e `cargo build --release --workspace` (`0` errori), rimuovi da `~/.clap/Analog-vibe/` eventuali vecchi file (`greg_api_2500.clap`, `greg_dbx_160.clap`, `greg_dbx_165.clap`, `greg_pultec.clap`, `greg-pultec.clap`) e installa tutti e 18 i nuovi `.clap` con `install -m 755 target/release/libgreg_*.so ~/.clap/Analog-vibe/greg_*.clap` (evita SIGBUS in Reaper).
-5. Cancella questo task da `doit.txt`, rinomina il successivo e fai `git commit -m "[GUI & Release] Fix sovrapposizioni GUI 2D, GR_DB_FMT e installazione atomica 18 plugin release" && git push`.
-
-task 2 — Sigillo Finale Anti-Scettici 10/10 (`clippy`, `rustdoc`, `rustfmt`, Zero Stub & Vetrina GitHub Pulita)
+task 1 — Sigillo Finale Anti-Scettici 10/10 (`clippy`, `rustdoc`, `rustfmt`, Zero Stub & Vetrina GitHub Pulita)
 Obiettivo: rendere l'intero repository inattaccabile prima della divulgazione pubblica:
 1. Esegui `cargo clippy --workspace --all-targets -- -D warnings` e risolvi ogni warning su tutti i crate (incluso `plugin-support/src/multichannel.rs:120` e `core-dsp`).
 2. Esegui `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace` e `cargo test --doc -p core-dsp -p plugin-support` sistemando tutti i tag/backtick nei doc-comment.
-3. Scansiona il codice di produzione verificando **zero** `todo!()`, `unimplemented!()`, `// TODO`, `// FIXME` o stub vuote, ed esegui `cargo fmt --all`.
+3. Scansiona il codice di produzione verificando **zero** `todo!()`, `unimplemented!()`, `// TODO`, `// FIXME` o stub vuoti, ed esegui `cargo fmt --all`.
 4. Aggiorna i nomi dei 4 plugin rinominati nel `README.md` e nei doc (`greg_2500`, `greg_160`, `greg_165`, `greg-eqp1a`), rimuovi i file sporchi nella root (`re`, `doit.tex`, cartella vuota `vibes`) aggiungendo i pattern temporanei a `.gitignore`, svuota `doit.txt` e fai `git commit -m "[Quality 10/10] Zero warning clippy/rustdoc, zero stub, vetrina GitHub e docs allineati" && git push`.
