@@ -1,6 +1,4 @@
-esegui queste task, in ordine. ogni volta che esegui un task di questo documento cancellalo e rinomina gli altri task in ordine, poi salva il file.
-
-task 1 — Mattoni Core per Controllo Dinamico & Risonanze (`auto_gain_matcher`, `transient_splitter`, `resonance_suppressor`, `inter_plugin_bus`)
+task 1 — Mattoni Core per Controllo Dinamico & Risonanze
 Leggi `ARCHITECTURE.md` (sezione *Moduli di Controllo Dinamico, Risonanze & Comunicazione Inter-Plugin*), `core-dsp/src/core_dsp_modules/metering.rs`, `core-dsp/src/core_dsp_modules/spectral_restoration.rs` e `plugin-support/src/lib.rs`.
 1. Implementa `auto_gain_matcher` in `metering.rs` (`enabled = false` di default), `transient_splitter.rs` (`transient + sustain == input`), `resonance_suppressor` in `spectral_restoration.rs` (con maschere di blocco/esclusione per banda/frequenza per `greg_resonance_killer_eq`) e `inter_plugin_bus` in `plugin-support`.
 2. **Verifica:** Esegui `cargo test -p core-dsp -p plugin-support`, cancella `task 4` da `doit.txt` e fai `git commit` + `git push`.
