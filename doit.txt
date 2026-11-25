@@ -1,8 +1,16 @@
-# DOIT — Chiusura Definitiva 10/10 & Build Release
+# DOIT — Rifinitura Finale 10/10 & Ottimizzazione CPU/RAM
 
-task 1 — Sigillo Finale Anti-Scettici 10/10 (`clippy`, `rustdoc`, `rustfmt`, Zero Stub & Vetrina GitHub Pulita)
-Obiettivo: rendere l'intero repository inattaccabile prima della divulgazione pubblica:
-1. Esegui `cargo clippy --workspace --all-targets -- -D warnings` e risolvi ogni warning su tutti i crate (incluso `plugin-support/src/multichannel.rs:120` e `core-dsp`).
-2. Esegui `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace` e `cargo test --doc -p core-dsp -p plugin-support` sistemando tutti i tag/backtick nei doc-comment.
-3. Scansiona il codice di produzione verificando **zero** `todo!()`, `unimplemented!()`, `// TODO`, `// FIXME` o stub vuoti, ed esegui `cargo fmt --all`.
-4. Aggiorna i nomi dei 4 plugin rinominati nel `README.md` e nei doc (`greg_2500`, `greg_160`, `greg_165`, `greg-eqp1a`), rimuovi i file sporchi nella root (`re`, `doit.tex`, cartella vuota `vibes`) aggiungendo i pattern temporanei a `.gitignore`, svuota `doit.txt` e fai `git commit -m "[Quality 10/10] Zero warning clippy/rustdoc, zero stub, vetrina GitHub e docs allineati" && git push`.
+task 1 — Ottimizzazione Efficienza CPU & RAM a Latenza Zero (`Cargo.toml`, `core-dsp`, `plugin-support`)
+Obiettivo: abbattere il carico CPU e l'impronta RAM mantenendo **0 campioni di latenza aggiunta**, 100% `f64`, `#![forbid(unsafe_code)]` e silenzio `0.0 in -> 0.0 out`:
+1. **`Cargo.toml` root:** Aggiungi `[profile.release]` con `opt-level = 3`, `lto = "fat"`, `codegen-units = 1` per abilitare auto-vettorizzazione SIMD AVX2/NEON e inlining cross-crate.
+2. **`core-dsp` (Dirty-Flag & Control Rate 16 campioni):** Nei filtri ZDF (`zdf_filters.rs`, `surgical_eq.rs`) e negli inviluppi (`component_models.rs`), ricalcola `tan()`, `sin()`, `cos()`, `exp()` solo quando i parametri cambiano (*dirty-flag* `1e-12`) o ogni 16 campioni durante lo smoothing.
+3. **`core-dsp` (Silence Fast-Path):** Nei moduli pesanti (`fdn_reverb.rs`, `partitioned_convolver.rs`, `oversampling.rs`, `analog_summing.rs`), salta i calcoli restituendo `0.0` se il blocco ha picco `< 1e-12` e lo stato interno/coda si è già estinto (`< 1e-12`).
+4. **`plugin-support` & RAM Locality:** Elabora solo i `num_channels` attivi dichiarati dall'host (`plugin-support/src/multichannel.rs`), dimensiona i buffer interni sui canali reali in `initialize()`, condividi tabelle statiche read-only con `Arc<[f64]>` / `OnceLock` e usa `f32` nei soli buffer di telemetria grafica verso la UI.
+5. Verifica `cargo test --workspace` (`0` errori), cancella questo task da `doit.txt`, rinomina il successivo e fai `git commit -m "[Perf] Ottimizzazione CPU e RAM a latenza zero: LTO SIMD, dirty-flag, silence fast-path e active channels" && git push`.
+
+task 2 — Sigillo Finale Anti-Scettici 10/10 (`clippy`, `rustdoc`, `rustfmt`, Zero Stub, Vetrina GitHub & Installazione Release)
+1. Esegui `cargo clippy --workspace --all-targets -- -D warnings` e risolvi tutti i warning rimanenti su tutto il workspace (`0` warning).
+2. Esegui `RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --workspace` e `cargo test --doc -p core-dsp -p plugin-support` sistemando tutti i doc-comment (`0` warning).
+3. Verifica **zero** `todo!()`, `unimplemented!()`, `// TODO`, `// FIXME` o stub nel codice di produzione, ed esegui `cargo fmt --all`.
+4. Aggiorna i nomi dei plugin nel `README.md` e nei doc (`greg_2500`, `greg_160`, `greg_165`, `greg-eqp1a`), rimuovi i file sporchi nella root (`re`, `doit.tex`, cartella vuota `vibes`) aggiornando `.gitignore`.
+5. Esegui `cargo build --release --workspace`, rimuovi i vecchi `.clap` da `~/.clap/Analog-vibe/`, installa tutti e 18 i nuovi `.clap` con `install -m 755 target/release/libgreg_*.so ~/.clap/Analog-vibe/greg_*.clap`, svuota `doit.txt` e fai `git commit -m "[Quality 10/10] Zero warning clippy/rustdoc, zero stub, vetrina GitHub pulita e release finale installata" && git push`.

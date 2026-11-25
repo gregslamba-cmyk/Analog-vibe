@@ -77,7 +77,7 @@ impl From<DbxRatio> for f32 {
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
 enum KneeMode {
     #[id = "over_easy"]
-    #[name = "OverEasy"]
+    #[name = "Soft Knee"]
     OverEasy,
     #[id = "hard_knee"]
     #[name = "Hard Knee"]
@@ -267,9 +267,9 @@ impl Default for GregDbx165Params {
             )
             .with_unit(" dB"),
             version: EnumParam::new("Version", Dbx165Version::A),
-            peakstop_enabled: BoolParam::new("Peak Stop Enable", false),
+            peakstop_enabled: BoolParam::new("Peak Limiter Enable", false),
             peakstop_threshold: FloatParam::new(
-                "Peak Stop Threshold",
+                "Peak Limiter Threshold",
                 -6.0,
                 FloatRange::Linear {
                     min: -24.0,
@@ -399,7 +399,7 @@ impl GregDbx165 {
 }
 
 impl Plugin for GregDbx165 {
-    const NAME: &'static str = "Greg DBX 165";
+    const NAME: &'static str = "Greg 165";
     const VENDOR: &'static str = core_dsp::core_dsp_modules::plugin_export::VENDOR;
     const URL: &'static str = core_dsp::core_dsp_modules::plugin_export::URL;
     const EMAIL: &'static str = core_dsp::core_dsp_modules::plugin_export::EMAIL;
@@ -551,7 +551,7 @@ impl Plugin for GregDbx165 {
             self.telemetry.clone(),
             move |cx| {
                 VStack::new(cx, |cx| {
-                    Label::new(cx, "Greg DBX 165").font_size(14.0).color(Color::rgb(255, 255, 255));
+                    Label::new(cx, "Greg 165").font_size(14.0).color(Color::rgb(255, 255, 255));
                     Label::new(cx, "Main Parameters").font_size(12.0).color(Color::rgb(210, 215, 225));
                     RotaryKnob::new(cx, Dbx165GuiData::params, |p| &p.input).width(Pixels(115.0)).height(Pixels(24.0));
                     RotaryKnob::new(cx, Dbx165GuiData::params, |p| &p.threshold).width(Pixels(115.0)).height(Pixels(24.0));
