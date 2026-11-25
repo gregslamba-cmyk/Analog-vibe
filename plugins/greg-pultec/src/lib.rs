@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 #![allow(unknown_lints, semicolon_in_expressions_from_non_local_macros)]
 
 use std::{sync::Arc, sync::atomic::Ordering};
@@ -10,7 +11,8 @@ use core_dsp::core_dsp_modules::{
         AcCoupling, DynamicMirrorPreEmphasis, NonlinearMode, SlewRateLimiter, process_nonlinear,
     },
     panic_protection::{PanicProtection, ProtectionResult},
-    realtime_controls::BypassCrossfade,
+    realtime_controls::{BypassCrossfade, LatencyDelay},
+    resampler_bitdepth::{Oversampler, OversamplingFactor},
     routing_matrix::{RoutingMatrix, RoutingMode},
     transformer_hysteresis::TransformerHysteresis,
     zdf_filters::ZdfSvf,
@@ -26,6 +28,33 @@ struct EditorData {
 }
 
 impl Model for EditorData {}
+
+#[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
+enum Oversampling {
+    #[id = "1x"]
+    #[name = "1x"]
+    X1,
+    #[id = "2x"]
+    #[name = "2x"]
+    X2,
+    #[id = "4x"]
+    #[name = "4x"]
+    X4,
+    #[id = "8x"]
+    #[name = "8x"]
+    X8,
+}
+
+impl From<Oversampling> for OversamplingFactor {
+    fn from(value: Oversampling) -> Self {
+        match value {
+            Oversampling::X1 => Self::X1,
+            Oversampling::X2 => Self::X2,
+            Oversampling::X4 => Self::X4,
+            Oversampling::X8 => Self::X8,
+        }
+    }
+}
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
 enum PultecVersion {
@@ -179,7 +208,7 @@ struct GregPultecParams {
     channel_setup: CommonChannelParams,
 
     #[id = "oversampling"]
-    oversampling: FloatParam,
+    oversampling: EnumParam<Oversampling>,
     #[id = "invert_left"]
     invert_left: BoolParam,
 }
@@ -244,11 +273,7 @@ impl Default for GregPultecParams {
                 0.0,
                 FloatRange::Linear { min: 0.0, max: 1.0 },
             ),
-            oversampling: FloatParam::new(
-                "Oversampling",
-                2.0,
-                FloatRange::Linear { min: 0.0, max: 4.0 },
-            ),
+            oversampling: EnumParam::new("Oversampling", Oversampling::X2),
             invert_left: BoolParam::new("Invert Left Polarity", false),
             channel_setup: CommonChannelParams::default(),
         }
@@ -259,15 +284,17 @@ struct GregPultec {
     params: Arc<GregPultecParams>,
     routing_matrix: RoutingMatrix,
     bypass_crossfades: [BypassCrossfade<f32>; 2],
+    dry_delays: [LatencyDelay<f64, 32>; 2],
+    last_oversampling: Oversampling,
     last_bypassed: bool,
     bypass_ramp_samples: u32,
     metering: Metering,
     panic_protection: PanicProtection,
     analog_variance: AnalogVariance,
     sample_rate: f64,
-    oversampling_factor: core_dsp::core_dsp_modules::resampler_bitdepth::OversamplingFactor,
-    oversampler_l: core_dsp::core_dsp_modules::resampler_bitdepth::Oversampler<f64>,
-    oversampler_r: core_dsp::core_dsp_modules::resampler_bitdepth::Oversampler<f64>,
+    oversampling_factor: OversamplingFactor,
+    oversampler_l: Oversampler<f64>,
+    oversampler_r: Oversampler<f64>,
     low_boost_l: ZdfSvf,
     low_boost_r: ZdfSvf,
     low_atten_l: ZdfSvf,
@@ -304,18 +331,17 @@ impl Default for GregPultec {
             params: Arc::new(GregPultecParams::default()),
             routing_matrix: RoutingMatrix::default(),
             bypass_crossfades: [BypassCrossfade::default(); 2],
+            dry_delays: [LatencyDelay::default(); 2],
+            last_oversampling: Oversampling::X1,
             last_bypassed: true,
             bypass_ramp_samples: (sample_rate * 0.005) as u32,
             metering: Metering::default(),
             panic_protection: PanicProtection::default(),
             analog_variance: AnalogVariance::from_seed(0x47_53_5F_5F, 0.02, 0.001, 0.0),
             sample_rate,
-            oversampling_factor:
-                core_dsp::core_dsp_modules::resampler_bitdepth::OversamplingFactor::X1,
-            oversampler_l:
-                core_dsp::core_dsp_modules::resampler_bitdepth::Oversampler::<f64>::default(),
-            oversampler_r:
-                core_dsp::core_dsp_modules::resampler_bitdepth::Oversampler::<f64>::default(),
+            oversampling_factor: OversamplingFactor::X1,
+            oversampler_l: Oversampler::<f64>::default(),
+            oversampler_r: Oversampler::<f64>::default(),
             low_boost_l: ZdfSvf::new(),
             low_boost_r: ZdfSvf::new(),
             low_atten_l: ZdfSvf::new(),
@@ -373,6 +399,20 @@ impl Plugin for GregPultec {
 
         self.routing_matrix.configure(2, RoutingMode::Stereo);
 
+        // Oversampling driven by the dedicated EnumParam (test harness feeds 0.0/1.0/2.0/3.0)
+        let oversampling = self.params.oversampling.value();
+        self.last_oversampling = oversampling;
+        let factor = OversamplingFactor::from(oversampling);
+        self.oversampling_factor = factor;
+        let latency_samples = Oversampler::<f64>::latency_samples(factor);
+        self.dry_delays.iter_mut().for_each(|delay| {
+            delay.reset();
+            let _ = delay.set_delay_samples(latency_samples as usize);
+        });
+        self.oversampler_l.reset();
+        self.oversampler_r.reset();
+        _context.set_latency_samples(latency_samples);
+
         let analog_drift = self.params.analog_drift.value() as f64;
         let drift = if analog_drift.is_finite() {
             analog_drift.clamp(0.0, 1.0)
@@ -380,18 +420,6 @@ impl Plugin for GregPultec {
             0.0
         };
         self.analog_variance = AnalogVariance::from_seed(0x47_53_5F_5F, 0.02, 0.001, drift);
-
-        let factor = match self.params.version.value() {
-            PultecVersion::EQP1A => {
-                core_dsp::core_dsp_modules::resampler_bitdepth::OversamplingFactor::X1
-            }
-            PultecVersion::EQP1A3 => {
-                core_dsp::core_dsp_modules::resampler_bitdepth::OversamplingFactor::X2
-            }
-        };
-        self.oversampling_factor = factor;
-        self.oversampler_l.reset();
-        self.oversampler_r.reset();
 
         self.transformer_l.configure(sr, 180.0);
         self.transformer_r.configure(sr, 180.0);
@@ -416,6 +444,9 @@ impl Plugin for GregPultec {
         for crossfade in &mut self.bypass_crossfades {
             crossfade.set_bypassed(self.last_bypassed, 0);
         }
+        for delay in &mut self.dry_delays {
+            delay.reset();
+        }
         self.low_boost_l.reset();
         self.low_boost_r.reset();
         self.low_atten_l.reset();
@@ -436,6 +467,7 @@ impl Plugin for GregPultec {
         self.slew_r.reset();
         self.oversampler_l.reset();
         self.oversampler_r.reset();
+        self.last_oversampling = self.params.oversampling.value();
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
@@ -500,11 +532,30 @@ impl Plugin for GregPultec {
         &mut self,
         buffer: &mut Buffer,
         _aux: &mut AuxiliaryBuffers,
-        _context: &mut impl ProcessContext<Self>,
+        context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
         if self.panic_protection.is_disabled() {
             return ProcessStatus::Normal;
         }
+
+        let oversampling = self.params.oversampling.value();
+        if oversampling != self.last_oversampling {
+            let factor = OversamplingFactor::from(oversampling);
+            let latency_samples = Oversampler::<f64>::latency_samples(factor);
+            for oversampler in [&mut self.oversampler_l, &mut self.oversampler_r] {
+                oversampler.reset();
+            }
+            for delay in &mut self.dry_delays {
+                delay.reset();
+                if !delay.set_delay_samples(latency_samples as usize) {
+                    return ProcessStatus::Error("Pultec latency exceeds dry delay storage");
+                }
+            }
+            self.last_oversampling = oversampling;
+            self.oversampling_factor = factor;
+            context.set_latency_samples(latency_samples);
+        }
+        let factor = self.oversampling_factor;
 
         let bypassed = self.params.bypass.value();
         if bypassed != self.last_bypassed {
@@ -525,6 +576,7 @@ impl Plugin for GregPultec {
         }
 
         let stereo_link = self.params.link.value();
+        let invert_left = self.params.invert_left.value();
 
         self.metering.begin_block();
         let protection_result = self.panic_protection.run(|| {
@@ -536,33 +588,35 @@ impl Plugin for GregPultec {
                     }
                 }
 
-                let x_l = inputs[0] as f64;
+                let x_l = if invert_left { -inputs[0] as f64 } else { inputs[0] as f64 };
                 let x_r = inputs[1] as f64;
 
-                let wet_l = process_channel(
-                    x_l,
-                    0,
-                    &mut self.low_boost_l,
-                    &mut self.low_boost_r,
-                    &mut self.low_atten_l,
-                    &mut self.low_atten_r,
-                    &mut self.high_peak_l,
-                    &mut self.high_peak_r,
-                    &mut self.high_atten_l,
-                    &mut self.high_atten_r,
-                    &mut self.transformer_l,
-                    &mut self.transformer_r,
-                    &mut self.ac_coupling_l,
-                    &mut self.ac_coupling_r,
-                    &mut self.pre_emphasis_l,
-                    &mut self.pre_emphasis_r,
-                    &mut self.de_emphasis_l,
-                    &mut self.de_emphasis_r,
-                    &mut self.slew_l,
-                    &mut self.slew_r,
-                    &self.params,
-                    self.sample_rate,
-                );
+                let wet_l = self.oversampler_l.process(x_l, factor, |v| {
+                    process_channel(
+                        v,
+                        0,
+                        &mut self.low_boost_l,
+                        &mut self.low_boost_r,
+                        &mut self.low_atten_l,
+                        &mut self.low_atten_r,
+                        &mut self.high_peak_l,
+                        &mut self.high_peak_r,
+                        &mut self.high_atten_l,
+                        &mut self.high_atten_r,
+                        &mut self.transformer_l,
+                        &mut self.transformer_r,
+                        &mut self.ac_coupling_l,
+                        &mut self.ac_coupling_r,
+                        &mut self.pre_emphasis_l,
+                        &mut self.pre_emphasis_r,
+                        &mut self.de_emphasis_l,
+                        &mut self.de_emphasis_r,
+                        &mut self.slew_l,
+                        &mut self.slew_r,
+                        &self.params,
+                        self.sample_rate,
+                    )
+                });
                 let wet_r = if stereo_link {
                     let mid = (x_l + x_r) * 0.5_f64;
                     let wet_mid = process_channel(
@@ -617,8 +671,8 @@ impl Plugin for GregPultec {
                     )
                 };
 
-                let dry_l = x_l;
-                let dry_r = x_r;
+                let dry_l = self.dry_delays[0].process(x_l);
+                let dry_r = self.dry_delays[1].process(x_r);
                 let out_l_raw = self.bypass_crossfades[0].process(dry_l as f32, wet_l as f32);
                 let out_r_raw = self.bypass_crossfades[1].process(dry_r as f32, wet_r as f32);
                 let out_l = if out_l_raw.is_finite() {

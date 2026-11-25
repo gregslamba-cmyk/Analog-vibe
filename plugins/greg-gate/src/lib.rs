@@ -1,8 +1,10 @@
+#![forbid(unsafe_code)]
 #![allow(unknown_lints, semicolon_in_expressions_from_non_local_macros)]
 use core_dsp::core_dsp_modules::{
     metering::Metering,
     panic_protection::{PanicProtection, ProtectionResult},
-    realtime_controls::BypassCrossfade,
+    realtime_controls::{BypassCrossfade, LatencyDelay},
+    resampler_bitdepth::{Oversampler, OversamplingFactor},
 };
 use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
@@ -17,6 +19,33 @@ struct GregGateGuiData {
 }
 
 impl Model for GregGateGuiData {}
+
+#[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
+enum Oversampling {
+    #[id = "1x"]
+    #[name = "1x"]
+    X1,
+    #[id = "2x"]
+    #[name = "2x"]
+    X2,
+    #[id = "4x"]
+    #[name = "4x"]
+    X4,
+    #[id = "8x"]
+    #[name = "8x"]
+    X8,
+}
+
+impl From<Oversampling> for OversamplingFactor {
+    fn from(value: Oversampling) -> Self {
+        match value {
+            Oversampling::X1 => Self::X1,
+            Oversampling::X2 => Self::X2,
+            Oversampling::X4 => Self::X4,
+            Oversampling::X8 => Self::X8,
+        }
+    }
+}
 
 #[derive(Params)]
 struct GregGateParams {
@@ -36,7 +65,7 @@ struct GregGateParams {
     dynamics: DynamicsExtendedParams,
 
     #[id = "oversampling"]
-    oversampling: FloatParam,
+    oversampling: EnumParam<Oversampling>,
     #[id = "invert_left"]
     invert_left: BoolParam,
 }
@@ -83,11 +112,7 @@ impl Default for GregGateParams {
                 .with_unit(" %"),
             bypass: BoolParam::new("Bypass", false),
             dynamics: DynamicsExtendedParams::default(),
-            oversampling: FloatParam::new(
-                "Oversampling",
-                1.0,
-                FloatRange::Linear { min: 0.0, max: 4.0 },
-            ),
+            oversampling: EnumParam::new("Oversampling", Oversampling::X2),
             invert_left: BoolParam::new("Invert Left Polarity", false),
         }
     }
@@ -96,11 +121,15 @@ struct GregGate {
     params: Arc<GregGateParams>,
     routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix,
     bypass_crossfades: [BypassCrossfade<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    oversamplers: [Oversampler<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    dry_delays: [LatencyDelay<f32, 32>; plugin_support::MAX_AUDIO_CHANNELS],
     last_bypassed: bool,
+    last_oversampling: Oversampling,
     bypass_ramp_samples: u32,
     panic_protection: PanicProtection,
     metering: Metering,
     telemetry: Arc<GuiTelemetry>,
+    sample_rate: f32,
 }
 impl Default for GregGate {
     fn default() -> Self {
@@ -108,11 +137,15 @@ impl Default for GregGate {
             params: Arc::new(GregGateParams::default()),
             routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix::default(),
             bypass_crossfades: [BypassCrossfade::default(); plugin_support::MAX_AUDIO_CHANNELS],
-            last_bypassed: false,
+            oversamplers: [Oversampler::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            dry_delays: [LatencyDelay::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            last_bypassed: true,
+            last_oversampling: Oversampling::X1,
             bypass_ramp_samples: 1,
             panic_protection: PanicProtection::default(),
             metering: Metering::default(),
             telemetry: GuiTelemetry::new(true),
+            sample_rate: 0.0,
         }
     }
 }
@@ -150,9 +183,21 @@ impl Plugin for GregGate {
         }
         self.bypass_ramp_samples = (buffer_config.sample_rate * 0.005).round().max(1.0) as u32;
         self.last_bypassed = self.params.bypass.value();
+        // Oversampling handling: EnumParam returns the variant directly
+        self.last_oversampling = self.params.oversampling.value();
+        let factor = OversamplingFactor::from(self.last_oversampling);
+        let latency_samples = Oversampler::<f32>::latency_samples(factor);
+        for delay in &mut self.dry_delays {
+            delay.reset();
+            let _ = delay.set_delay_samples(latency_samples as usize);
+        }
+        for oversampler in &mut self.oversamplers {
+            oversampler.reset();
+        }
         for crossfade in &mut self.bypass_crossfades {
             crossfade.set_bypassed(self.last_bypassed, 0);
         }
+        _context.set_latency_samples(latency_samples);
         true
     }
     fn reset(&mut self) {
@@ -160,6 +205,9 @@ impl Plugin for GregGate {
         for crossfade in &mut self.bypass_crossfades {
             crossfade.set_bypassed(self.last_bypassed, 0);
         }
+        // Reset oversampling state on restart
+        self.last_oversampling = Oversampling::X1;
+        self.dry_delays[0].set_delay_samples(0);
     }
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params_arc_main = self.params.clone();
@@ -205,6 +253,23 @@ impl Plugin for GregGate {
             }
             self.last_bypassed = bypassed;
         }
+        let oversampling = self.params.oversampling.value();
+        if oversampling != self.last_oversampling {
+            let factor = OversamplingFactor::from(oversampling);
+            let latency_samples = Oversampler::<f32>::latency_samples(factor);
+            for oversampler in &mut self.oversamplers {
+                oversampler.reset();
+            }
+            for delay in &mut self.dry_delays {
+                delay.reset();
+                if !delay.set_delay_samples(latency_samples as usize) {
+                    return ProcessStatus::Error("Gate latency exceeds dry delay storage");
+                }
+            }
+            self.last_oversampling = oversampling;
+            context.set_latency_samples(latency_samples);
+        }
+        let factor = OversamplingFactor::from(oversampling);
         // Handle MIDI events for gate triggering
         let mut gate_opened = false;
         let mut _program_change = None;
@@ -248,8 +313,21 @@ impl Plugin for GregGate {
                 } else {
                     1.0
                 };
-                let left_out = finite(left_input * gain);
-                let right_out = finite(right_input * gain);
+                let invert_left = self.params.invert_left.value();
+                let phase_left = if invert_left { -left_input } else { left_input };
+                let phase_right = right_input;
+                let left_out = {
+                    let oversampler = &mut self.oversamplers[0];
+                    let dry = self.dry_delays[0].process(phase_left);
+                    let wet = oversampler.process(phase_left, factor, |x| x * gain);
+                    finite(self.bypass_crossfades[0].process(dry, wet))
+                };
+                let right_out = {
+                    let oversampler = &mut self.oversamplers[1];
+                    let dry = self.dry_delays[1].process(phase_right);
+                    let wet = oversampler.process(phase_right, factor, |x| x * gain);
+                    finite(self.bypass_crossfades[1].process(dry, wet))
+                };
                 *left_sample = left_out;
                 *right_sample = right_out;
                 self.metering.record_sample(left_input, left_out, 0.0);

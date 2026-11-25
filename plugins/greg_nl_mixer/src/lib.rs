@@ -10,7 +10,8 @@ use std::sync::{Arc, atomic::Ordering};
 use core_dsp::core_dsp_modules::{
     metering::Metering,
     panic_protection::{PanicProtection, ProtectionResult},
-    realtime_controls::BypassCrossfade,
+    realtime_controls::{BypassCrossfade, LatencyDelay},
+    resampler_bitdepth::{Oversampler, OversamplingFactor},
     routing_matrix::{RoutingMatrix, RoutingMode},
     analog_summing::{AdjacentCrosstalkMatrix, VirtualEarthSummer},
     component_models::{create_transformer, TransformerModel},
@@ -19,11 +20,39 @@ use core_dsp::core_dsp_modules::{
 use channel_strip::ConsoleChannelStrip;
 use nih_plug::prelude::*;
 use plugin_support::CommonChannelParams;
-use greg_gui_core::GuiTelemetry;
+use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
+use greg_gui_core::prelude::*;
 
 const MAX_CHANNELS: usize = 24;
 const MAX_BUSES: usize = 8;
 const DEFAULT_CHANNELS: usize = 4;
+
+#[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
+enum Oversampling {
+    #[id = "1x"]
+    #[name = "1x"]
+    X1,
+    #[id = "2x"]
+    #[name = "2x"]
+    X2,
+    #[id = "4x"]
+    #[name = "4x"]
+    X4,
+    #[id = "8x"]
+    #[name = "8x"]
+    X8,
+}
+
+impl From<Oversampling> for OversamplingFactor {
+    fn from(value: Oversampling) -> Self {
+        match value {
+            Oversampling::X1 => Self::X1,
+            Oversampling::X2 => Self::X2,
+            Oversampling::X4 => Self::X4,
+            Oversampling::X8 => Self::X8,
+        }
+    }
+}
 
 #[derive(Params)]
 struct GregNlMixerParams {
@@ -56,7 +85,7 @@ struct GregNlMixerParams {
     bus_mode: [IntParam; MAX_BUSES],
     channel_setup: CommonChannelParams,
     #[id = "oversampling"]
-    oversampling: FloatParam,
+    oversampling: EnumParam<Oversampling>,
     #[id = "invert_left"]
     invert_left: BoolParam,
 }
@@ -93,7 +122,7 @@ impl Default for GregNlMixerParams {
             bus_comp_thresh: std::array::from_fn(|_| f_lin("Bus Comp Thresh", -24.0, -48.0, 0.0)),
             bus_comp_ratio: std::array::from_fn(|_| f_lin("Bus Comp Ratio", 1.0, 1.0, 20.0)),
             bus_mode: std::array::from_fn(|_| i_lin("Bus Mode", 0)),
-            oversampling: f_lin("Oversampling", 2.0, 0.0, 4.0),
+            oversampling: EnumParam::new("Oversampling", Oversampling::X2),
             invert_left: BoolParam::new("Invert Left Polarity", false),
             channel_setup: CommonChannelParams::default(),
         }
@@ -110,6 +139,9 @@ struct GregNlMixer {
     params: Arc<GregNlMixerParams>,
     routing_matrix: RoutingMatrix,
     bypass_crossfades: [BypassCrossfade<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    oversamplers: [Oversampler<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    dry_delays: [LatencyDelay<f32, 32>; plugin_support::MAX_AUDIO_CHANNELS],
+    last_oversampling: Oversampling,
     last_bypassed: bool, bypass_ramp_samples: u32,
     channels: [ConsoleChannelStrip; MAX_CHANNELS],
     buses: [MasterBus; MAX_BUSES],
@@ -124,6 +156,9 @@ impl Default for GregNlMixer {
             params: Arc::new(GregNlMixerParams::default()),
             routing_matrix: RoutingMatrix::default(),
             bypass_crossfades: [BypassCrossfade::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            oversamplers: [Oversampler::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            dry_delays: [LatencyDelay::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            last_oversampling: Oversampling::X1,
             last_bypassed: false, bypass_ramp_samples: 0,
             channels: std::array::from_fn(|_| ConsoleChannelStrip::default()),
             buses: std::array::from_fn(|_| MasterBus::default()),
@@ -152,6 +187,14 @@ impl Plugin for GregNlMixer {
         self.bypass_ramp_samples = (buffer_config.sample_rate * 0.005).round().max(1.0) as u32;
         self.last_bypassed = self.params.bypass.value();
         for cf in &mut self.bypass_crossfades { cf.set_bypassed(self.last_bypassed, 0); }
+
+        let oversampling = self.params.oversampling.value();
+        self.last_oversampling = oversampling;
+        let factor = OversamplingFactor::from(oversampling);
+        let latency_samples = Oversampler::<f32>::latency_samples(factor);
+        for oversampler in &mut self.oversamplers { oversampler.reset(); }
+        for delay in &mut self.dry_delays { delay.reset(); let _ = delay.set_delay_samples(latency_samples as usize); }
+        _context.set_latency_samples(latency_samples);
         let sr = (buffer_config.sample_rate as f64).max(48_000.0);
         let mix = self.params.mix.value() as f64;
         for ch in &mut self.channels { ch.prepare(sr); ch.fader_db = 0.0; ch.pan = 0.0; ch.muted = false; ch.solo = false; }
@@ -171,6 +214,9 @@ impl Plugin for GregNlMixer {
     fn reset(&mut self) {
         self.last_bypassed = self.params.bypass.value();
         for cf in &mut self.bypass_crossfades { cf.set_bypassed(self.last_bypassed, self.bypass_ramp_samples); }
+        self.last_oversampling = Oversampling::X1;
+        for delay in &mut self.dry_delays { delay.reset(); }
+        for oversampler in &mut self.oversamplers { oversampler.reset(); }
         for ch in &mut self.channels { ch.reset(); }
         if let Some(ref mut ct) = self.buses[0].crosstalk { ct.reset(); }
         if let Some(ref mut su) = self.buses[0].summer { su.reset(); }
@@ -186,42 +232,64 @@ impl Plugin for GregNlMixer {
             for cf in &mut self.bypass_crossfades { cf.set_bypassed(bypassed, self.bypass_ramp_samples); }
             self.last_bypassed = bypassed;
         }
+        let oversampling = self.params.oversampling.value();
+        if oversampling != self.last_oversampling {
+            let factor = OversamplingFactor::from(oversampling);
+            let latency_samples = Oversampler::<f32>::latency_samples(factor);
+            for oversampler in &mut self.oversamplers { oversampler.reset(); }
+            for delay in &mut self.dry_delays { delay.reset(); let _ = delay.set_delay_samples(latency_samples as usize); }
+            self.last_oversampling = oversampling;
+            _ctx.set_latency_samples(latency_samples);
+        }
+        let factor = OversamplingFactor::from(oversampling);
+        let invert_left = self.params.invert_left.value();
         let mix = self.params.mix.value() as f64;
         let master_drive = 10.0_f64.powf((self.params.master_drive_db.value() / 20.0).into()).max(0.001);
-        let active_ch_count = DEFAULT_CHANNELS.min(MAX_CHANNELS);
+        let crosstalk_db = self.params.crosstalk_db.value() as f64;
+        let ch_fader_db: [f64; MAX_CHANNELS] = std::array::from_fn(|i| self.channels[i].fader_db);
+        let ch_pan: [f64; MAX_CHANNELS] = std::array::from_fn(|i| self.channels[i].pan);
+        let ch_enabled: [bool; MAX_CHANNELS] = std::array::from_fn(|i| self.channels[i].enabled);
+        let ch_mute: [bool; MAX_CHANNELS] = std::array::from_fn(|i| self.channels[i].muted);
+        let ch_solo: [bool; MAX_CHANNELS] = std::array::from_fn(|i| self.channels[i].solo);
+        let any_solo = (0..self.routing_matrix.channel_count().min(MAX_CHANNELS)).any(|i| self.channels[i].solo);
+        let active_ch_count = self.routing_matrix.channel_count().min(MAX_CHANNELS);
         self.metering.begin_block();
         let pr = self.panic_protection.run(|| {
             for mut frame in buffer.iter_samples() {
                 let mut samples = frame.iter_mut();
                 let Some(ls) = samples.next() else { continue; };
                 let li = finite(*ls);
-                let mut left_out = li as f64;
-                let mut right_out = 0.0_f64;
-                let any_solo = (0..active_ch_count).any(|i| self.channels[i].solo);
-                for ch_idx in 0..active_ch_count {
-                    let ch = &mut self.channels[ch_idx];
-                    if !ch.enabled || ch.muted { continue; }
-                    if any_solo && !ch.solo { continue; }
-                    left_out = ch.process_sample(left_out);
-                    let gl = ch.pan_gains().0;
-                    left_out *= gl;
-                }
+                let xl = if invert_left { -li } else { li };
+                let input_left = li as f64;
                 // Right sample
-                let ri = if let Some(rs) = samples.next() { finite(*rs) as f64 } else { right_out };
-                right_out = ri as f64;
-                let any_solo = (0..active_ch_count).any(|i| self.channels[i].solo);
+                let mut rs_opt = samples.next();
+                let ri = if let Some(rs) = rs_opt.as_deref() { finite(*rs) as f64 } else { 0.0_f64 };
+                let input_right = ri as f64;
+
+                // Parallel summation: process every active channel independently and sum their outputs.
+                let mut sum_left = 0.0_f64;
+                let mut sum_right = 0.0_f64;
                 for ch_idx in 0..active_ch_count {
                     let ch = &mut self.channels[ch_idx];
-                    if !ch.enabled || ch.muted { continue; }
-                    if any_solo && !ch.solo { continue; }
-                    right_out = ch.process_sample(right_out);
-                    let gr = ch.pan_gains().1;
-                    right_out *= gr;
+                    if !ch_enabled[ch_idx] || ch_mute[ch_idx] { continue; }
+                    if any_solo && !ch_solo[ch_idx] { continue; }
+
+                    // Process left sample through this channel strip.
+                    let ch_left = ch.process_sample(input_left);
+                    let (gl, gr) = ch.pan_gains();
+                    // Apply fader gain.
+                    let fader = 10.0_f64.powf(ch_fader_db[ch_idx] / 20.0);
+                    sum_left += ch_left * gl * fader;
+                    sum_right += ch_left * gr * fader;
+
+                    // Process right sample through this channel strip.
+                    let ch_right = ch.process_sample(input_right);
+                    sum_right += ch_right * gr * fader;
                 }
-                if let Some(rs) = samples.next() {
-                    *ls = finite(left_out as f32);
-                    continue;
-                }
+
+                // Send summed stereo pair through the master bus summer (virtual earth summing with crosstalk).
+                let mut left_out = sum_left;
+                let mut right_out = sum_right;
                 if let Some(ref mut summer) = self.buses[0].summer {
                     let mut out_l = [0.0_f64];
                     let mut out_r = [0.0_f64];
@@ -231,14 +299,19 @@ impl Plugin for GregNlMixer {
                     left_out = out_l[0];
                     right_out = out_r[0];
                 }
-                let driven_l = (left_out * master_drive).tanh();
-                let driven_r = (right_out * master_drive).tanh();
-                let mixed_l = left_out + (driven_l - left_out) * mix;
-                let mixed_r = right_out + (driven_r - right_out) * mix;
-                let out_l = finite(self.bypass_crossfades[0].process(li as f32, mixed_l as f32));
-                let out_r = finite(self.bypass_crossfades[1].process(ri as f32, mixed_r as f32));
+                // Apply master bus drive saturation through oversampler + latency-compensated dry path.
+                let dry_l = self.dry_delays[0].process(xl);
+                let dry_r = self.dry_delays[1].process(ri as f32);
+                let wet_l = self.oversamplers[0].process(left_out as f32, factor, |x| (x as f64 * master_drive).tanh() as f32);
+                let wet_r = self.oversamplers[1].process(right_out as f32, factor, |x| (x as f64 * master_drive).tanh() as f32);
+                let mixed_l = dry_l as f64 + (wet_l as f64 - dry_l as f64) * mix;
+                let mixed_r = dry_r as f64 + (wet_r as f64 - dry_r as f64) * mix;
+                let out_l = finite(self.bypass_crossfades[0].process(dry_l, mixed_l as f32));
+                let out_r = finite(self.bypass_crossfades[1].process(dry_r, mixed_r as f32));
                 *ls = out_l;
-                if let Some(rs) = samples.next() { *rs = out_r; }
+                if let Some(rs) = rs_opt.as_deref_mut() {
+                    *rs = out_r;
+                }
                 self.metering.record_sample(li, out_l, 0.0);
                 self.metering.record_sample(ri as f32, out_r, 0.0);
             }

@@ -33,3 +33,13 @@ Consulta `vcinst.md` (e `GUI_SPEC.md` quando lavori sulla UI) per i dettagli com
   1. Diagnostica e **correggi subito** il bug nel codice sorgente (stack overflow, parametro mancante, deviazione RMS/fase/sidechain/bypass).
   2. Ricompila (`cargo build --release --workspace`) e **ri-esegui `clap-signal-host` sull'intera suite** finché tutti e 18 i plugin non restituiscono `All CLAP signal-host checks passed.` con exit code `0`.
 - **Pulizia post-verifica:** Subito dopo aver ottenuto il `18/18 PASS`, rimuovi eventuali binari/test temporanei superflui o vecchi `.so` obsoleti (es. `libgreg_pultec.so`, `libgreg_api_2500.so`, `libgreg_dbx_160.so`, `libgreg_dbx_165.so`, file temporanei di diagnostica) prima di eseguire `git commit` e `git push`.
+
+## Regole Permanenti di Collaudo Omnicomprensivo & Hardware Reference Matching
+- **Collaudo Host Omnicomprensivo (`clap-signal-host`):** Prima di ogni commit su DSP, plugin o GUI, verifica obbligatoriamente su tutti e 18 i plugin:
+  1. Simmetria multicanale (`1..=8` canali) senza canali muti o non processati.
+  2. Silenzio digitale assoluto (`0.0 in -> 0.0 out`, residuo `< 1e-12`) e assenza di rallentamenti da denormali.
+  3. `reset()` completo e invarianza al sample rate (`44.1 / 48 / 96 / 192 kHz`).
+  4. Sweep dinamico `min -> default -> max` su tutti i parametri esportati senza `NaN`/`Inf` né click `> +6 dB`.
+  5. Lifecycle GUI (`create`, `set_scale`, `show`, `hide`, `destroy`) attivo su tutti i plugin.
+  6. Budget CPU Real-Time entro le soglie di sicurezza.
+- **Hardware Reference Matching (`clap-validator-host --match-reference`):** Qualsiasi modifica alle curve di saturazione, inviluppi, ginocchi di compressione o EQ analogici deve essere validata tramite `--match-reference` verificando che curva di trasferimento (`±0.35 dB`), tempi di attacco/rilascio e spettro armonico (`H2–H5` entro `±1.5 dB`) restino allineati ai profili fisici di riferimento.

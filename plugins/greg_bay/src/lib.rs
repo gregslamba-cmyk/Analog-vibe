@@ -1,16 +1,46 @@
+#![forbid(unsafe_code)]
 #![allow(unknown_lints, semicolon_in_expressions_from_non_local_macros)]
 use std::sync::{Arc, atomic::Ordering};
 use core_dsp::core_dsp_modules::{
+    dsp_graph::{CompiledAudioGraph, DspGraphNode, GainPanNode},
     metering::Metering,
     panic_protection::{PanicProtection, ProtectionResult},
-    realtime_controls::BypassCrossfade,
+    realtime_controls::{BypassCrossfade, LatencyDelay},
+    resampler_bitdepth::{Oversampler, OversamplingFactor},
     routing_matrix::{RoutingMatrix, RoutingMode},
 };
 use nih_plug::prelude::*;
 use plugin_support::CommonChannelParams;
-use greg_gui_core::GuiTelemetry;
+use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
+use greg_gui_core::prelude::*;
 use serde::{Serialize, Deserialize};
-use greg_plugin_host::HostedPlugin;
+
+#[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
+enum Oversampling {
+    #[id = "1x"]
+    #[name = "1x"]
+    X1,
+    #[id = "2x"]
+    #[name = "2x"]
+    X2,
+    #[id = "4x"]
+    #[name = "4x"]
+    X4,
+    #[id = "8x"]
+    #[name = "8x"]
+    X8,
+}
+
+impl From<Oversampling> for OversamplingFactor {
+    fn from(value: Oversampling) -> Self {
+        match value {
+            Oversampling::X1 => Self::X1,
+            Oversampling::X2 => Self::X2,
+            Oversampling::X4 => Self::X4,
+            Oversampling::X8 => Self::X8,
+        }
+    }
+}
 
 #[derive(Params)]
 struct GregBayParams {
@@ -35,7 +65,7 @@ struct GregBayParams {
     #[id = "bypass"]
     bypass: BoolParam,
     #[id = "oversampling"]
-    oversampling: FloatParam,
+    oversampling: EnumParam<Oversampling>,
     #[id = "invert_left"]
     invert_left: BoolParam,
     channel_setup: CommonChannelParams,
@@ -70,11 +100,7 @@ impl Default for GregBayParams {
             slot_3_module: EnumParam::new("Slot 3 Module", SlotModule::None),
             slot_4_module: EnumParam::new("Slot 4 Module", SlotModule::None),
             bypass: BoolParam::new("Bypass", false),
-            oversampling: FloatParam::new(
-                "Oversampling",
-                1.0,
-                FloatRange::Linear { min: 0.0, max: 4.0 },
-            ),
+            oversampling: EnumParam::new("Oversampling", Oversampling::X4),
             invert_left: BoolParam::new("Invert Left Polarity", false),
             channel_setup: CommonChannelParams::default(),
         }
@@ -218,6 +244,9 @@ struct GregBay {
     params: Arc<GregBayParams>,
     routing_matrix: RoutingMatrix,
     bypass_crossfades: [BypassCrossfade<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    oversamplers: [Oversampler<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    dry_delays: [LatencyDelay<f32, 32>; plugin_support::MAX_AUDIO_CHANNELS],
+    last_oversampling: Oversampling,
     last_bypassed: bool,
     bypass_ramp_samples: u32,
     panic_protection: PanicProtection,
@@ -234,6 +263,9 @@ impl Default for GregBay {
             params: Arc::new(GregBayParams::default()),
             routing_matrix: RoutingMatrix::default(),
             bypass_crossfades: [BypassCrossfade::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            oversamplers: [Oversampler::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            dry_delays: [LatencyDelay::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            last_oversampling: Oversampling::X1,
             last_bypassed: false,
             bypass_ramp_samples: 1,
             panic_protection: PanicProtection::default(),
@@ -265,11 +297,22 @@ impl Plugin for GregBay {
         self.bypass_ramp_samples = (buffer_config.sample_rate * 0.005).round().max(1.0) as u32;
         self.last_bypassed = self.params.bypass.value();
         for cf in &mut self.bypass_crossfades { cf.set_bypassed(self.last_bypassed, 0); }
+
+        let oversampling = self.params.oversampling.value();
+        self.last_oversampling = oversampling;
+        let factor = OversamplingFactor::from(oversampling);
+        let latency_samples = Oversampler::<f32>::latency_samples(factor);
+        for oversampler in &mut self.oversamplers { oversampler.reset(); }
+        for delay in &mut self.dry_delays { delay.reset(); let _ = delay.set_delay_samples(latency_samples as usize); }
+        _context.set_latency_samples(latency_samples);
         true
     }
     fn reset(&mut self) {
         self.last_bypassed = self.params.bypass.value();
         for cf in &mut self.bypass_crossfades { cf.set_bypassed(self.last_bypassed, 0); }
+        self.last_oversampling = Oversampling::X1;
+        for delay in &mut self.dry_delays { delay.reset(); }
+        for oversampler in &mut self.oversamplers { oversampler.reset(); }
     }
     fn editor(&mut self, _ae: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> { None }
     fn process(&mut self, buffer: &mut Buffer, _aux: &mut AuxiliaryBuffers, _ctx: &mut impl ProcessContext<Self>) -> ProcessStatus {
@@ -279,6 +322,17 @@ impl Plugin for GregBay {
             for cf in &mut self.bypass_crossfades { cf.set_bypassed(bypassed, self.bypass_ramp_samples); }
             self.last_bypassed = bypassed;
         }
+        let oversampling = self.params.oversampling.value();
+        if oversampling != self.last_oversampling {
+            let factor = OversamplingFactor::from(oversampling);
+            let latency_samples = Oversampler::<f32>::latency_samples(factor);
+            for oversampler in &mut self.oversamplers { oversampler.reset(); }
+            for delay in &mut self.dry_delays { delay.reset(); let _ = delay.set_delay_samples(latency_samples as usize); }
+            self.last_oversampling = oversampling;
+            _ctx.set_latency_samples(latency_samples);
+        }
+        let factor = OversamplingFactor::from(oversampling);
+        let invert_left = self.params.invert_left.value();
         let slot1 = 10.0f64.powf((self.params.slot_1.value() / 20.0).into());
         let slot2 = 10.0f64.powf((self.params.slot_2.value() / 20.0).into());
         let slot3 = 10.0f64.powf((self.params.slot_3.value() / 20.0).into());
@@ -291,12 +345,19 @@ impl Plugin for GregBay {
                 let li = finite(*ls);
                 let Some(rs) = samples.next() else { *ls = li; continue; };
                 let ri = finite(*rs);
-                let lmo = (li as f64 * slot1).tanh() as f32;
-                let rmo = (ri as f64 * slot2).tanh() as f32;
-                let lmo2 = (lmo as f64 * slot3).tanh() as f32;
-                let rmo2 = (rmo as f64 * slot4).tanh() as f32;
-                *ls = finite(self.bypass_crossfades[0].process(li, lmo2));
-                *rs = finite(self.bypass_crossfades[1].process(ri, rmo2));
+                let xl = if invert_left { -li } else { li };
+                let wet_l = self.oversamplers[0].process(xl, factor, |x| {
+                    let t = (x as f64 * slot1).tanh() as f32;
+                    (t as f64 * slot3).tanh() as f32
+                });
+                let wet_r = self.oversamplers[1].process(ri, factor, |x| {
+                    let t = (x as f64 * slot2).tanh() as f32;
+                    (t as f64 * slot4).tanh() as f32
+                });
+                let dry_l = self.dry_delays[0].process(xl);
+                let dry_r = self.dry_delays[1].process(ri);
+                *ls = finite(self.bypass_crossfades[0].process(dry_l, wet_l));
+                *rs = finite(self.bypass_crossfades[1].process(dry_r, wet_r));
                 self.metering.record_sample(li, *ls, 0.0);
                 self.metering.record_sample(ri, *rs, 0.0);
             }

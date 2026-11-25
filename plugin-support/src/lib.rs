@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 #![allow(clippy::field_reassign_with_default)]
 #![allow(rustdoc::doc_list_item_overindented)]
 

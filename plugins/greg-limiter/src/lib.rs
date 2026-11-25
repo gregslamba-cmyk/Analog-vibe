@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 #![allow(unknown_lints, semicolon_in_expressions_from_non_local_macros)]
 
 use std::{sync::Arc};

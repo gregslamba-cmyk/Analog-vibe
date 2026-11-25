@@ -1,14 +1,44 @@
+#![forbid(unsafe_code)]
 #![allow(unknown_lints, semicolon_in_expressions_from_non_local_macros)]
 use std::sync::Arc;
 use core_dsp::core_dsp_modules::{
     metering::Metering,
     panic_protection::{PanicProtection, ProtectionResult},
-    realtime_controls::BypassCrossfade,
+    realtime_controls::{BypassCrossfade, LatencyDelay},
+    resampler_bitdepth::{Oversampler, OversamplingFactor},
     routing_matrix::{RoutingMatrix, RoutingMode},
 };
 use nih_plug::prelude::*;
 use plugin_support::CommonChannelParams;
-use greg_gui_core::GuiTelemetry;
+use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
+use greg_gui_core::prelude::*;
+
+#[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
+enum Oversampling {
+    #[id = "1x"]
+    #[name = "1x"]
+    X1,
+    #[id = "2x"]
+    #[name = "2x"]
+    X2,
+    #[id = "4x"]
+    #[name = "4x"]
+    X4,
+    #[id = "8x"]
+    #[name = "8x"]
+    X8,
+}
+
+impl From<Oversampling> for OversamplingFactor {
+    fn from(value: Oversampling) -> Self {
+        match value {
+            Oversampling::X1 => Self::X1,
+            Oversampling::X2 => Self::X2,
+            Oversampling::X4 => Self::X4,
+            Oversampling::X8 => Self::X8,
+        }
+    }
+}
 
 #[derive(Params)]
 struct GregNlChParams {
@@ -19,7 +49,7 @@ struct GregNlChParams {
     channel_setup: CommonChannelParams,
 
     #[id = "oversampling"]
-    oversampling: FloatParam,
+    oversampling: EnumParam<Oversampling>,
     #[id = "invert_left"]
     invert_left: BoolParam,
 }
@@ -32,11 +62,7 @@ impl Default for GregNlChParams {
             mix: FloatParam::new("Mix", 1.0, FloatRange::Linear { min: 0.0, max: 1.0 }),
             bypass: BoolParam::new("Bypass", false),
             channel_setup: CommonChannelParams::default(),
-            oversampling: FloatParam::new(
-                "Oversampling",
-                2.0,
-                FloatRange::Linear { min: 0.0, max: 4.0 },
-            ),
+            oversampling: EnumParam::new("Oversampling", Oversampling::X2),
             invert_left: BoolParam::new("Invert Left Polarity", false),
         }
     }
@@ -46,6 +72,9 @@ struct GregNlCh {
     params: Arc<GregNlChParams>,
     routing_matrix: RoutingMatrix,
     bypass_crossfades: [BypassCrossfade<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    oversamplers: [Oversampler<f32>; plugin_support::MAX_AUDIO_CHANNELS],
+    dry_delays: [LatencyDelay<f32, 32>; plugin_support::MAX_AUDIO_CHANNELS],
+    last_oversampling: Oversampling,
     last_bypassed: bool,
     bypass_ramp_samples: u32,
     panic_protection: PanicProtection,
@@ -59,6 +88,9 @@ impl Default for GregNlCh {
             params: Arc::new(GregNlChParams::default()),
             routing_matrix: RoutingMatrix::default(),
             bypass_crossfades: [BypassCrossfade::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            oversamplers: [Oversampler::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            dry_delays: [LatencyDelay::default(); plugin_support::MAX_AUDIO_CHANNELS],
+            last_oversampling: Oversampling::X1,
             last_bypassed: false,
             bypass_ramp_samples: 1,
             panic_protection: PanicProtection::default(),
@@ -86,11 +118,22 @@ impl Plugin for GregNlCh {
         self.bypass_ramp_samples = (buffer_config.sample_rate * 0.005).round().max(1.0) as u32;
         self.last_bypassed = self.params.bypass.value();
         for cf in &mut self.bypass_crossfades { cf.set_bypassed(self.last_bypassed, 0); }
+
+        let oversampling = self.params.oversampling.value();
+        self.last_oversampling = oversampling;
+        let factor = OversamplingFactor::from(oversampling);
+        let latency_samples = Oversampler::<f32>::latency_samples(factor);
+        for oversampler in &mut self.oversamplers { oversampler.reset(); }
+        for delay in &mut self.dry_delays { delay.reset(); let _ = delay.set_delay_samples(latency_samples as usize); }
+        _context.set_latency_samples(latency_samples);
         true
     }
     fn reset(&mut self) {
         self.last_bypassed = self.params.bypass.value();
         for cf in &mut self.bypass_crossfades { cf.set_bypassed(self.last_bypassed, 0); }
+        self.last_oversampling = Oversampling::X1;
+        for delay in &mut self.dry_delays { delay.reset(); }
+        for oversampler in &mut self.oversamplers { oversampler.reset(); }
     }
     fn editor(&mut self, _ae: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> { None }
     fn process(&mut self, buffer: &mut Buffer, _aux: &mut AuxiliaryBuffers, _ctx: &mut impl ProcessContext<Self>) -> ProcessStatus {
@@ -100,6 +143,17 @@ impl Plugin for GregNlCh {
             for cf in &mut self.bypass_crossfades { cf.set_bypassed(bypassed, self.bypass_ramp_samples); }
             self.last_bypassed = bypassed;
         }
+        let oversampling = self.params.oversampling.value();
+        if oversampling != self.last_oversampling {
+            let factor = OversamplingFactor::from(oversampling);
+            let latency_samples = Oversampler::<f32>::latency_samples(factor);
+            for oversampler in &mut self.oversamplers { oversampler.reset(); }
+            for delay in &mut self.dry_delays { delay.reset(); let _ = delay.set_delay_samples(latency_samples as usize); }
+            self.last_oversampling = oversampling;
+            _ctx.set_latency_samples(latency_samples);
+        }
+        let factor = OversamplingFactor::from(oversampling);
+        let invert_left = self.params.invert_left.value();
         let mix = self.params.mix.value();
         let drive_lin = 10.0f64.powf((self.params.drive_db.value() / 20.0).into());
         self.metering.begin_block();
@@ -110,12 +164,15 @@ impl Plugin for GregNlCh {
                 let li = finite(*ls);
                 let Some(rs) = samples.next() else { *ls = li; continue; };
                 let ri = finite(*rs);
-                let lo = (li as f64 * drive_lin).tanh() as f32;
-                let ro = (ri as f64 * drive_lin).tanh() as f32;
-                let lmo = li + (lo - li) * mix;
-                let rmo = ri + (ro - ri) * mix;
-                *ls = finite(self.bypass_crossfades[0].process(li, lmo));
-                *rs = finite(self.bypass_crossfades[1].process(ri, rmo));
+                let xl = if invert_left { -li } else { li };
+                let wet_l = self.oversamplers[0].process(xl, factor, |x| (x as f64 * drive_lin).tanh() as f32);
+                let wet_r = self.oversamplers[1].process(ri, factor, |x| (x as f64 * drive_lin).tanh() as f32);
+                let dry_l = self.dry_delays[0].process(xl);
+                let dry_r = self.dry_delays[1].process(ri);
+                let lmo = dry_l + (wet_l - dry_l) * mix;
+                let rmo = dry_r + (wet_r - dry_r) * mix;
+                *ls = finite(self.bypass_crossfades[0].process(dry_l, lmo));
+                *rs = finite(self.bypass_crossfades[1].process(dry_r, rmo));
                 self.metering.record_sample(li, *ls, 0.0);
                 self.metering.record_sample(ri, *rs, 0.0);
             }

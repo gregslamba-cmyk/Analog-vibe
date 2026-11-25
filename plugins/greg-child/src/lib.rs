@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 #![allow(unknown_lints, semicolon_in_expressions_from_non_local_macros)]
 
 use std::{array, sync::Arc};
@@ -545,7 +546,7 @@ impl Plugin for GregChild {
         let threshold_db = self.params.threshold.value();
         let factor = OversamplingFactor::from(oversampling);
         let drive = 1.0 + 0.2 * (util::db_to_gain(self.params.tube_drive.value()) - 1.0);
-        let use_external = self.params.external_sidechain.value();
+        let use_external = self.params.external_sidechain.value() || self.params.sidechain_listen.value();
         let stereo_link = self.params.stereo_link.value();
         let external_sidechain = aux
             .inputs

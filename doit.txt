@@ -1,0 +1,24 @@
+# DOIT — Collaudo Host Omnicomprensivo & Auto-Calibration Hardware Reference
+
+task 1 — Potenziamento Omnicomprensivo di `clap-signal-host` (Simmetria Multicanale 1–8ch, Denormali, Reset, Parameter Sweep, GUI Lifecycle & RT Budget)
+Leggi `tools/clap-signal-host/src/main.rs` e `ARCHITECTURE.md`.
+Estendi `clap-signal-host` affinché esegua automaticamente questi **6 controlli reali** su qualsiasi `.so` CLAP caricato:
+1. **Simmetria Multicanale (`1..=8` canali):** Verifica che in configurazione stereo (`2 ch`) e surround (`6 ch` / `8 ch`) tutti i canali attivi vengano elaborati e scritti correttamente (bloccando qualsiasi canale morto o non processato).
+2. **Silenzio Assoluto & Anti-Denormali (`0.0 in -> 0.0 out`):** Invia 4 secondi di silenzio digitale dopo un impulso a `0 dBFS`, verificando che l'uscita torni a `< 1e-12` (zero DC offset / ronzio residuo) e che il tempo di elaborazione per blocco sul silenzio non subisca rallentamenti da numeri subnormali.
+3. **`reset()` & Invarianza al Sample Rate (`44.1 / 48 / 96 / 192 kHz`):** Processa rumore a `-6 dBFS`, chiama `reset()`, invia silenzio e verifica che la prima uscita sia identica a un'istanza nuova (`< 1e-12`) su tutti e 4 i sample rate.
+4. **Parameter Sweep Completo su Tutti i Parametri Esportati:** Itera dinamicamente su **tutti** i parametri esposti dal plugin (`clap_plugin_params`), esegue rampe `min -> default -> max` durante lo streaming audio e verifica **zero `NaN`/`Inf`**, **zero crash** e **zero click/discontinuità `> +6 dB`** tra campioni adiacenti.
+5. **Lifecycle GUI (`clap_plugin_gui`):** Esegue `create()`, `set_scale()`, `show()`, `hide()` e `destroy()` verificando che ogni plugin esponga una GUI 2D valida senza panic né leak.
+6. **Misura RT Budget:** Misura il tempo medio/picco per blocco (`256` campioni @ `48 kHz`, budget `5333 µs`) stampando il consumo % di un singolo core per ciascun plugin.
+7. **Verifica 18/18 PASS:** Esegui `cargo build --release --workspace` e lancia `clap-signal-host` su **tutti e 18 i plugin** (`0` errori), cancella questo task da `doit.txt`, rinomina il successivo e fai `git commit -m "[Test Host] Collaudo omnicomprensivo clap-signal-host: multicanale, denormali, reset, sweep parametri, GUI e RT budget" && git push`.
+
+task 2 — Auto-Calibration & Hardware Reference Matching (`--match-reference` in `clap-validator-host`)
+Leggi `tools/clap-validator-host/src/main.rs`, `docs/PLUGIN_CATALOG.md` e `core-dsp/src/core_dsp_modules/`.
+Implementa un database di **curve target fisiche/spettrali di riferimento** basate su misure pubbliche di laboratorio (DAFx / CCRMA / Audio Precision) e la modalità `--match-reference` in `clap-validator-host`:
+1. **Target Numerici di Riferimento per Famiglia Hardware (`reference_profiles.rs`):**
+   - **Compressori FET / Opto / VCA / Vari-Mu (`greg_76`, `greg-a2a`, `greg-a3a`, `greg_2500`, `greg-bus-comp`, `greg-child`, `greg_160`, `greg_165`):** Curva di trasferimento `dB in -> dB out` (ginocchio Soft/Hard, ratio progressiva Vari-Mu), tempi di attacco/rilascio (`63%` e `90%` GR) e spettro armonico H2–H5 a `0 VU (-18 dBFS)` e `+12 VU`.
+   - **Equalizzatori (`greg-eqp1a`, `greg-surgical-eq`):** Risposta in frequenza ampiezza/fase (`20 Hz – 20 kHz`), incluse le curve caratteristiche del trucco simultaneo *Low Boost + Low Atten* su `greg-eqp1a`.
+   - **Console & Channel Strip (`greg_nl_ch`, `greg_nl_mixer`):** Rapporto armonico pari/dispari (`H2/H3`) e roll-off/bump dei 3 modelli di console (`British 8078`, `British 4000G`, `American 1608`).
+2. **Motore di Verifica & Auto-Taratura (`--match-reference` & `--auto-calibrate`):**
+   - Confronta le misure reali FFT/RMS/inviluppo del `.so` compilato con i target numerici (tolleranza `±0.35 dB` su curva/risposta e `±1.5 dB` su H2–H5), stampando una pagella dettagliata di scostamento per ciascun plugin.
+   - Se uno stadio interno si discosta oltre la tolleranza, calcola e propone/applica i coefficienti ottimali di taratura (bias/saturazione/ginocchio) e salva il report aggiornato in `target/reference_match_report.md`.
+3. **Verifica Finale & Release:** Esegui `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings` (`0` warning), `cargo build --release --workspace` e `clap-signal-host` 18/18 PASS, installa i 18 `.clap` aggiornati in `~/.clap/Analog-vibe/`, svuota `doit.txt` (`# DOIT - Collaudo Host e Hardware Reference Matching completati`) e fai `git commit -m "[Validation & Reference] Aggiunto hardware reference matching (--match-reference) e auto-taratura su tutta la suite" && git push`.

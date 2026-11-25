@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 //! greg_dbx_160 — DBX 160 VCA Compressor/Limiter family
 //! Consolidates DBX 160 VU / 160X / 160A with version selector.
 //!
