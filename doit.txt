@@ -6,16 +6,7 @@ Leggi `tools/clap-validator-host/src/main.rs` (intorno a `CLAP_EVENT_PARAM_VALUE
 2. Invia i valori dello sweep in scala normalizzata `[0.0 .. 1.0]` affinché `params.get_value()` accetti ogni parametro senza `[warn] parameter ... did not accept`.
 3. Compila SOLO `-p clap-validator-host` e verifica su `target/release/libgreg_76.so`, cancella `task 1` da `doit.txt` e rinomina i successivi.
 
-task 2 — Smart Multisampling, Multi-Layer / Multitraccia & Sample Editor Non Distruttivo (`mpc_sampler_engine` & `pitch_shifter`)
-Leggi `ARCHITECTURE.md`, `core-dsp/src/core_dsp_modules/mpc_sampler_engine.rs` e `core-dsp/src/core_dsp_modules/pitch_shifter.rs`.
-Obiettivo: dotare il motore sampler di `core-dsp` di architettura multi-layer/multitraccia e sintesi organica (`f64`, zero allocazioni in `process()`):
-1. **`OrganicRoundRobin`:** Micro-variazioni fisiche non distruttive per ogni trigger (micro-shift di fase, risonanza ZDF, micro-inviluppo transiente e saturazione controllata) per eliminare l'effetto mitragliatrice partendo da un singolo campione.
-2. **`SmartVelocityMorph` & Trasposizione Formant-Preserving:** Interpolazione dinamica continua su 127 velocity layer da 2–4 campioni reali e trasposizione con inviluppo formantico bloccato tramite `pitch_shifter.rs`.
-3. **Multi-Layer / Multitraccia & Non-Destructive Sample Editor (`SampleLayerRegion`):** Supporta numero configurabile in `initialize()` di layer/tracce simultanee (zero limiti fissi) (con routing su bus principale o uscite separate multi-out), dotando ciascun layer di `trim_start`, `trim_end`, `fade_in`, `fade_out` con snap allo zero-crossing, `reverse`, `phase_invert` e pre-calcolo dei picchi min/max per il mini-editor grafico di `greg_trigger`.
-4. **Sblocco Limiti Canali nei Motori Core (`core-dsp` + `plugin-support`):** Porta `MAX_AUDIO_CHANNELS` (in `dsp_graph.rs` e `plugin-support/src/lib.rs`) da `8` a `128` e rendi `VirtualEarthSummer` / `AdjacentCrosstalkMatrix` (`analog_summing.rs`) configurabili dinamicamente in `initialize()` oltre i 32 canali (zero limiti fissi).
-5. **Verifica:** Aggiungi test unitari deterministici in `cargo test -p core-dsp`, cancella `task 2` da `doit.txt` e rinomina i successivi.
-
-task 3 — Audit & Bonifica Totale Marchi Registrati (`mpc_sampler_engine` → `sampler_engine`, 4 Plugin Compilati & Stringhe UI)
+task 2 — Audit & Bonifica Totale Marchi Registrati (`mpc_sampler_engine` → `sampler_engine`, 4 Plugin Compilati & Stringhe UI)
 Leggi `vcinst.md` (regola Zero Marchi Registrati) e `docs/INVENTARIO.txt`.
 1. **Rinomina Modulo Sampler (`core-dsp`):** Rinomina `core-dsp/src/core_dsp_modules/mpc_sampler_engine.rs` in `sampler_engine.rs` (`MpcSamplerEngine` → `SamplerEngine`, `MpcPad` → `SamplerPad`), aggiornando `core_dsp_modules.rs`, `ARCHITECTURE.md`, `README.md`, `README.txt` e `docs/INVENTARIO.txt`.
 2. **Rinomina i 4 Plugin Compilati con Nomi Produttore (mantenendo `greg-child`):**
@@ -25,41 +16,41 @@ Leggi `vcinst.md` (regola Zero Marchi Registrati) e `docs/INVENTARIO.txt`.
    - `greg-pultec` -> `greg-eqp1a` (DAW Name: `"Greg EQP-1A Program EQ"`)
 3. **Bonifica Stringhe UI:** Sostituisci eventuali marchi registrati nei parametri esposti (`OverEasy` -> `Soft Knee`, `THRUST` -> `Sidechain Tilt`, `PeakStop` -> `Peak Limiter`, `All-Buttons` -> `All-Ratio Slam`, `Dolby Atmos` -> `Spatial 3D`).
 4. **Sblocco Limiti Canali nei Motori Core (`core-dsp` + `plugin-support`):** Porta `MAX_AUDIO_CHANNELS` (in `dsp_graph.rs` e `plugin-support/src/lib.rs`) da `8` a `128` e rendi `VirtualEarthSummer` / `AdjacentCrosstalkMatrix` (`analog_summing.rs`) configurabili dinamicamente in `initialize()` oltre i 32 canali (zero limiti fissi).
-5. **Verifica:** Esegui `cargo test --workspace` e `cargo build --release --workspace`, rimuovi i 4 vecchi `.clap` da `~/.clap/Analog-vibe/`, copia tutti e 18 i nuovi `.clap`, cancella `task 3` da `doit.txt` e fai `git commit` + `git push`.
+5. **Verifica:** Esegui `cargo test --workspace` e `cargo build --release --workspace`, rimuovi i 4 vecchi `.clap` da `~/.clap/Analog-vibe/`, copia tutti e 18 i nuovi `.clap`, cancella `task 2` da `doit.txt` e fai `git commit` + `git push`.
 
-task 4 — Crate Host Multi-Formato (`crates/greg_plugin_host`: CLAP, LV2, LADSPA, VST3, AUv2) + Integrazione in `greg_bay`
+task 3 — Crate Host Multi-Formato (`crates/greg_plugin_host`: CLAP, LV2, LADSPA, VST3, AUv2) + Integrazione in `greg_bay`
 Leggi `ARCHITECTURE.md` (sezione *Crate Host Multi-Formato*), `tools/clap-validator-host/src/main.rs` e `plugins/greg_bay/src/lib.rs`.
 1. Crea `crates/greg_plugin_host` con trait uniforme `HostedPlugin` + adattatore `DspGraphNode` (zero allocazioni in `process_block`, PDC automatico, `get_state`/`set_state`) e backend per **CLAP**, **LV2/LADSPA**, **VST3** e **AUv2** (`#[cfg(target_os = "macos")]`).
 2. Collega `greg_plugin_host` agli slot di `plugins/greg_bay` accanto ai moduli interni.
-3. **Verifica:** Esegui `cargo test -p greg_plugin_host -p greg_bay`, cancella `task 4` da `doit.txt` e fai `git commit` + `git push`.
+3. **Verifica:** Esegui `cargo test -p greg_plugin_host -p greg_bay`, cancella `task 3` da `doit.txt` e fai `git commit` + `git push`.
 
-task 5 — Mattoni `core-dsp` per Enhancer Basse & Suite Metering (`sub_harmonic_synth`, `scope_telemetry`, `tonal_reference`)
+task 4 — Mattoni `core-dsp` per Enhancer Basse & Suite Metering (`sub_harmonic_synth`, `scope_telemetry`, `tonal_reference`)
 Leggi `ARCHITECTURE.md` (sezione *Mattoni Core per Enhancer Basse & Suite Metering*), `core-dsp/src/core_dsp_modules/metering.rs` e `core-dsp/src/core_dsp_modules/spectral_analyzer.rs`.
 1. Implementa `sub_harmonic_synth.rs` (divisore PLL/zero-crossing `-1/-2 oct` + uscita LFE + serie armonica psicoacustica).
 2. Estendi `metering.rs` con `ScopeTelemetry` (oscilloscopio sincronizzato ai transienti) + correlometro di fase a 3 bande, ed estendi `spectral_analyzer.rs` con `TonalReferenceTracker`.
-3. **Verifica:** Esegui `cargo test -p core-dsp`, cancella `task 5` da `doit.txt` e fai `git commit` + `git push`.
+3. **Verifica:** Esegui `cargo test -p core-dsp`, cancella `task 4` da `doit.txt` e fai `git commit` + `git push`.
 
-task 6 — Mattoni Core per Controllo Dinamico & Risonanze (`auto_gain_matcher`, `transient_splitter`, `resonance_suppressor`, `inter_plugin_bus`)
+task 5 — Mattoni Core per Controllo Dinamico & Risonanze (`auto_gain_matcher`, `transient_splitter`, `resonance_suppressor`, `inter_plugin_bus`)
 Leggi `ARCHITECTURE.md` (sezione *Moduli di Controllo Dinamico, Risonanze & Comunicazione Inter-Plugin*), `core-dsp/src/core_dsp_modules/metering.rs`, `core-dsp/src/core_dsp_modules/spectral_restoration.rs` e `plugin-support/src/lib.rs`.
 1. Implementa `auto_gain_matcher` in `metering.rs` (`enabled = false` di default), `transient_splitter.rs` (`transient + sustain == input`), `resonance_suppressor` in `spectral_restoration.rs` (con maschere di blocco/esclusione per banda/frequenza per `greg_resonance_killer_eq`) e `inter_plugin_bus` in `plugin-support`.
-2. **Verifica:** Esegui `cargo test -p core-dsp -p plugin-support`, cancella `task 6` da `doit.txt` e fai `git commit` + `git push`.
+2. **Verifica:** Esegui `cargo test -p core-dsp -p plugin-support`, cancella `task 5` da `doit.txt` e fai `git commit` + `git push`.
 
-task 7 — Mattoni Core per Console & Mini-DAW (`console_mixer`, `transport_timeline` & `disk_streamer`)
+task 6 — Mattoni Core per Console & Mini-DAW (`console_mixer`, `transport_timeline` & `disk_streamer`)
 Leggi `ARCHITECTURE.md` (sezione *Mattoni per Console & Mini-DAW*), `core-dsp/src/core_dsp_modules/analog_summing.rs` e `plugin-support/src/lib.rs`.
 1. **`console_mixer.rs` (`core-dsp`):** Fader logaritmico reale (`-∞ .. +12 dB`) anti-zipper, Pan Law (`0 / -3 / -4.5 / -6 dB`), numero illimitato/configurabile in `prepare()` di Aux Send Pre/Post-Fader per canale, Gruppi Bus gerarchici (Canale → Group Bus → Master) con PDC automatico, Mute/Solo (SIP/AFL/PFL) e VCA Group Faders.
 2. **`transport_timeline.rs` (`core-dsp`):** Timeline sample-accurate (Play/Stop/Rec, Loop, Tempo Map, Bar/Beat/Sample), playback multi-traccia di clip audio & MIDI con fade/crossfade equal-power e curve di automazione sample-accurate (`Linear`, `Exp`, `SCurve`, `Step`).
 3. **`disk_streamer` & `engine_host` (`plugin-support`):** Ring-buffer lock-free per disk-streaming multi-traccia (lettura/scrittura WAV/FLAC fuori dal thread audio) e orchestratore di sessione per backend audio di sistema.
 4. **Sblocco Limiti Canali nei Motori Core (`core-dsp` + `plugin-support`):** Porta `MAX_AUDIO_CHANNELS` (in `dsp_graph.rs` e `plugin-support/src/lib.rs`) da `8` a `128` e rendi `VirtualEarthSummer` / `AdjacentCrosstalkMatrix` (`analog_summing.rs`) configurabili dinamicamente in `initialize()` oltre i 32 canali (zero limiti fissi).
-5. **Verifica:** Aggiungi test unitari deterministici (`cargo test -p core-dsp -p plugin-support`), cancella `task 7` da `doit.txt` e fai `git commit -m "[Core DSP & Support] Aggiunti console_mixer, transport_timeline e disk_streamer per mini-DAW" && git push`.
+5. **Verifica:** Aggiungi test unitari deterministici (`cargo test -p core-dsp -p plugin-support`), cancella `task 6` da `doit.txt` e fai `git commit -m "[Core DSP & Support] Aggiunti console_mixer, transport_timeline e disk_streamer per mini-DAW" && git push`.
 
-task 8 — Documentazione Standalone per Subtree GitHub (`core-dsp/README.md`, `core-dsp/ARCHITECTURE.md` & Satelliti)
+task 7 — Documentazione Standalone per Subtree GitHub (`core-dsp/README.md`, `core-dsp/ARCHITECTURE.md` & Satelliti)
 Leggi `ARCHITECTURE.md`, `core-dsp/README.txt`, `crates/greg_gui_core/README.txt` e `tools/clap-validator-host/README.txt`.
 Obiettivo: dotare i 3 repository standalone sincronizzati via GitHub Subtree di documentazione Markdown nativa e auto-contenuta per gli sviluppatori esterni:
 1. **`core-dsp/README.md` & `core-dsp/ARCHITECTURE.md` (`analog-vibe-dsp`):** Crea una guida completa per sviluppatori esterni con installazione Cargo, garanzie real-time (`f64`, `#![forbid(unsafe_code)]`, zero allocazioni), mappa completa di tutti i moduli DSP (inclusi `neural_capture`, `spatial_3d` 128ch, `sampler_engine`, `synth_engine`, `console_mixer`, `transport_timeline`), esempi compilabili e nota Dual Licensing (`GPLv3` + Commerciale).
 2. **`crates/greg_gui_core/README.md` (`clap-gui-designer`) & `tools/clap-validator-host/README.md` (`clap-validator-host`):** Converti e arricchisci in Markdown pulito le rispettive guide tecniche per GitHub.
 3. **Verifica:** Esegui `cargo test --doc -p core-dsp`, cancella questo task da `doit.txt` e fai `git commit -m "[Docs] Aggiunti README.md e ARCHITECTURE.md standalone per i repository subtree" && git push`.
 
-task 9 — Cargo Feature Flags Modulari & Audit Matematico Multi-Sample-Rate in `core-dsp`
+task 8 — Cargo Feature Flags Modulari & Audit Matematico Multi-Sample-Rate in `core-dsp`
 Leggi `core-dsp/Cargo.toml`, `core-dsp/src/core_dsp_modules.rs` e `core-dsp/ARCHITECTURE.md`.
 Obiettivo: rendere `core-dsp` compilabile a moduli tramite **Cargo Feature Flags** (mantenendo `default = ["full"]` per retrocompatibilità totale con il workspace) ed eseguire un audit matematico rigoroso su tutti i moduli:
 1. **Cargo Feature Flags (`core-dsp/Cargo.toml` & `core_dsp_modules.rs`):**
@@ -72,3 +63,23 @@ Obiettivo: rendere `core-dsp` compilabile a moduli tramite **Cargo Feature Flags
    - Aggiungi `state_version: u32` retrocompatibile negli stati serializzati (`greg_bay` / `gui_layout.json` / preset).
    - Aggiungi un test deterministico di budget CPU worst-case (128 canali / 64 voci synth sotto il tempo reale).
 4. **Documentazione & Commit:** Aggiorna `core-dsp/README.md` con la tabella delle feature flags, cancella questo task da `doit.txt` e fai `git commit -m "[Core DSP] Aggiunte Cargo Feature Flags modulari e audit multi-sample-rate" && git push`.
+
+task 9 — Enciclopedia Completa delle Scale Mondiali (`music_theory.rs`) & Griglie Metriche (`3/4`, `4/4`, `12/8`, Dispari)
+Leggi `ARCHITECTURE.md` (sezione *Enciclopedia Musicale Mondiale & Griglie Metriche*), `core-dsp/src/core_dsp_modules/tempo_sync.rs` e `core-dsp/src/core_dsp_modules/synth_engine/mod.rs`.
+Obiettivo: creare in `core-dsp` il modulo `music_theory.rs` ed estendere la gestione metrica (`f64`, `#![forbid(unsafe_code)]`, **zero allocazioni heap** nel thread audio `process()`):
+1. **`music_theory.rs` — Tutte le Tradizioni Musicali del Mondo:**
+   - **Occidentale, Modale & Jazz:** Maggiore, Minore Naturale/Armonica/Melodica, 7 Modi diatonici, 7 Modi della Minore Melodica, 7 Modi della Minore Armonica, Pentatoniche, Blues (Major/Minor), Esatonale, Ottofonica/Diminuita (`H-W`/`W-H`), Bebop (Dominant, Major, Minor, Dorian), Altered/Super Locrian, Lydian Dominant, Prometheus, Enigmatic.
+   - **Araba, Mediorientale & Mediterranea (Maqam / Jins):** Hijaz, Hijaz Kar, Nahawand, Rast, Bayati, Saba, Sikah, Kurd, Ajam, Nawa Athar, Nikriz, Phrygian Dominant / Freygish, Double Harmonic Major (Byzantine), Hungarian Minor/Major, Spanish 8-Tone, Flamenco.
+   - **Indiana (10 Thaat + Raga principali):** Bilawal, Kalyan, Khamaj, Bhairav, Poorvi, Marwa, Kafi, Asavari, Bhairavi, Todi, Charukeshi, Kirwani, Madhuvanti, Mohanam, Hamsadhwani.
+   - **Giapponese, Cinese & Sud-Est Asiatico:** *Hirajoshi, In Sen, Iwato, Yo, Kumoi, Hon Kumoi Joshi, Ritsu, Ryo*, *Gong, Shang, Jiao, Zhi, Yu*, *Pelog, Slendro*.
+   - **Balcanica, Etiope & Popolare:** Scale Rom/Balcaniche, Pentatoniche Etiopi (*Tizita, Bati, Ambassel, Anchihoye*), Klezmer, Celtiche.
+   - **Microtonalità & Armonia:** Supporto a quarti di tono (24-EDO), tuning arbitrari `N`-EDO e tabelle **Scala (`.scl`)**, quantizzatore di nota/frequenza su scala (*Snap-to-Scale* real-time), rilevatore automatico di scala/tonalità da input MIDI/audio e generatore di accordi/voicing.
+2. **Griglie Metriche & Tempi Composti/Dispari (`TimeSignature`):**
+   - Supporto a qualsiasi metro `TimeSignature { numerator, denominator }` (`2/4`, `3/4`, `4/4`, `5/4`, `6/8`, `7/8`, `9/8`, `11/8`, `12/8`, raggruppamenti additivi tipo `3+2+2/8` e cambi metro in corsa), coordinate `Bar : Beat : Tick`, accenti metrici e quantizzazione ritmica con swing.
+  - **Suddivisioni Metriche & Cicli Ritmici Etnici (`MetricGrid` & `EthnicRhythmCycle`):**
+    - **Aksak / Balcanici & Mediterranei:** `5/8` (`2+3`, `3+2`), `7/8` (`2+2+3`, `3+2+2`, `2+3+2`), `8/8` (`3+3+2` Tresillo), `9/8` (`2+2+2+3` Karsilamas/Zeibekiko), `11/8` (`2+2+3+2+2` Kopanitsa), `13/8`, `15/8`.
+    - **Tala Indiani:** *Dadra* (6), *Rupak* (7), *Keherwa* (8), *Jhaptaal* (10), *Ektaal* (12), *Dhamar* (14), *Teentaal* (16) con accenti *Sam / Tali / Khali*.
+    - **Iqa'at Arabi & Usul Ottomani:** *Maqsum*, *Baladi*, *Saidi*, *Malfuf*, *Ayyoub*, *Samai Thaqil* (`10/8`), *Dawr Hindi* (`7/8`), *Mudawwar* (`12/4`) con pattern di accenti *Dum / Tak*.
+    - **Poliritmie & Clave Afro-Cubane / Brasiliane / Africane:** *Son Clave* (`3-2`/`2-3`), *Rumba Clave*, *Bossa Clave*, *Bembe 12/8*, *Gahu*, *Partido Alto* e poliritmie `3:2`, `4:3`, `5:4`, `7:4`.
+    - **Tuplet & Groove Micro-Timing:** Quintine (`5:4`), Settimine (`7:4`), Novine (`9:8`), Swing e template di micro-timing.
+3. **Verifica:** Aggiungi test unitari deterministici su tutte le famiglie di scale (occidentali, maqam con quarti di tono, raga, giapponesi, etiope, `.scl`) e su tutti i metri (`3/4`, `4/4`, `7/8`, `12/8`) in `cargo test -p core-dsp`, cancella questo task da `doit.txt` e fai `git commit -m "[Core DSP] Aggiunta enciclopedia completa delle scale mondiali e griglie metriche" && git push`.

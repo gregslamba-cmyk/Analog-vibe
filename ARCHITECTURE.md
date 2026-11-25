@@ -591,3 +591,21 @@ impl SynthEngine {
 - **`console_mixer` (`core_dsp_modules::console_mixer`):** Fader logaritmico reale (`-∞ .. +12 dB`) anti-zipper, Pan Law (`0 / -3 / -4.5 / -6 dB`), fino a **16 Aux Send Pre/Post-Fader** per canale, **Gruppi Bus** gerarchici (Canale → Group Bus → Master) con PDC automatico, **Mute/Solo (SIP/AFL/PFL)** e **VCA Group Faders**.
 - **`transport_timeline` (`core_dsp_modules::transport_timeline`):** Timeline sample-accurate (Play/Stop/Rec, Loop, Tempo Map, Bar/Beat/Sample), playback multi-traccia di regioni/clip audio & MIDI con fade/crossfade equal-power e curve di automazione sample-accurate (`Linear`, `Exp`, `SCurve`, `Step`).
 - **`disk_streamer` & `engine_host` (in `plugin-support`):** Ring-buffer lock-free per disk-streaming multi-traccia (lettura/scrittura WAV/FLAC fuori dal thread audio) + orchestratore di sessione pronto per backend audio di sistema (JACK / PipeWire / ALSA / CoreAudio / WASAPI).
+
+---
+
+## Enciclopedia Musicale Mondiale & Griglie Metriche (`core-dsp`)
+- **`music_theory` (`core_dsp_modules::music_theory`):** Enciclopedia completa e real-time safe (`f64`, `#![forbid(unsafe_code)]`, zero allocazioni in `process()`) delle tradizioni musicali mondiali:
+  - **Occidentale & Jazz:** Maggiore, Minore Naturale/Armonica/Melodica, 7 Modi diatonici, 7 Modi della Minore Melodica, 7 Modi della Minore Armonica, Pentatoniche, Blues (Major/Minor), Esatonale (Whole-Tone), Ottofonica/Diminuita (`H-W` / `W-H`), Bebop (Dominant, Major, Minor, Dorian), Altered/Super Locrian, Lydian Dominant, Prometheus, Enigmatic.
+  - **Araba, Mediorientale & Mediterranea (Maqam / Jins):** Hijaz, Hijaz Kar, Nahawand, Rast, Bayati, Saba, Sikah, Kurd, Ajam, Nawa Athar, Nikriz, Phrygian Dominant / Freygish, Double Harmonic Major (Byzantine), Hungarian Minor/Major, Spanish 8-Tone, Flamenco.
+  - **Indiana (Thaat & Raga):** Bilawal, Kalyan, Khamaj, Bhairav, Poorvi, Marwa, Kafi, Asavari, Bhairavi, Todi, Charukeshi, Kirwani, Madhuvanti, Mohanam, Hamsadhwani.
+  - **Estremo Oriente & Sud-Est Asiatico:** Giapponese (*Hirajoshi, In Sen, Iwato, Yo, Kumoi, Hon Kumoi Joshi, Ritsu, Ryo*), Cinese (*Gong, Shang, Jiao, Zhi, Yu*), Indonesiana (*Pelog, Slendro* gamelan).
+  - **Balcanica, Africana & Tradizioni Popolari:** Scale Rom/Balcaniche, Pentatoniche Etiopi (*Tizita, Bati, Ambassel, Anchihoye*), Scale Klezmer, Celtiche e Polinesiane.
+  - **Microtonalità & Armonia:** Supporto nativo a quarti di tono (24-EDO), sistemi a `N`-EDO arbitrari, parser/esportatore di tabelle **Scala (`.scl`)**, quantizzatore di nota/pitch su scala (*Snap-to-Scale*), riconoscimento automatico di scala/tonalità da insiemi di note e dizionario completo di accordi e voicing.
+- **`transport_timeline` (`TimeSignature` & Griglia Metrica):** Supporto completo a qualsiasi metro musicale `N/D` (`2/4`, `3/4`, `4/4`, `5/4`, `6/8`, `7/8`, `8/8`, `9/8`, `11/8`, `12/8`, tempi additivi `3+2+2/8` e polimetrie), coordinate `Bar : Beat : Tick`, accenti metrici e quantizzazione ritmica con swing.
+  - **Suddivisioni Metriche & Cicli Ritmici Etnici (`MetricGrid` & `EthnicRhythmCycle`):**
+    - **Aksak / Balcanici & Mediterranei:** `5/8` (`2+3`, `3+2`), `7/8` (`2+2+3`, `3+2+2`, `2+3+2`), `8/8` (`3+3+2` Tresillo), `9/8` (`2+2+2+3` Karsilamas/Zeibekiko), `11/8` (`2+2+3+2+2` Kopanitsa), `13/8`, `15/8`.
+    - **Tala Indiani:** *Dadra* (6), *Rupak* (7), *Keherwa* (8), *Jhaptaal* (10), *Ektaal* (12), *Dhamar* (14), *Teentaal* (16) con accenti *Sam / Tali / Khali*.
+    - **Iqa'at Arabi & Usul Ottomani:** *Maqsum*, *Baladi*, *Saidi*, *Malfuf*, *Ayyoub*, *Samai Thaqil* (`10/8`), *Dawr Hindi* (`7/8`), *Mudawwar* (`12/4`) con pattern di accenti *Dum / Tak*.
+    - **Poliritmie & Clave Afro-Cubane / Brasiliane / Africane:** *Son Clave* (`3-2`/`2-3`), *Rumba Clave*, *Bossa Clave*, *Bembe 12/8*, *Gahu*, *Partido Alto* e poliritmie `3:2`, `4:3`, `5:4`, `7:4`.
+    - **Tuplet & Groove Micro-Timing:** Quintine (`5:4`), Settimine (`7:4`), Novine (`9:8`), Swing e template di micro-timing.

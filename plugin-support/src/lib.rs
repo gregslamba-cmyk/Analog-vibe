@@ -76,7 +76,7 @@ pub const DYNAMICS_IO_LAYOUTS: [AudioIOLayout; 21] = [
     layout_with_aux(CHANNELS[7], &STEREO_SIDECHAIN),
 ];
 
-pub const MAX_AUDIO_CHANNELS: usize = 8;
+pub const MAX_AUDIO_CHANNELS: usize = 128;
 
 pub mod multichannel;
 pub use multichannel::{
