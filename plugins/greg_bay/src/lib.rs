@@ -10,6 +10,7 @@ use nih_plug::prelude::*;
 use plugin_support::CommonChannelParams;
 use greg_gui_core::GuiTelemetry;
 use serde::{Serialize, Deserialize};
+use greg_plugin_host::HostedPlugin;
 
 #[derive(Params)]
 struct GregBayParams {

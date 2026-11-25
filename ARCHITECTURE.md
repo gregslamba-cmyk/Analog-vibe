@@ -609,3 +609,9 @@ impl SynthEngine {
     - **Iqa'at Arabi & Usul Ottomani:** *Maqsum*, *Baladi*, *Saidi*, *Malfuf*, *Ayyoub*, *Samai Thaqil* (`10/8`), *Dawr Hindi* (`7/8`), *Mudawwar* (`12/4`) con pattern di accenti *Dum / Tak*.
     - **Poliritmie & Clave Afro-Cubane / Brasiliane / Africane:** *Son Clave* (`3-2`/`2-3`), *Rumba Clave*, *Bossa Clave*, *Bembe 12/8*, *Gahu*, *Partido Alto* e poliritmie `3:2`, `4:3`, `5:4`, `7:4`.
     - **Tuplet & Groove Micro-Timing:** Quintine (`5:4`), Settimine (`7:4`), Novine (`9:8`), Swing e template di micro-timing.
+
+---
+
+## Sincronizzazione Video & Timecode SMPTE (`core-dsp` + `greg_video_sync`)
+- **Livello Core (`transport_timeline` in `core-dsp`):** Motore matematico sample-accurate (`#![forbid(unsafe_code)]`) per **SMPTE Timecode (`HH:MM:SS:FF`)**, frame rate standard (`23.976, 24, 25, 29.97 DF/NDF, 30, 50, 59.94, 60 fps`), offset al quarto di frame e conversione **Pull-Up / Pull-Down (`±0.1%`)**.
+- **Livello Media (`crates/greg_video_sync` — Standalone DAW):** Decoder asincrono su thread separato (FFmpeg/GStreamer) agganciato al contatore atomico dei campioni di `transport_timeline` per playback video sincronizzato, thumbnail strip sulla timeline e post-produzione/ADR/Foley.

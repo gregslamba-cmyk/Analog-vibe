@@ -1,0 +1,11 @@
+[package]
+name = "greg_plugin_host"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["lib"]
+
+[dependencies]
+core-dsp = { path = "../../core-dsp" }
+thiserror = "1.0"

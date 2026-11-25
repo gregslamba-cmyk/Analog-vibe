@@ -1605,6 +1605,7 @@ dependencies = [
  "core-dsp",
  "dirs",
  "greg_gui_core",
+ "greg_plugin_host",
  "nih_plug",
  "nih_plug_vizia",
  "plugin-support",
@@ -1664,6 +1665,14 @@ dependencies = [
  "nih_plug",
  "nih_plug_vizia",
  "plugin-support",
+]
+
+[[package]]
+name = "greg_plugin_host"
+version = "0.1.0"
+dependencies = [
+ "core-dsp",
+ "thiserror",
 ]
 
 [[package]]

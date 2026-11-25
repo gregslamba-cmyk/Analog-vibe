@@ -19,6 +19,7 @@ members = [
     "plugins/greg_76",
     "plugins/greg-pultec",
     "crates/greg_gui_core",
+    "crates/greg_plugin_host",
     "tools/clap-signal-host",
     "tools/clap-validator-host",
     "plugins/greg_nl_ch",
