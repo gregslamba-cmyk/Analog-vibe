@@ -14,14 +14,14 @@ La suite Analog-Vibe comprende **18 plugin CLAP + VST3 nativi**, tutti con elabo
 | `greg_76` | Compressore FET vintage (1176LN). Accorpa le revisioni: Rev A, Rev D, Rev E, Rev F, All-Buttons. | Dinamica / FET | **Implementato** (Alpha) |
 | `greg-a2a` | Compressore ottico valvolare (Teletronix LA-2A). Selettore cella T4 (Silverface vs Vintage Tube). | Dinamica / Opto | **Implementato** (Alpha) |
 | `greg-a3a` | Compressore ottico a stato solido discreto (Teletronix LA-3A) con stadio API 2520. | Dinamica / Opto | **Implementato** (Alpha) |
-| `greg_api_2500` | Compressore stereo VCA bus (API 2500). Accorpa le versioni 2500 e 2500+ (Mix/Blend, THRUST). | Dinamica / VCA | **Implementato** (Alpha) |
+| `greg_2500` | Compressore stereo VCA bus (API 2500). Accorpa le versioni 2500 e 2500+ (Mix/Blend, THRUST). | Dinamica / VCA | **Implementato** (Alpha) |
 | `greg-bus-comp` | Compressore stereo VCA da mix bus (SSL 4000 G Bus Compressor). | Dinamica / VCA | **Implementato** (Alpha) |
 | `greg-child` | Compressore Vari-Mu valvolare (Fairchild 670 stereo / 660 mono). | Dinamica / Vari-Mu | **Implementato** (Alpha) |
-| `greg_dbx_160` | Compressore VCA (DBX 160). Accorpa le versioni 160 VU, 160X e 160A con selettore dedicato. | Dinamica / VCA | **Implementato** (Alpha) |
-| `greg_dbx_165` | Compressore VCA (DBX 165). Accorpa 165 e 165A con selettore PeakStop Limiter. | Dinamica / VCA | **Implementato** (Alpha) |
+| `greg_160` | Compressore VCA (DBX 160). Accorpa le versioni 160 VU, 160X e 160A con selettore dedicato. | Dinamica / VCA | **Implementato** (Alpha) |
+| `greg_165` | Compressore VCA (DBX 165). Accorpa 165 e 165A con selettore PeakStop Limiter. | Dinamica / VCA | **Implementato** (Alpha) |
 | `greg-gate` | Noise Gate & Downward Expander analogico con isteresi, filtri sidechain e ducking. | Dinamica / Gate | **Implementato** (Alpha) |
 | `greg-limiter` | True-Peak Limiter / Maximizer brickwall trasparente con oversampling e lookahead. | Dinamica / Limiter | **Implementato** (Alpha) |
-| `greg-pultec` | EQ passivo valvolare (Pultec EQP-1A / EQP-1A3) con interazione boost/attenuation. | Equalizzatore | **Implementato** (Alpha) |
+| `greg-eqp1a` | EQ passivo valvolare (Pultec EQP-1A / EQP-1A3) con interazione boost/attenuation. | Equalizzatore | **Implementato** (Alpha) |
 | `greg-surgical-eq` | EQ parametrico chirurgico a fase lineare e fase minima con filtri ad alta pendenza. | Equalizzatore | **Implementato** (Alpha) |
 | `greg-ms-encoder` | Matrice ortonormale di codifica stereo Left/Right → Mid/Side. | Utility / Matrice | **Implementato** (Alpha) |
 | `greg-ms-decoder` | Matrice ortonormale di decodifica stereo Mid/Side → Left/Right. | Utility / Matrice | **Implementato** (Alpha) |
@@ -38,21 +38,21 @@ La suite Analog-Vibe comprende **18 plugin CLAP + VST3 nativi**, tutti con elabo
 
 | ID Plugin | Obiettivo / Riferimento Hardware da Modellare | Note Architetturali |
 | :--- | :--- | :--- |
-| `greg_api_525` | Compressore feedback FET API 525 vintage e 525A | Accorpa 525 e 525A (attacco fisso vintage 15 µs vs tempi estesi 525A). |
-| `greg_api_527` | Compressore VCA serie 500 API 527 e 527A | Accorpa 527 e 527A con selettore di revisione. |
-| `greg_api_sr22` | Compressore VCA dual-channel circuito ATI Paragon | Accorpa versione rack SR22 e modulo serie 500 SV12. |
-| `greg_api_225l` | Modulo compressore VCA serie 200 API 225L | Topologia feedback/feedforward selezionabile. |
-| `greg_api_t25` | Compressore a due canali FET feedback valvolare Class A API T25 | Modello con trasformatore e doppio triodo. |
-| `greg_api_529` | Compressore stereo bus serie 500 API 529 | Miniaturizzazione del circuito 2500 per serie 500. |
-| `greg_ssl_eq` | EQ di canale SSL 4000 (Black 242 / Brown 02 / G-Series 292) | Selettore curve e risonanze di filtro analogico. |
-| `greg_neve_eq` | EQ a induttori Neve 1073 (vintage / SPX-D con selettore) | Modello di saturazione a induttore e trasformatore Marinair. |
-| `greg_neve_pre` | Preamplificatore discreto Neve 1073 | Modello con trasformatori Carnhill/Marinair e stadio BA283. |
-| `greg_api_pre` | Preamplificatore discreto API 512c | Op-amp discreto API 2520 e trasformatore API 2623. |
-| `greg_harrison_pre` | Preamplificatore da console Harrison 32C | Stadio discreto a bassissimo rumore e saturazione morbida. |
-| `greg_harrison_comp` | Compressore VCA da canale Harrison 32C | Riconoscimento rapido dei transienti e smoothing. |
-| `greg_harrison_eq` | EQ a 4 bande con filtri HPF/LPF Harrison 32C | Curve proporzionali Q e filtri risonanti unici. |
-| `greg_manley_eq` | EQ passivo valvolare Massive Passive | Filtri passivi paralleli con make-up a valvole e trasformatori. |
-| `greg_manley_comp` | Compressore valvolare Variable Mu | Accorpa le versioni Standard e Mastering con selettore di versione. |
+| `greg_525` | Compressore feedback FET API 525 vintage e 525A | Accorpa 525 e 525A (attacco fisso vintage 15 µs vs tempi estesi 525A). |
+| `greg_527` | Compressore VCA serie 500 API 527 e 527A | Accorpa 527 e 527A con selettore di revisione. |
+| `greg_sr22` | Compressore VCA dual-channel circuito ATI Paragon | Accorpa versione rack SR22 e modulo serie 500 SV12. |
+| `greg_225l` | Modulo compressore VCA serie 200 API 225L | Topologia feedback/feedforward selezionabile. |
+| `greg_t25` | Compressore a due canali FET feedback valvolare Class A API T25 | Modello con trasformatore e doppio triodo. |
+| `greg_529` | Compressore stereo bus serie 500 API 529 | Miniaturizzazione del circuito 2500 per serie 500. |
+| `greg_292_242_eq` | EQ di canale SSL 4000 (Black 242 / Brown 02 / G-Series 292) | Selettore curve e risonanze di filtro analogico. |
+| `greg_1073_1081_eq` | EQ a induttori Neve 1073 (vintage / SPX-D con selettore) | Modello di saturazione a induttore e trasformatore Marinair. |
+| `greg_1073_pre` | Preamplificatore discreto Neve 1073 | Modello con trasformatori Carnhill/Marinair e stadio BA283. |
+| `greg_512_pre` | Preamplificatore discreto API 512c | Op-amp discreto API 2520 e trasformatore API 2623. |
+| `greg_32c_pre` | Preamplificatore da console Harrison 32C | Stadio discreto a bassissimo rumore e saturazione morbida. |
+| `greg_32c_comp` | Compressore VCA da canale Harrison 32C | Riconoscimento rapido dei transienti e smoothing. |
+| `greg_32c_eq` | EQ a 4 bande con filtri HPF/LPF Harrison 32C | Curve proporzionali Q e filtri risonanti unici. |
+| `greg_massive_eq` | EQ passivo valvolare Massive Passive | Filtri passivi paralleli con make-up a valvole e trasformatori. |
+| `greg_vari_mu_comp` | Compressore valvolare Variable Mu | Accorpa le versioni Standard e Mastering con selettore di versione. |
 | `greg_multiband_comp`| Compressore multibanda a 4 bande | Crossover Linkwitz-Riley a fase lineare/minima e detector indipendenti. |
 | `greg_deesser` | De-Esser trasparente e musicale | Rilevamento dinamico delle sibilanti e filtro split-band / wideband. |
 | `greg_depop` | Soppressore dinamico di pop e rumble microfonici | Rilevamento plosive ad alta velocità con attenuazione selettiva LF. |
@@ -70,21 +70,21 @@ Ogni channel strip modella fedelmente il percorso completo di canale (Preamp →
 
 | ID Plugin | Modello di Riferimento | Caratteristiche Chiave |
 | :--- | :--- | :--- |
-| `greg_neve_1073_strip` | Neve 1073 Channel Strip | Preamp BA283, induttori EQ, trasformatori Marinair. |
-| `greg_neve_1081_strip` | Neve 1081 Console Strip | EQ a 4 bande con medie parametriche e curve vintage. |
-| `greg_neve_1084_strip` | Neve 1084 Console Strip | 1073 esteso con frequenze alte selezionabili e filtro passa-banda. |
-| `greg_neve_88rs_strip` | Neve 88RS Modern Console Strip | Strip di console moderno con dinamica trasparente e EQ versatile. |
-| `greg_harrison_32c_strip` | Harrison 32C Analog Console Strip | Strip completo del leggendario banco analogico 32C. |
-| `greg_harrison_mixbus_strip` | Harrison Mixbus Software Profile | Emulazione del flusso di summing e saturazione stile Mixbus. |
-| `greg_ssl_4000e_strip` | SSL 4000 E Channel Strip | Preamplificatore, filtri, VCA expander/gate, comp e Brown/Black EQ. |
-| `greg_ssl_4000g_strip` | SSL 4000 G Channel Strip | Modello G-Series con G-EQ (292) e curve di compressione dedicate. |
-| `greg_ssl_9000j_strip` | SSL 9000 J SuperAnalogue Strip | Banda ultra-larga, circuitazione accoppiata in DC, THD minimale. |
-| `greg_api_vision_strip` | API Vision Console Channel Strip | Pre 212L, EQ 550L/560L, Comp 225L, Gate 235L. |
-| `greg_api_legacy_plus_strip` | API Legacy Plus Console Strip | Architettura classica API con op-amp 2520 e saturazione calda. |
-| `greg_trident_a_range_strip` | Trident A-Range Console Strip | EQ induttivo leggendario a 4 bande e preamplificatore discreto. |
-| `greg_trident_80b_strip` | Trident Series 80B Strip | Carattere rock anni '80 con EQ aggressivo e preamplificatore IC/discreto. |
-| `greg_amek_9098_strip` | AMEK 9098 (Rupert Neve Design) | Equalizzatore e dinamica con circuito TLA e curve ad alta precisione. |
-| `greg_mci_jh500_strip` | MCI JH-500 Console Strip | Banco classico della disco/rock anni '70 con suono denso e caldo. |
+| `greg_1073_strip` | Neve 1073 Channel Strip | Preamp BA283, induttori EQ, trasformatori Marinair. |
+| `greg_1081_strip` | Neve 1081 Console Strip | EQ a 4 bande con medie parametriche e curve vintage. |
+| `greg_1084_strip` | Neve 1084 Console Strip | 1073 esteso con frequenze alte selezionabili e filtro passa-banda. |
+| `greg_88rs_strip` | Neve 88RS Modern Console Strip | Strip di console moderno con dinamica trasparente e EQ versatile. |
+| `greg_32c_strip` | Harrison 32C Analog Console Strip | Strip completo del leggendario banco analogico 32C. |
+| `greg_mixbus_strip` | Harrison Mixbus Software Profile | Emulazione del flusso di summing e saturazione stile Mixbus. |
+| `greg_4000e_strip` | SSL 4000 E Channel Strip | Preamplificatore, filtri, VCA expander/gate, comp e Brown/Black EQ. |
+| `greg_4000g_strip` | SSL 4000 G Channel Strip | Modello G-Series con G-EQ (292) e curve di compressione dedicate. |
+| `greg_9000j_strip` | SSL 9000 J SuperAnalogue Strip | Banda ultra-larga, circuitazione accoppiata in DC, THD minimale. |
+| `greg_vision_strip` | API Vision Console Channel Strip | Pre 212L, EQ 550L/560L, Comp 225L, Gate 235L. |
+| `greg_legacy_strip` | API Legacy Plus Console Strip | Architettura classica API con op-amp 2520 e saturazione calda. |
+| `greg_a_range_strip` | Trident A-Range Console Strip | EQ induttivo leggendario a 4 bande e preamplificatore discreto. |
+| `greg_80b_strip` | Trident Series 80B Strip | Carattere rock anni '80 con EQ aggressivo e preamplificatore IC/discreto. |
+| `greg_9098_strip` | AMEK 9098 (Rupert Neve Design) | Equalizzatore e dinamica con circuito TLA e curve ad alta precisione. |
+| `greg_jh500_strip` | MCI JH-500 Console Strip | Banco classico della disco/rock anni '70 con suono denso e caldo. |
 
 ---
 
@@ -119,14 +119,14 @@ Ogni channel strip modella fedelmente il percorso completo di canale (Preamp →
 Per evitare la proliferazione di plugin ridondanti e ottimizzare l'usabilità per il produttore audio, **tutte le versioni o revisioni dello stesso dispositivo hardware devono essere accorpate in un unico plugin**, offrendo la scelta tramite un apposito selettore di versione/profilo nei parametri:
 
 1. **`greg_76`**: accorpa le revisioni 1176LN **Rev A**, **Rev D**, **Rev E**, **Rev F** e modalità **All-Buttons** (scelta circuitazione, FET e trasformatori UTC O-12 / A-10).
-2. **`greg_dbx_160`**: accorpa le versioni **160 VU**, **160X** e **160A** (commutazione tra Hard Knee e OverEasy, curve VCA Dbx 202, uscite sbilanciate vs bilanciate e compressione Infinity+).
-3. **`greg_dbx_165`**: accorpa **165** e **165A** con interruttore dedicato per abilitare o escludere il circuito limitatore PeakStop.
-4. **`greg_api_2500`**: accorpa **2500** e **2500+** con selettore del circuito di mixaggio parallelo integrato Blend/Mix.
-5. **`greg_api_525`**: accorpa **525 vintage** e **525A** con commutazione dell'attacco fisso vintage a 15 µs vs i tempi espansi del 525A.
-6. **`greg_api_527`**: accorpa **527** e **527A** con selettore di revisione e switch feed-forward/feedback.
-7. **`greg_api_sr22`**: accorpa l'unità rack dual channel **SR22** e il modulo serie 500 **Select SV12**.
-8. **`greg_pultec`**: accorpa **EQP-1A** ed **EQP-1A3** (gestione fedele dell'interazione low-frequency boost/attenuation e trucco Pultec).
-9. **`greg_manley_comp`**: accorpa **Variable Mu Standard** e **Variable Mu Mastering Version** (scelta ratio e step T/C).
+2. **`greg_160`**: accorpa le versioni **160 VU**, **160X** e **160A** (commutazione tra Hard Knee e OverEasy, curve VCA Dbx 202, uscite sbilanciate vs bilanciate e compressione Infinity+).
+3. **`greg_165`**: accorpa **165** e **165A** con interruttore dedicato per abilitare o escludere il circuito limitatore PeakStop.
+4. **`greg_2500`**: accorpa **2500** e **2500+** con selettore del circuito di mixaggio parallelo integrato Blend/Mix.
+5. **`greg_525`**: accorpa **525 vintage** e **525A** con commutazione dell'attacco fisso vintage a 15 µs vs i tempi espansi del 525A.
+6. **`greg_527`**: accorpa **527** e **527A** con selettore di revisione e switch feed-forward/feedback.
+7. **`greg_sr22`**: accorpa l'unità rack dual channel **SR22** e il modulo serie 500 **Select SV12**.
+8. **`greg_eqp1a`**: accorpa **EQP-1A** ed **EQP-1A3** (gestione fedele dell'interazione low-frequency boost/attenuation e trucco Pultec).
+9. **`greg_vari_mu_comp`**: accorpa **Variable Mu Standard** e **Variable Mu Mastering Version** (scelta ratio e step T/C).
 
 > **Nota di distinzione topologica:** Dispositivi con percorsi di segnale, topologie o banchi circuitali intrinsecamente differenti restano plugin separati (es. Neve 1073 vs 1081 vs 1084 vs 88RS; API 525 FET vs 527 VCA vs 225L vs 2500 VCA bus vs T25 tube; banco analogico Harrison 32C vs software Mixbus).
 
@@ -175,3 +175,12 @@ Al completamento della suite Analog-Vibe, l'infrastruttura condivisa (`core-dsp`
 - **Obiettivo:** Workstation di mastering all-in-one per formati stereo e immersivi fino a 7.1.4.
 - **Innovazione DSP:** Metering integrale ITU-R BS.1770-4 / EBU R128 (Integrated LUFS, LRA, Short-Term, Momentary), True-Peak limiting inter-sample a fase lineare con lookahead a bassissima distorsione, correzione stereo ellittica e monitoraggio di correlazione di fase per la conformità broadcast.
 - **Mastering Vibe:** Una variante focalizzata sull'emulazione caratteristica del calore analogico, con saturazione musicale controllata, risposta in frequenza "vintage" e imaging spaziale ottimizzato per il contenuto voci e strumenti acustici.
+
+---
+
+## Direzioni Tecnologiche Avanzate v2.0 (Scelte Architetturali)
+- **Neural Inference & Zero-Training Capture:** Esecuzione real-time in Rust puro di modelli neurale già addestrati (es. profili open-source `.nam` / `RTNeural` / `ONNX`) + cattura rapida di circuiti reali tramite identificazione matematica *Hammerstein-Wiener* (senza addestramento GPU).
+- **Spatial Audio Object-Based (16–128 Canali):** Estensione del `MultiChannelGraph` oltre il 7.1 fino a 7.1.4 / 9.1.6 / 128 canali object-based con panning 3D dinamico (`spatial_3d.rs`) e rendering binaurale istantaneo.
+- **AI Multisample & Round-Robin Generator:** Espansione creativa di `sampler_engine` capace di sintetizzare librerie multi-velocity (127 layer), round-robin organici anti-mitragliatrice e trasposizione formant-preserving partendo da pochissimi campioni reali registrati dall'utente.
+
+- **`greg_trigger` (Multi-Layer Drum Replacer & Sample Trigger):** Rilevatore a soglia (*Threshold*, *Hysteresis*, *Holdoff* anti-doppio colpo, filtro sidechain HPF/LPF) che lancia fino a 8 layer di campioni (Velocity + Round-Robin), ciascuno dotato di mini-editor individuale con **Trim Start/End & Fade**, **Pitch/Fase**, **EQ dedicato** e **Compressore dedicato**, più **Dry/Wet** per layering con la ripresa reale.

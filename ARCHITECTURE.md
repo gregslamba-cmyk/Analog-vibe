@@ -569,3 +569,25 @@ impl SynthEngine {
 - **Motivazione:** Mantiene `core-dsp` puro (`#![forbid(unsafe_code)]`), isolando il caricamento dinamico FFI (`libloading`) in una crate dedicata riutilizzabile da `greg_bay`, `greg_nl_mixer` e dai Channel Strip.
 - **Formati supportati:** **CLAP** (priorità 1, multi-piattaforma), **LV2 / LADSPA** (Linux nativo), **VST3** (COM ABI) e **AUv2** (`#[cfg(target_os = "macos")]`).
 - **Integrazione Grafo:** Ogni istanza implementerà il trait `DspGraphNode` di `core-dsp`, garantendo PDC automatico al singolo campione, isolamento nel thread non-audio per allocazioni/scansione e serializzazione dello stato binario.
+
+---
+
+## Mattoni Core per Enhancer Basse & Suite Metering (`core-dsp`)
+- **`sub_harmonic_synth` (`core_dsp_modules::sub_harmonic_synth`):** Divisore di frequenza PLL / zero-crossing zero-alloc per generare sub-ottave reali (-1/-2 ottave) + serie armonica psicoacustica sulle basse frequenze.
+- **`scope_telemetry` & `tonal_reference` (in `metering.rs` & `spectral_analyzer.rs`):** Ring-buffer lock-free con trigger su zero-crossing per oscilloscopio stabile, correlometro di fase a 3 bande e accumulatore spettrale mediato nel tempo (*Long-Term Spectral Average*) per `greg_scope_analyzer` e `greg_tonal_balance`.
+
+---
+
+## Moduli di Controllo Dinamico, Risonanze & Comunicazione Inter-Plugin
+- **`auto_gain_matcher` (in `metering.rs`):** Misura differenziale RMS/K-weighted ingresso/uscita per compensazione di ascolto opzionale (rigorosamente **OFF di default** nei plugin per preservare il gain staging manuale).
+- **`transient_splitter` (`core_dsp_modules::transient_splitter`):** Separazione real-time zero-alloc a ricostruzione perfetta tra componente impulsiva (*Transient*) e continua (*Sustain*).
+- **`resonance_suppressor` (in `spectral_restoration.rs`):** Rilevamento spettrale automatico dei picchi risonanti (`20 Hz – 20 kHz`) con banco di filtri dinamici a Q stretto e **maschere di esclusione/blocco per singola banda o frequenza** (per `greg_resonance_killer_eq` e `greg_deharsh`).
+- **`inter_plugin_bus` (in `plugin-support`):** Bus telemetrico lock-free locale per visualizzare collisioni spettrali tra istanze e collegare `greg_nl_ch` con `greg_nl_mixer`.
+- **`sampler_engine` (Non-Destructive Sample Editor & Waveform Telemetry):** Supporto nativo per ciascun layer a `trim_start`, `trim_end`, `fade_in_samples`, `fade_out_samples` (con curva equal-power/lineare e snap automatico allo zero-crossing), `reverse`, `pitch_semitones`, `phase_invert` ed estrazione pre-calcolata di un array di picchi min/max per il rendering della forma d'onda nella GUI senza toccare il thread audio.
+
+---
+
+## Mattoni per Console & Mini-DAW (`core-dsp` + `plugin-support`)
+- **`console_mixer` (`core_dsp_modules::console_mixer`):** Fader logaritmico reale (`-∞ .. +12 dB`) anti-zipper, Pan Law (`0 / -3 / -4.5 / -6 dB`), fino a **16 Aux Send Pre/Post-Fader** per canale, **Gruppi Bus** gerarchici (Canale → Group Bus → Master) con PDC automatico, **Mute/Solo (SIP/AFL/PFL)** e **VCA Group Faders**.
+- **`transport_timeline` (`core_dsp_modules::transport_timeline`):** Timeline sample-accurate (Play/Stop/Rec, Loop, Tempo Map, Bar/Beat/Sample), playback multi-traccia di regioni/clip audio & MIDI con fade/crossfade equal-power e curve di automazione sample-accurate (`Linear`, `Exp`, `SCurve`, `Step`).
+- **`disk_streamer` & `engine_host` (in `plugin-support`):** Ring-buffer lock-free per disk-streaming multi-traccia (lettura/scrittura WAV/FLAC fuori dal thread audio) + orchestratore di sessione pronto per backend audio di sistema (JACK / PipeWire / ALSA / CoreAudio / WASAPI).

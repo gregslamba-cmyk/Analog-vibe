@@ -7,6 +7,7 @@ use core_dsp::core_dsp_modules::{
 use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
+use plugin_support::DynamicsExtendedParams;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
@@ -31,6 +32,8 @@ struct GregGateParams {
     mix: FloatParam,
     #[id = "bypass"]
     bypass: BoolParam,
+    #[nested]
+    dynamics: DynamicsExtendedParams,
 }
 impl Default for GregGateParams {
     fn default() -> Self {
@@ -74,6 +77,7 @@ impl Default for GregGateParams {
             mix: FloatParam::new("Mix", 1.0, FloatRange::Linear { min: 0.0, max: 1.0 })
                 .with_unit(" %"),
             bypass: BoolParam::new("Bypass", false),
+            dynamics: DynamicsExtendedParams::default(),
         }
     }
 }

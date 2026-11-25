@@ -55,14 +55,14 @@ Ogni agente AI deve eseguire il lavoro in modo sistematico, senza saltare passag
 1. **Accorpamento Obbligatorio delle Versioni di uno Stesso Outboard:**
    I plugin che simulano lo stesso dispositivo hardware attraverso diverse versioni, revisioni o annate **vanno obbligatoriamente accorpati in un unico plugin provvisto di apposito selettore di versione/profilo** nei parametri:
    - `greg_76`: accorpa 1176LN **Rev A**, **Rev D**, **Rev E**, **Rev F** e **All-Buttons-In** (commuta FET, bias, stadi Class A vs Class AB e trasformatori UTC).
-   - `greg_dbx_160`: accorpa **160 VU**, **160X** e **160A** (selettore Hard Knee vs OverEasy, curve VCA Dbx 202, uscite bilanciate/sbilanciate, Infinity+).
-   - `greg_dbx_165`: accorpa **165** e **165A** con selettore dedicato per il limitatore PeakStop.
-   - `greg_api_2500`: accorpa **2500** e **2500+** con selettore Mix/Blend parallelo, THRUST e Feedback/Feed-Forward.
-   - `greg_api_525`: accorpa **525 vintage** e **525A** (attacco fisso 15 µs vs tempi espansi 525A).
-   - `greg_api_527`: accorpa **527** e **527A** con selettore di revisione.
-   - `greg_api_sr22`: accorpa **SR22** (rack stereo) e **Select SV12** (modulo serie 500).
-   - `greg_pultec`: accorpa **EQP-1A** ed **EQP-1A3** (interazione low boost/attenuation e trucco Pultec).
-   - `greg_manley_comp`: accorpa **Variable Mu Standard** e **Mastering Version**.
+   - `greg_160`: accorpa **160 VU**, **160X** e **160A** (selettore Hard Knee vs OverEasy, curve VCA Dbx 202, uscite bilanciate/sbilanciate, Infinity+).
+   - `greg_165`: accorpa **165** e **165A** con selettore dedicato per il limitatore PeakStop.
+   - `greg_2500`: accorpa **2500** e **2500+** con selettore Mix/Blend parallelo, THRUST e Feedback/Feed-Forward.
+   - `greg_525`: accorpa **525 vintage** e **525A** (attacco fisso 15 µs vs tempi espansi 525A).
+   - `greg_527`: accorpa **527** e **527A** con selettore di revisione.
+   - `greg_sr22`: accorpa **SR22** (rack stereo) e **Select SV12** (modulo serie 500).
+   - `greg_eqp1a`: accorpa **EQP-1A** ed **EQP-1A3** (interazione low boost/attenuation e trucco Pultec).
+   - `greg_vari_mu_comp`: accorpa **Variable Mu Standard** e **Mastering Version**.
 2. **Modelli Intrinsecamente Distinti:**
    Dispositivi con topologie, controlli e percorsi di segnale totalmente differenti restano plugin separati (es. Neve 1073 vs 1081 vs 1084 vs 88RS; API 525 FET vs 527 VCA vs 225L vs 2500 bus vs T25 tube; banco analogico Harrison 32C vs profilo software Mixbus).
 3. **Flusso del Segnale Reale:**
@@ -139,4 +139,4 @@ Prima di considerare completato qualsiasi plugin della suite Analog-Vibe, verifi
    - `Channel Mode` (`Stereo Link`, `Dual Mono`, `Mid/Side`) + controllo `Mix / Dry-Wet`.
 3. **Composizione Modulare dei Channel Strip (`dsp_graph` + Riuso Moduli Singoli + Host CLAP/VST3):**
    - I motori DSP dei singoli moduli (**Preamp**, **EQ**, **Compressore/Dynamics**, già accorpati per revisioni storiche come da Sez. 3) devono essere esportati con `crate-type = ["cdylib", "rlib"]` affinché lo stesso codice funzioni sia come **plugin singolo** sia come **blocco DSP dentro i Channel Strip**.
-   - Ogni **Channel Strip** (`greg_neve_*_strip`, `greg_ssl_*_strip`, `greg_api_*_strip`, ecc.) deve comporre tali moduli dentro `dsp_graph` (con ordine commutabile `Pre → EQ → Dyn` / `Pre → Dyn → EQ`), includere `aux_send` + `fader_console`, e integrare un **Sub-Host CLAP/VST3** per ospitare plugin esterni con PDC automatico al singolo campione.
+   - Ogni **Channel Strip** (`greg_1073_strip`, `greg_4000_strip`, `greg_vision_strip`, ecc.) deve comporre tali moduli dentro `dsp_graph` (con ordine commutabile `Pre → EQ → Dyn` / `Pre → Dyn → EQ`), includere `aux_send` + `fader_console`, e integrare un **Sub-Host CLAP/VST3** per ospitare plugin esterni con PDC automatico al singolo campione.

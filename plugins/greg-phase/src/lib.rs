@@ -12,6 +12,7 @@ use nih_plug_vizia::vizia::prelude::*;
 use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
+use plugin_support::CommonChannelParams;
 
 #[derive(Params)]
 struct GregPhaseParams {
@@ -23,6 +24,7 @@ struct GregPhaseParams {
     invert_both: BoolParam,
     #[id = "bypass"]
     bypass: BoolParam,
+    channel_setup: CommonChannelParams,
 }
 
 impl Default for GregPhaseParams {
@@ -32,6 +34,7 @@ impl Default for GregPhaseParams {
             invert_right: BoolParam::new("Invert Right Polarity", false),
             invert_both: BoolParam::new("Invert Both (Link)", false),
             bypass: BoolParam::new("Bypass", false),
+            channel_setup: CommonChannelParams::default(),
         }
     }
 }

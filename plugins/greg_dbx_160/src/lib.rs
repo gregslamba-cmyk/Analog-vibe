@@ -20,6 +20,7 @@ use core_dsp::core_dsp_modules::{
     resampler_bitdepth::{Oversampler, OversamplingFactor},
     sidechain_processor::{SidechainFilter, SidechainProcessor},
 };
+use plugin_support::CommonChannelParams;
 use nih_plug_vizia::vizia::prelude::*;
 use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
@@ -241,6 +242,8 @@ struct GregDbx160Params {
     sc_q: FloatParam,
     #[id = "sc_gain"]
     sc_gain: FloatParam,
+    #[nested]
+    channel_setup: CommonChannelParams,
 }
 
 impl Default for GregDbx160Params {
@@ -329,6 +332,7 @@ impl Default for GregDbx160Params {
                 },
             )
             .with_unit(" dB"),
+            channel_setup: CommonChannelParams::default(),
         }
     }
 }

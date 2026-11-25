@@ -7,6 +7,7 @@ use core_dsp::core_dsp_modules::{
     routing_matrix::{RoutingMatrix, RoutingMode},
 };
 use nih_plug::prelude::*;
+use plugin_support::CommonChannelParams;
 use greg_gui_core::GuiTelemetry;
 
 #[derive(Params)]
@@ -15,6 +16,7 @@ struct GregNlChParams {
     #[id = "crosstalk"] crosstalk_db: FloatParam,
     #[id = "mix"] mix: FloatParam,
     #[id = "bypass"] bypass: BoolParam,
+    channel_setup: CommonChannelParams,
 }
 
 impl Default for GregNlChParams {
@@ -24,6 +26,7 @@ impl Default for GregNlChParams {
             crosstalk_db: FloatParam::new("Crosstalk (dB)", -60.0, FloatRange::Linear { min: -80.0, max: 0.0 }).with_unit(" dB"),
             mix: FloatParam::new("Mix", 1.0, FloatRange::Linear { min: 0.0, max: 1.0 }),
             bypass: BoolParam::new("Bypass", false),
+            channel_setup: CommonChannelParams::default(),
         }
     }
 }

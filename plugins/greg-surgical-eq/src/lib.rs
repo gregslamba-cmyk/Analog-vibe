@@ -14,6 +14,7 @@ use nih_plug_vizia::vizia::prelude::*;
 use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
+use plugin_support::CommonChannelParams;
 
 const BAND_COUNT: usize = 10;
 const LINEAR_PHASE_TAPS: usize = 257;
@@ -113,6 +114,7 @@ struct GregSurgicalEqParams {
     bypass: BoolParam,
     #[nested(array, group = "Bands")]
     bands: [EqBandParams; BAND_COUNT],
+    channel_setup: CommonChannelParams,
 }
 
 #[derive(Clone, Lens)]
@@ -128,6 +130,7 @@ impl Default for GregSurgicalEqParams {
             phase_mode: EnumParam::new("Phase Mode", PhaseMode::MinimumPhase),
             bypass: BoolParam::new("Bypass", false),
             bands: array::from_fn(|_| EqBandParams::default()),
+            channel_setup: CommonChannelParams::default(),
         }
     }
 }

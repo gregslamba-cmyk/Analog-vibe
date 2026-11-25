@@ -15,21 +15,40 @@ use core_dsp::core_dsp_modules::routing_matrix::{RoutingMatrix, RoutingMode};
 use core_dsp::core_dsp_modules::realtime_controls::BypassCrossfade;
 use std::sync::atomic::{AtomicBool, Ordering};
 use core_dsp::core_dsp_modules::sidechain_processor::MultiChannelLinkMode;
+use nih_plug::prelude::Enum;
 
 /// Manual channel count override (`Channel Setup` parameter exposed to user).
 /// - `Auto`: Use `buffer.channels()` from DAW host (default).
 /// - `Mono`..`SevenDot1`: Force a specific channel count.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Enum)]
 pub enum ChannelSetup {
     #[default]
+    #[id = "auto"]
+    #[name = "Auto"]
     Auto,
+    #[id = "mono_1ch"]
+    #[name = "Mono (1ch)"]
     Mono,
+    #[id = "stereo_2ch"]
+    #[name = "Stereo (2ch)"]
     Stereo,
+    #[id = "lcr_3ch"]
+    #[name = "LCR (3ch)"]
     LCR,
+    #[id = "quad_4ch"]
+    #[name = "Quad (4ch)"]
     Quad,
+    #[id = "5_0"]
+    #[name = "5.0"]
     FiveDot0,
+    #[id = "5_1"]
+    #[name = "5.1"]
     FiveDot1,
+    #[id = "7_0"]
+    #[name = "7.0"]
     SevenDot0,
+    #[id = "7_1"]
+    #[name = "7.1"]
     SevenDot1,
 }
 

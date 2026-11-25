@@ -18,6 +18,7 @@ use core_dsp::core_dsp_modules::{
 };
 use channel_strip::ConsoleChannelStrip;
 use nih_plug::prelude::*;
+use plugin_support::CommonChannelParams;
 use greg_gui_core::GuiTelemetry;
 
 const MAX_CHANNELS: usize = 24;
@@ -52,6 +53,7 @@ struct GregNlMixerParams {
     bus_comp_thresh: [FloatParam; MAX_BUSES],
     bus_comp_ratio: [FloatParam; MAX_BUSES],
     bus_mode: [IntParam; MAX_BUSES],
+    channel_setup: CommonChannelParams,
 }
 impl Default for GregNlMixerParams {
     fn default() -> Self {
@@ -86,6 +88,7 @@ impl Default for GregNlMixerParams {
             bus_comp_thresh: std::array::from_fn(|_| f_lin("Bus Comp Thresh", -24.0, -48.0, 0.0)),
             bus_comp_ratio: std::array::from_fn(|_| f_lin("Bus Comp Ratio", 1.0, 1.0, 20.0)),
             bus_mode: std::array::from_fn(|_| i_lin("Bus Mode", 0)),
+            channel_setup: CommonChannelParams::default(),
         }
     }
 }

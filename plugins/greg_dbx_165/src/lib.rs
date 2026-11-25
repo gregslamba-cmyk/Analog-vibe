@@ -15,6 +15,7 @@ use core_dsp::core_dsp_modules::{
 use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
+use plugin_support::CommonChannelParams;
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
 enum Dbx165Version {
@@ -211,6 +212,8 @@ struct GregDbx165Params {
     sc_q: FloatParam,
     #[id = "sc_gain"]
     sc_gain: FloatParam,
+    #[nested]
+    channel_setup: CommonChannelParams,
 }
 
 impl Default for GregDbx165Params {
@@ -309,6 +312,7 @@ impl Default for GregDbx165Params {
                 },
             )
             .with_unit(" dB"),
+            channel_setup: CommonChannelParams::default(),
         }
     }
 }

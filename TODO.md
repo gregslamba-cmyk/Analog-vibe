@@ -102,3 +102,6 @@
 - [ ] **Curve Dinamiche & Analisi Visiva 60 FPS (`greg_gui_core`):** Curva di trasferimento su compressori/gate con pallino del livello istantaneo, grafico GR History nel tempo e curva EQ + analizzatore di spettro sovrapposto.
 - [ ] **Supporto MIDI Sample-Accurate & Poly-Modulation CLAP (`plugin-support` + `core-dsp`):** Gestione `NoteOn/Off`, `MidiCC` (MIDI Learn), `Program Change` (cambio scene in `greg_bay`), `MIDI Sidechain Trigger` su `greg-gate`/compressori e modulazioni polifoniche CLAP (`PolyModulation`), pronto anche per i futuri sampler/synth (`mpc_sampler_engine`).
 - [ ] **Oversampling Adattivo in Render Offline (`plugin-support`):** Rilevamento automatico della modalità *Offline Render* della DAW per commutare l'oversampling alla massima qualità (`8x` / `16x` lineare) durante l'esportazione del master.
+
+## Backlog Lontano (v3.0 — Developer Experience)
+- [ ] **Estensione VS Code per GUI Layout Designer (`clap-gui-designer`):** Impacchettare l'editor visuale HTML/Canvas (`gui_designer.html`) in una *VS Code Custom Editor Extension* per aprire e modificare visivamente i file `gui_layout.json` direttamente dentro l'IDE con salvataggio istantaneo e live-reload.

@@ -20,6 +20,7 @@ use nih_plug_vizia::vizia::prelude::*;
 use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
+use plugin_support::DynamicsExtendedParams;
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
 enum ScFilter {
@@ -157,6 +158,8 @@ struct GregA2aParams {
     sidechain_gain: FloatParam,
     #[id = "analog_drift"]
     analog_drift: FloatParam,
+    #[nested]
+    dynamics: DynamicsExtendedParams,
 }
 
 impl Default for GregA2aParams {
@@ -231,6 +234,7 @@ impl Default for GregA2aParams {
                 0.2,
                 FloatRange::Linear { min: 0.0, max: 1.0 },
             ),
+            dynamics: DynamicsExtendedParams::default(),
         }
     }
 }

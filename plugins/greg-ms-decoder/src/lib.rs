@@ -12,6 +12,7 @@ use nih_plug_vizia::vizia::prelude::*;
 use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
+use plugin_support::CommonChannelParams;
 
 #[derive(Params)]
 struct MidSideDecoderParams {
@@ -27,6 +28,7 @@ struct MidSideDecoderParams {
     invert_right: BoolParam,
     #[id = "bypass"]
     bypass: BoolParam,
+    channel_setup: CommonChannelParams,
 }
 
 impl Default for MidSideDecoderParams {
@@ -61,6 +63,7 @@ impl Default for MidSideDecoderParams {
             invert_left: BoolParam::new("Invert Left Polarity", false),
             invert_right: BoolParam::new("Invert Right Polarity", false),
             bypass: BoolParam::new("Bypass", false),
+            channel_setup: CommonChannelParams::default(),
         }
     }
 }

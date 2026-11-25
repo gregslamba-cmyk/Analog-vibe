@@ -7,6 +7,7 @@ use core_dsp::core_dsp_modules::{
     routing_matrix::{RoutingMatrix, RoutingMode},
 };
 use nih_plug::prelude::*;
+use plugin_support::CommonChannelParams;
 use greg_gui_core::GuiTelemetry;
 use serde::{Serialize, Deserialize};
 
@@ -32,6 +33,7 @@ struct GregBayParams {
     slot_4_module: EnumParam<SlotModule>,
     #[id = "bypass"]
     bypass: BoolParam,
+    channel_setup: CommonChannelParams,
 }
 
 impl Default for GregBayParams {
@@ -63,6 +65,7 @@ impl Default for GregBayParams {
             slot_3_module: EnumParam::new("Slot 3 Module", SlotModule::None),
             slot_4_module: EnumParam::new("Slot 4 Module", SlotModule::None),
             bypass: BoolParam::new("Bypass", false),
+            channel_setup: CommonChannelParams::default(),
         }
     }
 }

@@ -18,6 +18,7 @@ use core_dsp::core_dsp_modules::{
 use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
+use plugin_support::CommonChannelParams;
 
 #[derive(Clone, Lens)]
 struct EditorData {
@@ -174,6 +175,8 @@ struct GregPultecParams {
     link: BoolParam,
     #[id = "analog_drift"]
     analog_drift: FloatParam,
+    #[nested]
+    channel_setup: CommonChannelParams,
 }
 
 impl Default for GregPultecParams {
@@ -236,6 +239,7 @@ impl Default for GregPultecParams {
                 0.0,
                 FloatRange::Linear { min: 0.0, max: 1.0 },
             ),
+            channel_setup: CommonChannelParams::default(),
         }
     }
 }

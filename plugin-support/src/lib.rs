@@ -83,3 +83,61 @@ pub use multichannel::{
     ChannelSetup, MonoChannelProcessor, MultiChannelDetectorLink, MultiChannelGraph,
 };
 pub use core_dsp::core_dsp_modules::sidechain_processor::MultiChannelLinkMode;
+use nih_plug::prelude::*;
+
+/// Source selection for sidechain input.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Enum)]
+pub enum SidechainSource {
+    #[default]
+    #[id = "internal"]
+    #[name = "Internal"]
+    Internal,
+    #[id = "external"]
+    #[name = "External"]
+    External,
+}
+
+/// Parameters common to all plugins with channel setup override.
+#[derive(Params)]
+pub struct CommonChannelParams {
+    #[id = "channel_setup"]
+    pub channel_setup: EnumParam<ChannelSetup>,
+}
+
+/// Extended parameters for dynamics processors (compressors, gate, limiter).
+#[derive(Params)]
+pub struct DynamicsExtendedParams {
+    #[id = "channel_setup"]
+    pub channel_setup: EnumParam<ChannelSetup>,
+    #[id = "sc_source"]
+    pub sc_source: EnumParam<SidechainSource>,
+    #[id = "sc_listen"]
+    pub sc_listen: BoolParam,
+    #[id = "sc_hpf"]
+    pub sc_hpf: BoolParam,
+    #[id = "sc_lpf"]
+    pub sc_lpf: BoolParam,
+    #[id = "channel_mode"]
+    pub channel_mode: EnumParam<MultiChannelLinkMode>,
+}
+
+impl Default for CommonChannelParams {
+    fn default() -> Self {
+        Self {
+            channel_setup: EnumParam::new("Channel Setup", ChannelSetup::Auto),
+        }
+    }
+}
+
+impl Default for DynamicsExtendedParams {
+    fn default() -> Self {
+        Self {
+            channel_setup: EnumParam::new("Channel Setup", ChannelSetup::Auto),
+            sc_source: EnumParam::new("SC Source", SidechainSource::Internal),
+            sc_listen: BoolParam::new("SC Listen", false),
+            sc_hpf: BoolParam::new("SC HPF", false),
+            sc_lpf: BoolParam::new("SC LPF", false),
+            channel_mode: EnumParam::new("Channel Mode", MultiChannelLinkMode::Unlinked),
+        }
+    }
+}

@@ -26,8 +26,17 @@ Stato "pianificato" significa non implementato; la presenza della scheda non equ
 - Moduli Serie 500 ("Lunchbox Classics"):
   greg_gama_pre (preamp discreto con selettore trasformatori Nickel / Discrete / Steel), greg_redblue_pre (preamp con circuito armonico Silk Red/Blue + HPF), greg_12428_pre (preamp stile console EMI TG12428), greg_air_eq (EQ con Air Band fino a 40 kHz), greg_xpress_comp (compressore Classe A con Warm Mode e Negative Ratios), greg_doublewide (compressore valvolare Vari-Mu 500), greg_tape_500 (emulatore nastro 500 con Silk + Blend).
 
-- Saturatori, Utility & Creativi:
-  greg_nl_ch, greg_nl_mixer, greg_bay, greg_tape (Master Tape 7.5/15/30 ips NAB/CCIR), greg_tube_drive (saturatore valvolare triodo/pentodo), greg_xfmr_box (color box trasformatori passivi UTC/Marinair/Carnhill/API), greg_destroyer, greg_exciter, greg_low_enhancer, greg_ms_encoder, greg_ms_decoder, greg_phase, greg_pitch_clean, greg_pitch_formant, greg_space, greg_pingpong, greg_ir_reverb, greg_trans_mono, greg_trans_multi, greg_gate.
+- Saturatori & Coloratori Armonici:
+  greg_tape (Master Tape 7.5/15/30 ips NAB/CCIR), greg_tube_drive (saturatore valvolare triodo/pentodo), greg_xfmr_box (color box trasformatori passivi), greg_multiband_sat (saturatore multibanda a 4 bande con dinamica), greg_wavefolder_clip (clipper & wavefolder di mastering oversamplato), greg_diode_sat (saturatore a ponte di diodi & germanio con bias), greg_destroyer (bitcrusher & lo-fi).
+
+- Enhancer Basse & Alte Frequenze:
+  greg_sub_synth (sintetizzatore sub-armonico -1/-2 ottave con uscita LFE), greg_harmonic_bass (enhancer psicoacustico basse frequenze), greg_low_enhancer (controllo peso & risonanza basse), greg_air_exciter (enhancer dinamico alte frequenze + de-harsh), greg_exciter (sintesi armonica banda alta), greg_dynamic_tilt (bilanciamento spettrale & contour dinamico).
+
+- Metering & Analisi Professionale (Suite Master Bus):
+  greg_master_meter (LUFS Momentary/Short-Term/Integrated, True Peak dBTP, LRA, Crest Factor, target streaming/broadcast), greg_scope_analyzer (RTA spettrale, oscilloscopio sincronizzato ai transienti, goniometro Lissajous & correlazione di fase multibanda), greg_tonal_balance (controllo curva spettrale per genere & confronto A/B con tracce reference).
+
+- Utility, Pitch, Spazio & Console:
+  greg_nl_ch, greg_nl_mixer, greg_bay, greg_ms_encoder, greg_ms_decoder, greg_phase, greg_pitch_clean, greg_pitch_formant, greg_space, greg_pingpong, greg_ir_reverb, greg_resonance_killer_eq (EQ dinamico automatico anti-risonanze con bande bloccabili/escludibili), greg_deharsh (suppressore dinamico asprezze vocali/strumentali), greg_split_dyn (dinamica & saturazione separata Transiente/Sustain), greg_trans_mono, greg_trans_multi, greg_trigger (drum replacer & sample trigger multi-layer con threshold, holdoff anti-double-trigger, velocity/round-robin e mini-editor per layer: trim/fade/pitch, EQ e compressore dedicati), greg_gate.
 
 - Restauro Audio:
   greg_denoiser, greg_declipper, greg_dehummer, greg_declicker.

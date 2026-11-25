@@ -22,6 +22,7 @@ use nih_plug_vizia::vizia::prelude::*;
 use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
+use plugin_support::multichannel::ChannelSetup;
 
 /// 1176 Revision models with distinct component chains per hardware revision.
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
@@ -255,6 +256,8 @@ struct GregFet76Params {
     sidechain_q: FloatParam,
     #[id = "sidechain_gain"]
     sidechain_gain: FloatParam,
+    #[id = "channel_setup"]
+    channel_setup: EnumParam<plugin_support::multichannel::ChannelSetup>,
 }
 
 impl Default for GregFet76Params {
@@ -341,12 +344,17 @@ impl Default for GregFet76Params {
                 FloatRange::Linear { min: -18.0, max: 18.0 },
             )
             .with_unit(" dB"),
+            channel_setup: EnumParam::new(
+                "Channel Setup",
+                plugin_support::multichannel::ChannelSetup::Auto,
+            ),
         }
     }
 }
 struct GregFet76 {
     params: Arc<GregFet76Params>,
     routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix,
+    channel_setup: plugin_support::multichannel::ChannelSetup,
     sidechains: [SidechainProcessor<f32>; plugin_support::MAX_AUDIO_CHANNELS],
     last_sidechain_settings: SidechainSettings,
     oversamplers: [Oversampler<f32>; plugin_support::MAX_AUDIO_CHANNELS],
@@ -380,6 +388,7 @@ impl Default for GregFet76 {
         Self {
             params: Arc::new(GregFet76Params::default()),
             routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix::default(),
+            channel_setup: ChannelSetup::default(),
             sidechains: array::from_fn(|_| SidechainProcessor::default()),
             last_sidechain_settings: SidechainSettings {
                 filter: ScFilter::HighPass,
@@ -470,12 +479,14 @@ impl Plugin for GregFet76 {
         buffer_config: &BufferConfig,
         context: &mut impl InitContext<Self>,
     ) -> bool {
-        let Some(channel_count) = audio_io_layout
+        let Some(host_channel_count) = audio_io_layout
             .main_input_channels
             .map(|channels| channels.get() as usize)
         else {
             return false;
         };
+        // Apply manual `Channel Setup` override when not `Auto`.
+        let channel_count = self.channel_setup.channel_count().unwrap_or(host_channel_count);
         if !self.routing_matrix.configure(
             channel_count,
             core_dsp::core_dsp_modules::routing_matrix::RoutingMode::DualMono,
@@ -605,7 +616,7 @@ impl Plugin for GregFet76 {
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params_main = self.params.clone();
-        let params_adv = self.params.clone();
+        let _params_adv = self.params.clone();
         let param_defs: &'static [greg_gui_core::ParamDef] =
             Box::leak(vec![
                 greg_gui_core::ParamDef::knob("Input", Box::new(|cx| {

@@ -16,6 +16,7 @@ use core_dsp::core_dsp_modules::{
 use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
 use nih_plug::prelude::*;
+use plugin_support::DynamicsExtendedParams;
 
 #[derive(Clone, Lens)]
 struct EditorData {
@@ -167,6 +168,8 @@ struct GregBusCompParams {
     sidechain_q: FloatParam,
     #[id = "sidechain_gain"]
     sidechain_gain: FloatParam,
+    #[nested]
+    dynamics: DynamicsExtendedParams,
 }
 
 impl Default for GregBusCompParams {
@@ -266,6 +269,7 @@ impl Default for GregBusCompParams {
                 },
             )
             .with_unit(" dB"),
+            dynamics: DynamicsExtendedParams::default(),
         }
     }
 }
