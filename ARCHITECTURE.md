@@ -615,3 +615,22 @@ impl SynthEngine {
 ## Sincronizzazione Video & Timecode SMPTE (`core-dsp` + `greg_video_sync`)
 - **Livello Core (`transport_timeline` in `core-dsp`):** Motore matematico sample-accurate (`#![forbid(unsafe_code)]`) per **SMPTE Timecode (`HH:MM:SS:FF`)**, frame rate standard (`23.976, 24, 25, 29.97 DF/NDF, 30, 50, 59.94, 60 fps`), offset al quarto di frame e conversione **Pull-Up / Pull-Down (`±0.1%`)**.
 - **Livello Media (`crates/greg_video_sync` — Standalone DAW):** Decoder asincrono su thread separato (FFmpeg/GStreamer) agganciato al contatore atomico dei campioni di `transport_timeline` per playback video sincronizzato, thumbnail strip sulla timeline e post-produzione/ADR/Foley.
+
+---
+
+## Algoritmi Matematici State-of-the-Art (Opt-In, Zero Breaking Changes)
+- **ADAA 1° & 2° Ordine (`nonlinear_stages`):** Antiderivative Anti-Aliasing analitico (Parker et al., DAFx) per tanh, soft-clip, hard-clip e wavefolder con soglia di stabilità numerica $|x_n - x_{n-1}| < 10^{-7}$ in `f64`.
+- **Pitch-Shifting Polifonico (`pitch_shifter`):** Modalità `PitchQualityMode::PolyphonicStudio` con Phase-Locking verticale attorno ai picchi spettrali (Laroche & Dolson), rilevamento transienti a flusso spettrale con re-inizializzazione delle fasi e preservazione formanti cepstrale.
+- **FDN Reverb di Riferimento (`fdn_reverb`):** Diffusori di ingresso Velvet-Noise / All-Pass in cascata, modulazione LFO asimmetrica incommensurabile delle linee di ritardo e filtri di assorbimento ZDF multi-banda.
+
+---
+
+## Algoritmi Matematici 10/10 State-of-the-Art (Zero Breaking Changes)
+- **ADAA 1° & 2° Ordine (`nonlinear_stages`):** Antiderivative Anti-Aliasing analitico (Parker et al., DAFx) con fallback di stabilità $|x_n - x_{n-1}| < 10^{-7}$ in `f64`.
+- **Pitch-Shifting Polifonico (`pitch_shifter`):** Modalità `PolyphonicStudio` con Peak Phase-Locking verticale (Laroche & Dolson), separazione transiente/tonale con reset di fase e inviluppo formanti cepstrale.
+- **FDN Reverb di Riferimento (`fdn_reverb`):** Diffusori Velvet-Noise/All-Pass, modulazione LFO asimmetrica incommensurabile e damping ZDF multi-banda.
+- **Restauro MMSE-LSA (`spectral_restoration`):** Stimatore log-spettrale Ephraim-Malah per abbattimento del *musical noise*.
+- **Fisica del Nastro (`tape_physics`):** Head-bump risonante dipendente da velocità (`7.5/15/30 ips`), gap-loss e auto-smagnetizzazione.
+- **Oscillatori Band-Limited (`synth_engine`):** PolyBLEP e PolyBLAMP analitici in `f64`.
+- **Audio 3D Continuo (`spatial_3d`):** Interpolazione sferica HRIR bilineare senza artefatti di commutazione.
+- **Dinamica Dual-Stage (`component_models`):** Rilascio program-dependent a doppio condensatore accoppiato.

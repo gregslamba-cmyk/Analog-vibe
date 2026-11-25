@@ -85,6 +85,109 @@ pub use multichannel::{
 pub use core_dsp::core_dsp_modules::sidechain_processor::MultiChannelLinkMode;
 use nih_plug::prelude::*;
 
+// ============================================================================
+// Inter-Plugin Bus (lock-free local telemetry bus)
+// ============================================================================
+// Bus telemetrico lock-free locale per visualizzare collisioni spettrali tra
+// istanze e collegare `greg_nl_ch` con `greg_nl_mixer`.
+
+use std::sync::atomic::{AtomicU64, Ordering};
+
+/// Costante dimensione ring-buffer del bus inter-plugin (canali di telemetria).
+const INTER_PLUGIN_BUS_CAPACITY: usize = 1024;
+
+/// Canale di telemetria inter-plugin lock-free basato su ring-buffer atomico.
+/// Supporta scrittura dal thread audio e lettura dal thread UI/host senza lock.
+pub struct InterPluginBus {
+    /// Ring buffer di valori f64 (codificati come bit-pattern u64 per atomicità).
+    buffer: [AtomicU64; INTER_PLUGIN_BUS_CAPACITY],
+    /// Posizione di scrittura corrente (modulo capacità).
+    write_pos: AtomicU64,
+    /// Posizione di lettura corrente (modulo capacità).
+    read_pos: AtomicU64,
+    /// Numero totale di campioni scritti (per statistiche).
+    total_written: AtomicU64,
+}
+
+impl Default for InterPluginBus {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl InterPluginBus {
+    /// Crea un nuovo bus inter-plugin vuoto.
+    pub fn new() -> Self {
+        Self {
+            buffer: core::array::from_fn(|_| AtomicU64::new(0)),
+            write_pos: AtomicU64::new(0),
+            read_pos: AtomicU64::new(0),
+            total_written: AtomicU64::new(0),
+        }
+    }
+
+    /// Scrive un campione nel bus (thread-safe, lock-free).
+    #[inline]
+    pub fn write(&self, sample: f64) {
+        let s = if sample.is_finite() { sample } else { 0.0 };
+        let bits = s.to_bits();
+        let pos = self.write_pos.fetch_add(1, Ordering::Relaxed) % INTER_PLUGIN_BUS_CAPACITY as u64;
+        self.buffer[pos as usize].store(bits, Ordering::Relaxed);
+        self.total_written.fetch_add(1, Ordering::Relaxed);
+    }
+
+    /// Legge il campione più recente dal bus (thread-safe, lock-free).
+    #[inline]
+    pub fn read_latest(&self) -> f64 {
+        let written = self.total_written.load(Ordering::Relaxed);
+        if written == 0 {
+            return 0.0;
+        }
+        let wpos = (self.write_pos.load(Ordering::Relaxed) + INTER_PLUGIN_BUS_CAPACITY as u64 - 1)
+            % INTER_PLUGIN_BUS_CAPACITY as u64;
+        let bits = self.buffer[wpos as usize].load(Ordering::Relaxed);
+        f64::from_bits(bits)
+    }
+
+    /// Ritorna il numero totale di campioni scritti.
+    pub fn total_written(&self) -> u64 {
+        self.total_written.load(Ordering::Relaxed)
+    }
+
+    /// Reset del bus (svuota buffer e contatori).
+    pub fn reset(&self) {
+        for slot in &self.buffer {
+            slot.store(0, Ordering::Relaxed);
+        }
+        self.write_pos.store(0, Ordering::Relaxed);
+        self.read_pos.store(0, Ordering::Relaxed);
+        self.total_written.store(0, Ordering::Relaxed);
+    }
+}
+
+/// Istanza globale statica del bus inter-plugin (per comunicazione tra plugin).
+static INTER_PLUGIN_BUS: InterPluginBus = InterPluginBus {
+    buffer: [const { AtomicU64::new(0) }; INTER_PLUGIN_BUS_CAPACITY],
+    write_pos: AtomicU64::new(0),
+    read_pos: AtomicU64::new(0),
+    total_written: AtomicU64::new(0),
+};
+
+/// Scrive un valore di telemetria sul bus inter-plugin globale.
+pub fn inter_plugin_bus_write(sample: f64) {
+    INTER_PLUGIN_BUS.write(sample);
+}
+
+/// Legge l'ultimo valore di telemetria dal bus inter-plugin globale.
+pub fn inter_plugin_bus_read() -> f64 {
+    INTER_PLUGIN_BUS.read_latest()
+}
+
+/// Reset del bus inter-plugin globale.
+pub fn inter_plugin_bus_reset() {
+    INTER_PLUGIN_BUS.reset();
+}
+
 /// Source selection for sidechain input.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Enum)]
 pub enum SidechainSource {
