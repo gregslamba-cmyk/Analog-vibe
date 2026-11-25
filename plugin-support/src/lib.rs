@@ -1,3 +1,5 @@
+#![allow(clippy::field_reassign_with_default)]
+
 use nih_plug::prelude::{AudioIOLayout, PortNames, new_nonzero_u32};
 
 /// Tutti i layout di canali standard supportati (Mono → 7.1).
