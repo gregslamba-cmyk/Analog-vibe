@@ -355,6 +355,51 @@ Thread-safe audio→UI communication via `[AtomicU64; 9]` stores with `Ordering:
 
 ---
 
+## 33. `psychoacoustics` — Psychoacoustic Engine
+
+The `psychoacoustics` module provides real-time safe psychoacoustic processing
+for perceptual audio metering, loudness compensation, and noise-shaped dithering.
+
+### Key Components
+
+- [`EqualLoudnessContour`]: ISO 226:2003 equal-loudness contours (20 Hz – 20 kHz,
+  0 – 120 Phon) + Terhardt absolute threshold of hearing (ATH). Enables
+  loudness-compensated auto-gain and Fletcher-Munson contour visualization.
+
+- [`WeightingFilter`]: Multi-channel (1–8) calibrated IIR biquads for A/B/C/D/Z
+  (flat) / ITU-R 468 weightings with K-weighting bridge to LUFS (ITU-R BS.1770).
+
+- Critical band conversions: `hz_to_bark`, `hz_to_erb`, `hz_to_mel`.
+
+- [`SpecificLoudness`]: Zwicker 24-band specific loudness in Sone.
+
+- [`MaskingModel`]: Simultaneous and temporal (pre/post) masking estimation.
+
+- [`SpatialPsychoacoustics`]: ITD/ILD binaural sensitivity and Haas effect.
+
+- [`NoiseShapingDither`]: Psychoacoustic FIR coefficients connectable to 16/24-bit
+  quantizer in `resampler_bitdepth.rs`.
+
+### Real-time Safety
+
+- `#![forbid(unsafe_code)]` enforced
+- Zero heap allocations in `process()` — all states pre-allocated
+- NaN/Inf sanitization to 0.0 inline
+- Deterministic sample-rate reset/initialize cycle
+
+### Integration
+
+- Used by `loudness_metering.rs` for LUFS measurement
+- Connected to `sidechain_processor.rs` for sidechain filtering
+- Feeds spatial_3d.rs binaural rendering parameters
+- Exposes coefficients to `resampler_bitdepth.rs` for noise-shaped dither
+
+### Unit Tests
+
+8 tests covering: ISO 226 gain at 1 kHz/40/80 phon, ATH threshold,
+ phon-to-sone conversion, zero-input silence, A-weighting magnitude at 1 kHz,
+ Z-weighting flat response, and 0.0 in → 0.0 out.
+
 ## 42. `dsp_graph` — Topological Audio Graph & Automatic PDC Engine
 
 ### Guarantees

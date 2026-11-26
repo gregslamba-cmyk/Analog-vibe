@@ -70,3 +70,11 @@ Ogni modifica o nuovo modulo/plugin deve rispettare tassativamente questi requis
    - **Per Sviluppatori (`README.txt`, `ARCHITECTURE.md`, `GUI_SPEC.md`):** Mantieni sempre allineate le firme API, i diagrammi, i flussi DSP e le istruzioni di build/test ogni volta che aggiungi o modifichi un modulo.
    - **Per Utenti / Fonici (`README.md`, `docs/USER_MANUAL.md`):** Mantieni sempre aggiornata la guida d'uso chiara con spiegazione pratica dei controlli `MAIN` e `ADVANCED` e consigli di utilizzo in mix.
 4. **Licenza e Documentazione Completa in Ogni Subtree Folder:** Ogni cartella esportata come subtree su GitHub (`core-dsp/`, `crates/greg_gui_core/`, `tools/clap-validator-host/`) deve contenere al suo interno sia il proprio file **`LICENSE`** (GNU GPLv3 + nota Dual License Commerciale intestata ad **Alberto Gregorio Ferraris**) sia un **`README.md` / `README.txt`** completo e auto-contenuto per chi clona o usa quel singolo repository separatamente.
+
+## Regola Obbligatoria Gestione TODO Separati per Repository
+Non mantenere un unico `TODO.md` generico per tutto il monorepo: mantieni sempre sincronizzati e separati i 4 file TODO dedicati:
+1. `TODO.md` (alla radice: release, packaging e test DAW di `Analog-Vibe`).
+2. `core-dsp/TODO.md` (roadmap del subtree `Rust_Dsp_Core`).
+3. `crates/greg_gui_core/TODO.md` (roadmap del subtree `clap-gui-designer`).
+4. `tools/clap-validator-host/TODO.md` (roadmap del subtree `clap-validator-host`).
+Ogni aggiornamento della roadmap va scritto nel `TODO.md` del repository pertinente e propagato via `git subtree push`.

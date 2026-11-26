@@ -1,81 +1,76 @@
-# DOIT — Collaudo Host Omnicomprensivo & Auto-Calibration Hardware Reference
+# DOIT — Completamento Psicoacustica, Rifinitura GUI & Validazione Reference
 
-task 1 — Auto-Calibration & Hardware Reference Matching (`--match-reference` in `clap-validator-host`)
-Leggi `tools/clap-validator-host/src/main.rs`, `docs/PLUGIN_CATALOG.md` e `core-dsp/src/core_dsp_modules/`.
-Implementa un database di **curve target fisiche/spettrali di riferimento** basate su misure pubbliche di laboratorio (DAFx / CCRMA / Audio Precision) e la modalità `--match-reference` in `clap-validator-host`:
+task 1 — Rifinitura GUI 2D (`Box::leak` -> static, Ore 12 Bipolari, `EqBandSpec` a Colonne & `ChannelFormat`/`TrackSpec` nei Plugin)
+Leggi `crates/greg_gui_core/src/lib.rs`, `GUI_SPEC.md`, `plugins/greg-surgical-eq/src/lib.rs` e i plugin in `plugins/`:
+1. **Rimozione `Box::leak` nelle GUI:** Sostituisci `Box::leak(vec![...])` dentro `fn editor(...)` (in `greg-a3a`, `greg-child` e negli altri plugin) con slice `&'static [ParamDef]` statiche o `OnceLock`.
+2. **Pulsanti/Switch Cliccabili & GUI Console:** Rendi effettivamente cliccabili tutti i toggle/dropdown su tutti i plugin e attiva la GUI 2D standard anche su `greg_nl_ch`, `greg_nl_mixer` e `greg_bay`.
+3. **Tacca Verticale a Ore 12 (`RotaryKnob`):** Per i parametri bipolari (`Gain`, `Pan`, `Trim`, `Bias`, `Crosstalk` relativo) lo zero (`0.0`) deve puntare verticalmente verso l'alto (`0°` / ore 12) con escursione simmetrica; per gli unipolari arco simmetrico `-135° -> +135°`.
+4. **Astrazione Universale `EqBandSpec` & Layout a Colonne:** Definisci `EqBandSpec` in `core-dsp` (riesportata in `plugin-support`) e usala per renderizzare in colonna verticale le bande di `greg-surgical-eq` e `greg-pultec` (da sinistra `Low` a destra `High`) e i filtri `Sidechain HPF/LPF` dei compressori/gate.
+5. **Adozione `ChannelFormat` & `TrackSpec`:** Adotta `ChannelFormat` e `TrackSpec` (appena definiti in `routing_matrix.rs`) su tutti i compressori, EQ e utility affinché `Stereo Link`/`Channel Link` e `AdjacentCrosstalkMatrix` operino esattamente tra i canali della stessa traccia.
+6. **Verifica & Release:** Esegui `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings` (`0` warning), `cargo build --release --workspace` e `clap-signal-host` 18/18 PASS, installa i 18 `.clap` in `~/.clap/Analog-vibe/`, cancella questo `task 2` da `doit.txt` e fai `git commit` + `git push` (inclusi i 3 subtree).
+
+task 2 — Bonifica Critica P0/P1 Core-DSP (Parte A: Filtri ZDF, ADAA, Valvole, Cabinet & Resampler)
+Leggi `docs/CORE_DSP_AUDIT.md` e risolvi tutti i problemi P0 e P1 nei primi due gruppi di `core-dsp/src/core_dsp_modules/`, verificando `cargo test --workspace` e `cargo clippy --workspace --all-targets -- -D warnings` (`0` warning):
+1. **`zdf_filters.rs` & `filters.rs`:**
+   - Correggi `ZdfSvf::process` allineandolo alla topologia TPT/ZDF corretta (`SvfFilter`) con soluzione Newton-Raphson esatta dell'equazione implicita di feedback non-lineare.
+   - Correggi `CombFilter` affinché salvi `delay_samples` in `configure()` e legga al ritardo corretto in `process()`.
+   - Fix P1/P2: usa i poli Butterworth reali in `IirCascade` saltando gli stadi inattivi; configura `NaturalPhaseEq` Bell al sample rate 2× oversampled.
+2. **`opto_compressor.rs` & `vari_mu.rs`:**
+   - Aggiungi `flush_denormal` sugli stati interni, evita `exp()`/`log10()` inutili a parametri costanti e correggi `release_start_db` (`OptoCell`) e il raccordo inferiore del soft-knee (`VariMuCell`).
+3. **`nonlinear_stages.rs`:**
+   - Sostituisci `adaa_antiderivative` per `tanh` con la formula analitica stabile senza overflow (`|x| + ln(1 + exp(-2|x|)) - ln(2)`) e riscrivi `process_adaa2` con seconda antiderivata esatta e differenze divise di Newton per nodi non uniformi.
+   - Fix P1: implementa `DynamicMirrorPreEmphasis::de_emphasis` come filtro IIR inverso esatto (evitando l'azzeramento a Nyquist).
+4. **`component_models.rs`, `transformer_hysteresis.rs`, `psu_sag.rs` & `cabinet_speaker.rs`:**
+   - Correggi il Miller low-pass in `TubeStage`/`SolidStateStage` affinché attenui le alte frequenze e non i bassi `< 200 Hz`; implementa realmente `DualStageProgramDependentRelease` con `state_fast`, `state_slow` e `sample_rate`.
+   - Correggi `TransformerHysteresis` per impedire il crollo di $h(1-h)$ verso `hysteresis -> 0.985` e scala `ripple_phase` in `PsuSag` per `sample_rate`.
+   - In `CabinetSpeaker`, sposta `TubeStage` e `TransformerHysteresis` di `mic_preamp` nei campi persistiti della struct (mai ricreati per campione!) e correggi `CabinetResonance` (passa-banda/picco) e `HeadBumpShelf` (low-shelf sui bassi).
+5. **Verifica & Sync Subtree:** Aggiungi unit test di regressione per ogni fix sopra, esegui `cargo test --workspace` e `cargo clippy --workspace --all-targets -- -D warnings` (`0` warning), cancella questo `task 2` da `doit.txt` e fai `git commit -m "[Core DSP P0] Fix ZdfSvf, CombFilter, ADAA1/2, TubeStage, DualStageRelease, Cabinet mic_preamp e filtri analogici" && git push` (inclusi i 3 subtree `dsp`, `gui`, `validator`).
+
+task 3 — Bonifica Critica P0/P1 Core-DSP (Parte B: Zero-Alloc Real-Time, Reverb/Spatial, PitchShifter, Loudness & Grafo)
+Leggi `docs/CORE_DSP_AUDIT.md` e risolvi tutti i problemi P0 e P1 nei gruppi 3 e 4 di `core-dsp/src/core_dsp_modules/`, verificando `cargo test --workspace` e `cargo clippy --workspace --all-targets -- -D warnings` (`0` warning):
+1. **`pitch_shifter.rs` (Zero-Alloc & Phase Vocoder Reale):**
+   - Elimina ogni allocazione `Vec` dentro `process_sample()`/`spectral_modify()` pre-allocando tutti i buffer nella struct.
+   - Implementa la reale trasposizione dei bin con accumulo di fase (`synth_phase`), overlap-add 75% (hop = N/4) con finestra Hann normalizzata COLA e protezione `NaN` sull'inviluppo formantico quando `logmag < 0`.
+2. **`fdn_reverb.rs`, `acoustic_room.rs` & `spatial_3d.rs` (Zero-Alloc & Fisica Corretta):**
+   - In `FdnReverb`: normalizza la matrice di Hadamard per $1/\sqrt{8}$ nel feedback e rimuovi il fast-path su `input == 0.0` affinché la coda decada naturalmente senza troncamenti.
+   - In `AcousticRoom`: evita la doppia chiamata per campione sulla stessa `DelayLine`, lascia decadere le riflessioni a `x == 0.0` e chiudi il feedback nelle celle `DiffusionAllPass`.
+   - In `Spatial3d` & `VbapState`: elimina la normalizzazione per-sample `max(|L|, |R|)` (che creava onde quadre!), applica realmente `itd_sec` tramite linea di ritardo frazionaria, correggi il segno dell'angolo azimuth per `pan_gain` ed elimina le allocazioni `Vec` di `VbapState` usando array fissi stack-allocated.
+3. **`loudness_metering.rs` & `psychoacoustics.rs`:**
+   - In `LoudnessEngine`: usa due istanze indipendenti di `KWeightFilter` (`k_weight_l` e `k_weight_r`), somma `kl^2 + kr^2` per ITU-R BS.1770-4, usa ring-buffer circolari fissi (zero `Vec` in `integrated_lufs`/`lra`/`reset`) per finestre scorrevoli `400 ms` e `3.0 s`, e implementa il True-Peak 4× oversampled FIR reale.
+   - In `psychoacoustics.rs`: calcola la risposta complessa $|H(e^{j\omega})|$ a `1 kHz` su entrambi gli stadi del `WeightingFilter`, allinea i poli/zeri alle specifiche IEC 61672-1 (`A/B/C/D/Z`) e ITU-R BS.468-4, e verifica le curve isofoniche ISO 226:2003.
+4. **`dsp_graph.rs` & `resampler_bitdepth.rs`:**
+   - In `CompiledAudioGraph`: elimina `in_slices: Vec` in `process()` usando buffer fissi pre-allocati, collega realmente lettura/scrittura degli `edge_buffers`, gestisci `FeedbackDelayZ1Node` rompendo i cicli nel sort topologico e correggi lo smoothing per-sample di `GainPanNode` e `ParallelDryWetNode` su multi-canale e blocchi grandi.
+   - In `resampler_bitdepth.rs`: ottimizza `Oversampler` con decomposizione polifase (evitando moltiplicazioni su zeri di stuffing).
+5. **Verifica & Sync Subtree:** Aggiungi test di zero-allocazione nel thread audio su `PitchShifter`, `Spatial3d`, `LoudnessEngine` e `CompiledAudioGraph`, più test di decadimento naturale `FdnReverb`/`AcousticRoom`; esegui `cargo test --workspace` e `cargo clippy --workspace --all-targets -- -D warnings` (`0` warning), cancella questo `task 3` da `doit.txt` e fai `git commit -m "[Core DSP P0] Zero-alloc real-time, FdnReverb Hadamard 1/sqrt(8), Spatial3d ITD, PhaseVocoder COLA, Loudness ITU-1770-4 e DspGraph" && git push` (inclusi i 3 subtree `dsp`, `gui`, `validator`).
+
+task 4 — Auto-Calibration, Hardware Reference Matching & Orecchio Percettivo (`--match-reference` in `clap-validator-host`)
+Leggi `tools/clap-validator-host/src/main.rs`, `docs/PLUGIN_CATALOG.md` e `core-dsp/src/core_dsp_modules/psychoacoustics.rs`:
 1. **Target Numerici di Riferimento per Famiglia Hardware (`reference_profiles.rs`):**
-   - **Compressori FET / Opto / VCA / Vari-Mu (`greg_76`, `greg-a2a`, `greg-a3a`, `greg_api_2500`, `greg-bus-comp`, `greg-child`, `greg_dbx_160`, `greg_dbx_165`):** Curva di trasferimento `dB in -> dB out` (ginocchio Soft/Hard, ratio progressiva Vari-Mu), tempi di attacco/rilascio (`63%` e `90%` GR) e spettro armonico H2–H5 a `0 VU (-18 dBFS)` e `+12 VU`.
-   - **Equalizzatori (`greg-pultec`, `greg-surgical-eq`):** Risposta in frequenza ampiezza/fase (`20 Hz – 20 kHz`), incluse le curve caratteristiche del trucco simultaneo *Low Boost + Low Atten* su `greg-pultec`.
-   - **Console & Channel Strip (`greg_nl_ch`, `greg_nl_mixer`):** Rapporto armonico pari/dispari (`H2/H3`) e roll-off/bump dei 3 modelli di console (`British 8078`, `British 4000G`, `American 1608`).
-2. **Motore di Verifica & Auto-Taratura (`--match-reference` & `--auto-calibrate`):**
-   - Confronta le misure reali FFT/RMS/inviluppo del `.so` compilato con i target numerici (tolleranza `±0.35 dB` su curva/risposta e `±1.5 dB` su H2–H5), stampando una pagella dettagliata di scostamento per ciascun plugin.
-   - Se uno stadio interno si discosta oltre la tolleranza, calcola e propone/applica i coefficienti ottimali di taratura (bias/saturazione/ginocchio) e salva il report aggiornato in `target/reference_match_report.md`.
-3. **Verifica Finale & Release:** Esegui `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings` (`0` warning), `cargo build --release --workspace` e `clap-signal-host` 18/18 PASS, installa i 18 `.clap` aggiornati in `~/.clap/Analog-vibe/`, cancella questo `task 2` da `doit.txt` e fai `git commit -m "[Validation & Reference] Aggiunto hardware reference matching (--match-reference) e auto-taratura su tutta la suite" && git push`.
+   - Compressori FET / Opto / VCA / Vari-Mu (`greg_76`, `greg-a2a`, `greg-a3a`, `greg_api_2500`, `greg-bus-comp`, `greg-child`, `greg_dbx_160`, `greg_dbx_165`): curva di trasferimento `dB in -> dB out`, tempi attacco/rilascio (`63%` e `90%` GR) e spettro armonico H2–H5 a `0 VU` e `+12 VU`.
+   - Equalizzatori (`greg-pultec`, `greg-surgical-eq`): risposta ampiezza/fase (`20 Hz – 20 kHz`), incluso trucco simultaneo *Low Boost + Low Atten* su `greg-pultec`.
+   - Console (`greg_nl_ch`, `greg_nl_mixer`): rapporto `H2/H3` e curve dei 3 modelli (`British 8078`, `British 4000G`, `American 1608`).
+2. **Orecchio Percettivo su Segnali Complessi (`core_dsp::psychoacoustics`):**
+   - Alimenta il validatore con **Onda Quadra (`Square`), Rumore Rosa (`-3 dB/oct`) e Program Material multi-banda**, misurando: aliasing udibile pesato **ITU-R 468** sopra soglia **ATH / Mascheramento Bark**, coerenza **Loudness Percettiva (Sone)** su Bypass/Auto-Gain e stabilità immagine sotto `1.5 kHz` (soglia ITD/ILD).
+3. **Motore `--match-reference` & `--auto-calibrate`:** Confronta le misure reali con i target, calcola eventuali coefficienti ottimali di taratura e salva `target/reference_match_report.md` + sezione `"Perceptual Audio Evaluation"` in `target/validation_report.html`.
+4. **Verifica Finale & Release:** Esegui `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings` (`0` warning), `cargo build --release --workspace` e `clap-signal-host` 18/18 PASS, installa i 18 `.clap` in `~/.clap/Analog-vibe/`, svuota `doit.txt` (`# DOIT - Tutti i task completati`) e fai `git commit -m "[Validation & Reference] Hardware reference matching, auto-taratura e orecchio percettivo psicoacustico" && git push` (inclusi i 3 subtree).
 
-task 2 — Bug-Fix Chirurgico Core-DSP, Topologia Canali Adiacenti, Rimozione `Box::leak` & Allineamento `ARCHITECTURE.md`
-Esegui una revisione matematica e strutturale mirata, verificando `cargo test --workspace` e `cargo clippy --workspace --all-targets -- -D warnings` (`0` warning):
-1. **`core-dsp/src/core_dsp_modules/nonlinear_stages.rs`:**
-   - Correggi `TAU` -> `PI` nella trasformata bilineare di `MillerRollOff` e `AcCoupling`.
-   - Correggi la formula del filtro passa-alto `AcCoupling` affinché lasci passare la banda audio (1 kHz) a `0 dB` (senza attenuare il segnale di -60 dB) bloccando solo il DC offset.
-   - Correggi il mapping della frequenza di taglio di `MillerRollOff` affinché scenda fluidamente da Nyquist (`drive = 1.0`) fino a `8 kHz` al massimo drive, e sostituisci `state_l`/`state_r` con supporto indipendente fino a 8 canali (`[f64; 8]`).
-2. **`core-dsp/src/core_dsp_modules/cabinet_speaker.rs`:**
-   - Correggi `TAU` -> `PI` nelle righe 91 e 132 (`tan(PI * bw / sr)` e `tan(PI * cutoff_hz / sr)`).
-3. **`core-dsp/src/core_dsp_modules/resampler_bitdepth.rs`:**
-   - Verifica e garantisci che `upsample_2x` mantenga esattamente guadagno unitario (`0 dB` compensando lo zero-stuffing) e che la latenza dichiarata per `2x / 4x / 8x` sia compensata esattamente anche nel parallel mix Dry/Wet dei plugin.
-4. **Topologia Canali Adiacenti & Crosstalk Standardizzato (`routing_matrix.rs`, `analog_summing.rs`, `greg_nl_mixer`, `greg_nl_ch`):**
-   - Definisci in `ChannelFormat` / `TrackSpec` (`routing_matrix.rs` / `analog_summing.rs`) la mappa esplicita dei **canali fisicamente adiacenti** per Mono (`nessuno`), Stereo (`0 <-> 1`), Mid/Side (`0 <-> 1`), LCR (`0 <-> 2 <-> 1`), Quad (`0 <-> 1`, `2 <-> 3`), Surround 5.1 e 7.1 SMPTE (`L <-> R`, `Ls <-> Rs`, `Lrs <-> Rrs`, con canale `LFE` indice 3 **sempre isolato**).
-   - Uniforma l'unità di `AdjacentCrosstalkMatrix` in **dB reali di livello di diafonia** (`-90.0 dB` = Off/silenzio -> `-20.0 dB` = crosstalk massimo, default analogico `-65.0 dB`) risolvendo l'inversione tra `greg_nl_mixer` (`0..60`) e `greg_nl_ch` (`-80..0`), confinando il crosstalk esclusivamente tra canali adiacenti della stessa `TrackSpec` (e tra strisce adiacenti del banco solo su `greg_nl_mixer`).
-5. **Allineamento Moduli Core -> Plugin & `ARCHITECTURE.md`:**
-   - Verifica che `greg-surgical-eq` utilizzi effettivamente `linear_phase_fir` quando viene selezionata la modalità a fase lineare (dichiarando la latenza esatta all'host).
-   - Assicurati che `ARCHITECTURE.md` e `GUI_SPEC.md` documentino lo standard a due livelli (**Pannello `MAIN`** fedelmente analogico vs **Pannello `ADVANCED`** con controlli moderni, incluso `Crosstalk` per i processori analogici).
-6. **Rimozione `Box::leak` nelle GUI dei Plugin:**
-   - Sostituisci `Box::leak(vec![...])` dentro `fn editor(...)` (presente in `greg-a3a`, `greg-child` e negli altri plugin) con slice `&'static [ParamDef]` statiche o `OnceLock` per evitare leak di memoria all'apertura/chiusura delle finestre in DAW.
-7. **Verifica & Sync Subtree:** Aggiungi unit test mirati per `AcCoupling`, `MillerRollOff` (8 canali), `Oversampler` (`0 dB` unity gain su 1x/2x/4x/8x) e topologia canali adiacenti (`AdjacentCrosstalkMatrix` 5.1/7.1 con isolamento `LFE`), esegui `cargo test --workspace`, cancella questo task da `doit.txt` e fai `git commit -m "[Core DSP] Fix filtri bilineari PI, DC blocker, Miller 8ch, oversampling, topologia canali adiacenti e rimozione Box::leak" && git push` (inclusi i 3 subtree `dsp`, `gui`, `validator`).
 
-task 3 — Modulo Psicoacustico Completo, Curve Isofoniche ISO 226 & Pesature Universali (`psychoacoustics.rs`)
-Implementa il nuovo modulo real-time safe (`f64`, `#![forbid(unsafe_code)]`, zero allocazioni in `process()`) `core-dsp/src/core_dsp_modules/psychoacoustics.rs` (riesportato in `core-dsp/src/lib.rs` e documentato in `ARCHITECTURE.md`):
-1. **Curve Isofoniche ISO 226:2003 & Soglia Assoluta ATH (`EqualLoudnessContour`):**
-   - Implementa l'interpolazione continua ISO 226 (`20 Hz – 20 kHz`, `0 – 120 Phon`) + la formula analitica della **Soglia Assoluta dell'Udito (ATH / Terhardt)** per calcolare la compensazione percettiva in funzione dei Phon di ascolto, alimentando il **Loudness-Compensated Auto-Gain** e il **Fletcher-Munson Contour**.
-2. **Pesature di Misura Universali (`WeightingFilter` & `WeightingCurve`):**
-   - Implementa banchi di filtri IIR/biquad calibrati per **A-Weighting (`dBA`)**, **B-Weighting (`dBB`)**, **C-Weighting (`dBC`)**, **D-Weighting (`dBD`)**, **Z-Weighting (`dBZ` flat)**, **ITU-R 468 (`dB468`)** e ponte unificato verso **K-Weighting (`LUFS`)** in `loudness_metering.rs`, con supporto fino a 8 canali indipendenti (`[f64; 8]`).
-3. **Bande Critiche (Bark / ERB / Mel), Specific Loudness (Sone) & Mascheramento:**
-   - Conversioni esatte `hz_to_bark`, `hz_to_erb`, `hz_to_mel`, calcolo della **Specific Loudness (Sone)** sulle 24 bande critiche (modello Zwicker) e stima del **Mascheramento Simultaneo e Temporale** (pre/post-masking) per evidenziare collisioni spettrali e guidare il gating/compressione.
-4. **Psicoacustica Spaziale & Noise-Shaping Dither:**
-   - Esponi le curve di sensibilità binaurale (transizione ITD/ILD ~1.5 kHz, effetto Haas) per `spatial_3d.rs` e i coefficienti FIR di **Noise-Shaping Psicoacustico** (ATH / ISO 226) collegabili al quantizzatore 16/24 bit in `resampler_bitdepth.rs`.
-5. **Integrazione "Orecchio Percettivo" in `clap-validator-host` (`tools/clap-validator-host`):**
-   - Collega `core_dsp::psychoacoustics` dentro `clap-validator-host` alimentandolo con **segnali complessi e transienti** (Onda Quadra `Square` multi-frequenza, Rumore Rosa `-3 dB/oct` e segnale musicale composto *Sub-Bass + Transiente Rullante + Armoniche Vocali*, non solo sinusoidi pure) affinché valuti ogni plugin percettivamente:
-     * **Aliasing & Artefatti Udibili:** misura i residui fuori banda pesati con curva **ITU-R 468** e confrontati con la **Soglia Assoluta ATH** e il **Mascheramento Simultaneo (24 bande Bark)**, segnalando se eventuali artefatti sono realmente udibili.
-     * **Coerenza Loudness Percettiva (Sone / ISO 226):** verifica che Bypass e Auto-Gain mantengano invariata la loudness percettiva reale in Sone.
-     * **Stabilità Spaziale Bassa Frequenza (< 1.5 kHz):** controlla tramite soglia ITD/ILD che crosstalk e link stereo non degradino la focalizzazione dei bassi.
-   - Aggiungi una sezione **"Perceptual Audio Evaluation"** nel report `target/validation_report.html` e nei riepiloghi CLI.
-6. **Integrazione & Verifica:**
-   - Collega le pesature (`dBA`, `dBC`, `ITU-468`, `K-Weighting`) al detector di `sidechain_processor.rs` e `metering.rs`.
-   - Aggiungi unit test deterministici che verifichino: `0.0 dB` a `1 kHz` su tutte le pesature, attenuazione esatta a `100 Hz` (`dBA` vs `dBC`), picco a `6.3 kHz` (`ITU-468`), isofoniche ISO 226 (`40` vs `80 Phon`), supporto 8 canali e `0.0 in -> 0.0 out`.
-   - Esegui `cargo test --workspace` e `cargo clippy --workspace --all-targets -- -D warnings` (`0` warning), cancella questo `task 2` da `doit.txt` e fai `git commit -m "[Psychoacoustics] Aggiunto motore psicoacustico completo: ISO 226, pesature A/B/C/D/Z/ITU-468/K, Sone/Bark/ERB, mascheramento e noise-shaping" && git push` (inclusi i 3 subtree `dsp`, `gui`, `validator`).
+task 5 — Re-Export Completo `core-dsp/src/lib.rs` & 3 Estensioni Mirate per Suite Future
+Leggi `core-dsp/src/lib.rs`, `synth_engine/`, `pitch_shifter.rs` e `routing_matrix.rs` per estendere i moduli esistenti senza creare duplicati:
+1. **Re-Export Completo in `core-dsp/src/lib.rs`:** Esporta con `pub use core_dsp_modules::*;` tutti i moduli presenti in `core_dsp_modules/` (inclusi `psychoacoustics`, `music_theory`, `neural_capture`, `cabinet_speaker`, `acoustic_room`, `spatial_3d`, `loudness_metering`, `dsp_graph`, `routing_matrix`, `zdf_filters`, `surgical_eq`, `sub_harmonic_synth`, `sidechain_processor`).
+2. **Oscillatore Wavetable (`synth_engine/`):** Aggiungi un oscillatore Wavetable band-limited (mip-mapped) con morphing continuo, real-time safe (`f64`, zero allocazioni in `process()`), per `Creative-Vibe`.
+3. **Pitch Tracker Monofonico YIN/pYIN (`pitch_shifter.rs`):** Aggiungi il rilevatore di frequenza fondamentale monofonico (algoritmo YIN / pYIN) ed estrattore formanti per `greg-pitch-correct` e `audio_to_midi`.
+4. **Allineatore di Fase Automatico (`routing_matrix.rs` / `filters.rs`):** Aggiungi `AutoPhaseAligner` basato su cross-correlazione, ritardo frazionario e rotazione All-Pass continua per allineamento multi-microfono (`greg-phase` / `greg-cab-3d`).
+5. **Verifica & Sync Subtree:** Aggiungi unit test deterministici per ciascuna delle 3 estensioni, verifica `cargo test --workspace` e `cargo clippy --workspace --all-targets -- -D warnings` (`0` warning), aggiorna `ARCHITECTURE.md` e i `README.txt` di `core-dsp`, svuota `doit.txt` (`# DOIT - Tutti i task completati`) e fai `git commit -m "[Core DSP] Re-export completo moduli e aggiunte Wavetable, YIN Pitch Tracker e AutoPhaseAligner" && git push` (inclusi i 3 subtree `dsp`, `gui`, `validator`).
 
-task 4 — Completamento Feature GUI & Astrazioni Core (Ripristino Task 1)
-Verifica e completa nel codice quanto già pianificato nel vecchio task 1 e non ancora implementato:
-1. **Pulsanti & Switch GUI Realmente Attivi (`ToggleSwitch`, `DropdownSelect`, `Button`):**
-   - Rendi cliccabili e interattivi tutti i controlli discreti/on-off e i menu a tendina su tutti i plugin, inclusi `greg_nl_ch`, `greg_nl_mixer`, `greg_bay` (attualmente `editor() -> None`).
-   - Verifica che il click aggiorni il parametro CLAP/VST3 e il redraw grafico in tempo reale.
-2. **Tacca Verticale a Ore 12 / Centratura Manopole Bipolari (`RotaryKnob`):**
-   - Per parametri bipolari (`Gain`, `Pan`, `Trim`, `Bias`, ecc.) lo zero (`0.0 dB` / `0`) deve puntare esattamente in verticale verso l'alto (`0°` / ore 12), con escursione simmetrica a sinistra (`-`) e destra (`+`).
-   - Per parametri unipolari, arco centrato simmetricamente rispetto all'asse verticale (`-135°` min a sinistra → `+135°` max a destra).
-3. **Astrazione Universale `EqBandSpec` (`core-dsp` → `plugin-support` → `greg_gui_core`):**
-   - Definisci in `core-dsp` (es. `routing_matrix.rs` o `audio_topology.rs`, riesportato in `core-dsp/src/lib.rs` e `plugin-support/src/lib.rs`) la struct `EqBandSpec` (`band_index`, `role`: `Low`/`LowMid`/`Mid`/`HighMid`/`High`, `enabled`, `filter_type`, `frequency_hz`, `gain_db`, `q`, `slope_db_oct`) ordinata `Low -> High`.
-   - Usala per bande EQ (`greg-surgical-eq`, `greg-pultec`, renderizzate a colonne verticali) e per filtri `Sidechain HPF/LPF` dei compressori/gate.
-4. **Astrazioni Universali `ChannelFormat` & `TrackSpec` (`X` Canali → `Y` Tracce):**
-   - Definisci in `core-dsp` (riesportato in `core-dsp/src/lib.rs` e `plugin-support/src/lib.rs`) `ChannelFormat` (`Mono=1`, `Stereo=2`, `Lcr=3`, `Quad=4`, `Surround51=6`, `Surround71=8`, `Custom(usize)`) e `TrackSpec` (raggruppamento di `N` canali fisici contigui in una traccia logica con controlli condivisi, mantenendo stadi analogici/`analog_variance` indipendenti per canale).
-   - Adotta `ChannelFormat` e `TrackSpec` su tutti i compressori, EQ e utility; `Stereo Link`/`Channel Link` accoppia il detector tra canali della stessa `TrackSpec` preservando il carattere analogico per canale.
-5. **Verifica & Release:** Esegui `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings` (`0` warning), `cargo build --release --workspace`, `clap-signal-host` 18/18 PASS, installa i 18 `.clap` in `~/.clap/Analog-vibe/`, cancella questo task da `doit.txt`, rinomina i successivi e fai `git commit` + `git push` (inclusi i 3 subtree `dsp`, `gui`, `validator`).
 
-task 5 — Potenziamento Omnicomprensivo di `clap-signal-host` (Simmetria Multicanale 1–8ch, Denormali, Reset, Parameter Sweep, GUI Lifecycle & RT Budget)
-Leggi `tools/clap-signal-host/src/main.rs` e `ARCHITECTURE.md`.
-Estendi `clap-signal-host` affinché esegua automaticamente questi **6 controlli reali** su qualsiasi `.so` CLAP caricato:
-1. **Simmetria Multicanale (`1..=8` canali):** Verifica che in configurazione stereo (`2 ch`) e surround (`6 ch` / `8 ch`) tutti i canali attivi vengano elaborati e scritti correttamente (bloccando qualsiasi canale morto o non processato).
-2. **Silenzio Assoluto & Anti-Denormali (`0.0 in -> 0.0 out`):** Invia 4 secondi di silenzio digitale dopo un impulso a `0 dBFS`, verificando che l'uscita torni a `< 1e-12` (zero DC offset / ronzio residuo) e che il tempo di elaborazione per blocco sul silenzio non subisca rallentamenti da numeri subnormali.
-3. **`reset()` & Invarianza al Sample Rate (`44.1 / 48 / 96 / 192 kHz`):** Processa rumore a `-6 dBFS`, chiama `reset()`, invia silenzio e verifica che la prima uscita sia identica a un'istanza nuova (`< 1e-12`) su tutti e 4 i sample rate.
-4. **Parameter Sweep Completo su Tutti i Parametri Esportati:** Itera dinamicamente su **tutti** i parametri esposti dal plugin (`clap_plugin_params`), esegue rampe `min -> default -> max` durante lo streaming audio e verifica **zero `NaN`/`Inf`**, **zero crash** e **zero click/discontinuità `> +6 dB`** tra campioni adiacenti.
-5. **Lifecycle GUI (`clap_plugin_gui`):** Esegue `create()`, `set_scale()`, `show()`, `hide()` e `destroy()` verificando che ogni plugin esponga una GUI 2D valida senza panic né leak.
-6. **Misura RT Budget:** Misura il tempo medio/picco per blocco (`256` campioni @ `48 kHz`, budget `5333 µs`) stampando il consumo % di un singolo core per ciascun plugin.
-7. **Verifica 18/18 PASS:** Esegui `cargo build --release --workspace` e lancia `clap-signal-host` su **tutti e 18 i plugin** (`0` errori), cancella questo task da `doit.txt`, rinomina il successivo e fai `git commit -m "[Test Host] Collaudo omnicomprensivo clap-signal-host: multicanale, denormali, reset, sweep parametri, GUI e RT budget" && git push`.
+task 6 — Split `TODO.md` nei 4 Repository & Tasto Utente `"Save as Default"` in `greg_gui_core`
+0. **Creazione `ROADMAP.md` Collegata ai 4 `TODO.md` (inclusa Copertura Moduli Core Dormienti):**
+   - Crea `ROADMAP.md` alla radice con 4 Milestone (`v0.9 Bonifica Core-DSP P0/P1`, `v1.0 Analog-Vibe & Hardware Reference`, `v1.1 Plugin di Copertura Moduli Avanzati: FdnReverb/Spatial3d, Tape/Cabinet Klippel, Loudness ITU-1770-4/ISO 226, PitchShifter/MusicTheory`, `v2.0 Suite Mastering/Amp/Creative & PipeWire Matrix`).
+   - Collega ogni Milestone della `ROADMAP.md` ai rispettivi punti nei 4 `TODO.md` (includendo tutti i fix di `docs/CORE_DSP_AUDIT.md` in `core-dsp/TODO.md`).
+1. **Split dei `TODO.md` per Repository:**
+   - Organizza e separa i task futuri nei 4 file dedicati: `TODO.md` (suite `Analog-Vibe`), `core-dsp/TODO.md` (`Rust_Dsp_Core`), `crates/greg_gui_core/TODO.md` (`clap-gui-designer`) e `tools/clap-validator-host/TODO.md` (`clap-validator-host`), con intestazione copyright **Alberto Gregorio Ferraris**.
+2. **Funzione Utente `"Save as Default"` (`crates/greg_gui_core` & `plugin-support`):**
+   - Aggiungi nella barra superiore della GUI 2D un pulsante **`Save Default`** (con conferma visiva) che salva i valori correnti di tutti i parametri (`MAIN` + `ADVANCED`) in `~/.config/analog-vibe/<plugin_id>.json`.
+   - Carica questo file di default utente esclusivamente in `initialize()` (zero I/O, zero allocazioni e zero lock nel thread audio `process()`), così ogni produttore può tarare il comportamento iniziale di ciascun plugin sulle proprie preferenze.
+3. **Verifica & Sync Subtree:** Esegui `cargo test --workspace` e `cargo clippy --workspace --all-targets -- -D warnings` (`0` warning), svuota `doit.txt` (`# DOIT - Tutti i task completati`), fai commit e push su `origin` e su tutti e 3 i subtree (`dsp`, `gui`, `validator`).
