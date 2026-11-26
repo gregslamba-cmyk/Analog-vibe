@@ -58,7 +58,7 @@ impl Default for GregNlChParams {
     fn default() -> Self {
         Self {
             drive_db: FloatParam::new("Drive (dB)", 0.0, FloatRange::Linear { min: -12.0, max: 18.0 }).with_unit(" dB"),
-            crosstalk_db: FloatParam::new("Crosstalk (dB)", -60.0, FloatRange::Linear { min: -80.0, max: 0.0 }).with_unit(" dB"),
+            crosstalk_db: FloatParam::new("Crosstalk (dB)", -65.0, FloatRange::Linear { min: -90.0, max: -20.0 }).with_unit(" dB"),
             mix: FloatParam::new("Mix", 1.0, FloatRange::Linear { min: 0.0, max: 1.0 }),
             bypass: BoolParam::new("Bypass", false),
             channel_setup: CommonChannelParams::default(),
