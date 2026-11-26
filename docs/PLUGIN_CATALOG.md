@@ -185,3 +185,17 @@ Al completamento della suite Analog-Vibe, l'infrastruttura condivisa (`core-dsp`
 
 - **`greg_trigger` (Multi-Layer Drum Replacer & Sample Trigger):** Rilevatore a soglia (*Threshold*, *Hysteresis*, *Holdoff* anti-doppio colpo, filtro sidechain HPF/LPF) che lancia fino a 8 layer di campioni (Velocity + Round-Robin), ciascuno dotato di mini-editor individuale con **Trim Start/End & Fade**, **Pitch/Fase**, **EQ dedicato** e **Compressore dedicato**, più **Dry/Wet** per layering con la ripresa reale.
 - **Modulo Video & Post-Produzione (`greg_video_sync`):** Playback video sincronizzato al singolo campione via timecode SMPTE (`23.976–60 fps`, Pull-Up/Down `±0.1%`), estrazione automatica thumbnail su traccia video e strumenti di Foley/ADR per la futura AI-Native DAW.
+
+---
+
+### Serie Chirurgica Anti-Risonanza (`greg-resonance-surgical-eq` — Scalabile `g1` → `g15`)
+- **Architettura Unificata a Bande Dinamiche (`1..=15` filtri):** Invece di 15 binari separati (`g1`..`g15`), un unico plugin chirurgico basato su `EqBandSpec` e `ZdfSvf` pre-allocati (`[ZdfSvf; 15]`) in cui l'utente può aggiungere (`+`) o rimuovere (`-`) bande in tempo reale da 1 fino a 15 filtri, processando nel thread audio esclusivamente le bande attive (`zero overhead` quando si usano poche bande).
+- **Modalità "Resonance Hunt / Solo Sweep":** Pulsante di ascolto isolato per banda (e auto-solo opzionale durante lo sweep di frequenza/Q) con campana stretta fino a `Q = 40.0` per individuare immediatamente risonanze modali, fischi o armoniche dure e attenuarle fino a `-36 dB`.
+- **Analizzatore Spettrale & Rilevamento Picchi:** Visualizzazione FFT ad alta risoluzione in tempo reale (`spectral_analyzer.rs`) con evidenziazione dei picchi risonanti persistiti e supporto Fase Minima / Fase Lineare (`linear_phase_fir.rs`).
+
+---
+
+### Serie Chirurgica Anti-Risonanza (`greg-resonance-surgical-eq` — Scalabile `g1` → `g15`)
+- **Architettura Unificata a Bande Dinamiche (`1..=15` filtri):** Invece di 15 binari separati (`g1`..`g15`), un unico plugin chirurgico basato su `EqBandSpec` e `ZdfSvf` pre-allocati (`[ZdfSvf; 15]`) in cui l'utente può aggiungere (`+`) o rimuovere (`-`) bande in tempo reale da 1 fino a 15 filtri, processando nel thread audio esclusivamente le bande attive (`zero overhead` quando si usano poche bande).
+- **Modalità "Resonance Hunt / Solo Sweep":** Pulsante di ascolto isolato per banda (e auto-solo opzionale durante lo sweep di frequenza/Q) con campana stretta fino a `Q = 40.0` per individuare immediatamente risonanze modali, fischi o armoniche dure e attenuarle fino a `-36 dB`.
+- **Analizzatore Spettrale & Rilevamento Picchi:** Visualizzazione FFT ad alta risoluzione in tempo reale (`spectral_analyzer.rs`) con evidenziazione dei picchi risonanti persistiti e supporto Fase Minima / Fase Lineare (`linear_phase_fir.rs`).

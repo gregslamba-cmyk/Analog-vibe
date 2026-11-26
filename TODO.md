@@ -105,3 +105,7 @@
 
 ## Backlog Lontano (v3.0 — Developer Experience)
 - [ ] **Estensione VS Code per GUI Layout Designer (`clap-gui-designer`):** Impacchettare l'editor visuale HTML/Canvas (`gui_designer.html`) in una *VS Code Custom Editor Extension* per aprire e modificare visivamente i file `gui_layout.json` direttamente dentro l'IDE con salvataggio istantaneo e live-reload.
+
+- [ ] Implementare **`greg-resonance-surgical-eq`** (architettura scalabile `g1..g15` con aggiunta/rimozione dinamica fino a 15 bande `EqBandSpec`, `Q` fino a 40 e tasto *Band Solo / Resonance Hunt*)
+
+- [ ] Implementare **`greg-resonance-surgical-eq`** (architettura scalabile `g1..g15` con aggiunta/rimozione dinamica fino a 15 bande `EqBandSpec`, `Q` fino a 40 e tasto *Band Solo / Resonance Hunt*)

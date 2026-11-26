@@ -733,3 +733,18 @@ In `core-dsp` (`routing_matrix.rs` / `analog_summing.rs`), `ChannelFormat` e `Tr
 - **Surround 5.1 (6ch SMPTE: L, R, C, LFE, Ls, Rs):** `L <-> R`, `L <-> C <-> R`, `Ls <-> Rs`; canale `LFE` (indice 3) **sempre isolato** dal crosstalk.
 - **Surround 7.1 (8ch SMPTE: L, R, C, LFE, Ls, Rs, Lrs, Rrs):** `L <-> R`, `Ls <-> Rs`, `Lrs <-> Rrs`; canale `LFE` (indice 3) **sempre isolato**.
 - **Isolamento tra Tracce:** Nei plugin standard (`greg_76`, `greg-a2a`, ecc.) il crosstalk opera esclusivamente tra canali appartenenti alla stessa `TrackSpec`; solo in `greg_nl_mixer` opera anche tra strisce adiacenti del banco.
+
+---
+
+## Standard Universale Copia/Incolla Parametri & A/B Compare (`greg_gui_core`)
+Ogni plugin della suite eredita automaticamente dalla barra superiore di `greg_gui_core` (eseguita interamente nel thread UI, zero I/O o allocazioni nel thread audio `process()`) i seguenti strumenti di workflow:
+- **`A / B` Compare:** Doppio slot istantaneo in memoria UI per confrontare al volo due impostazioni sullo stesso plugin.
+- **`Copy` / `Paste` Parametri (Cross-Instance & Cross-Plugin):** Serializza lo stato correnti di tutti i parametri (`MAIN` + `ADVANCED`) in JSON (`{ "param_id": value }`) nella clipboard condivisa (`~/.cache/analog-vibe/param_clipboard.json`). Il comando **`Paste`** ripristina tutti i parametri sullo stesso plugin e trasferisce automaticamente anche i parametri comuni (`threshold`, `ratio`, `attack`, `release`, `mix`, `sc_hpf`, `stereo_link`, `oversampling`) quando si incolla tra due plugin diversi della stessa famiglia (es. da `greg_76` a `greg-a2a` o da `g3` a `g8`).
+- **`Save Default`:** Salva lo stato corrente come default utente permanente in `~/.config/analog-vibe/<plugin_id>.json` caricato esclusivamente in `initialize()`.
+
+---
+
+## Standard Universale Preset a File Singolo (`greg_gui_core`)
+Tutti i plugin della suite condividono il **Preset Manager** integrato nella barra superiore di `greg_gui_core` (eseguito esclusivamente nel thread UI, zero I/O nel thread audio):
+- **Un file per singolo preset:** Ogni preset è salvato come file JSON autonomo e condivisibile in `~/.config/analog-vibe/presets/<plugin_id>/<preset_name>.json` (affiancato ai preset factory integrati), contenente metadati (`plugin_id`, `author`, `category`) e mappa completa `{ "param_id": value }` (`MAIN` + `ADVANCED`).
+- **Controlli Barra Superiore:** Selettore a tendina con frecce `<` / `>` per scorrimento rapido, tasto **`Save Preset`** (scrive il singolo file `.json` condivisibile) e tasto **`Open Folder`** per aprire direttamente la cartella dei preset dell'utente e facilitare lo scambio tra produttori.
