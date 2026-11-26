@@ -748,3 +748,18 @@ Ogni plugin della suite eredita automaticamente dalla barra superiore di `greg_g
 Tutti i plugin della suite condividono il **Preset Manager** integrato nella barra superiore di `greg_gui_core` (eseguito esclusivamente nel thread UI, zero I/O nel thread audio):
 - **Un file per singolo preset:** Ogni preset è salvato come file JSON autonomo e condivisibile in `~/.config/analog-vibe/presets/<plugin_id>/<preset_name>.json` (affiancato ai preset factory integrati), contenente metadati (`plugin_id`, `author`, `category`) e mappa completa `{ "param_id": value }` (`MAIN` + `ADVANCED`).
 - **Controlli Barra Superiore:** Selettore a tendina con frecce `<` / `>` per scorrimento rapido, tasto **`Save Preset`** (scrive il singolo file `.json` condivisibile) e tasto **`Open Folder`** per aprire direttamente la cartella dei preset dell'utente e facilitare lo scambio tra produttori.
+
+---
+
+## Nuovi Moduli Core-DSP (Task 2 — Re-export Completo & Estensioni)
+
+Il modulo `core-dsp/src/lib.rs` ora ri-esporta tutti i 46 moduli di `core_dsp_modules/` tramite `pub use core_dsp_modules::*`, in aggiunta ai moduli singoli già esposti.
+
+Tre nuove estensioni mirate per le suite future sono state aggiunte a `core-dsp`:
+
+- **`core_dsp_modules::synth_engine::WavetableOscillator`** (`synth_engine/wavetable_oscillator.rs`): oscillatore Wavetable band-limited con tabelle mip-mappate (`NUM_LEVELS` di risoluzione, `TABLE_SIZE` campioni), morphing continuo tra due forme d'onda (`morph` 0.0–1.0), selezione automatica del livello mip basata sulla frequenza per evitare aliasing. Elaborazione interna `f64`, zero allocazioni in `process()`, `NaN`/`Inf` sanificati a `0.0`, `0.0 in → 0.0 out` a frequenza nulla.
+
+- **`core_dsp_modules::PitchTracker`** (`pitch_shifter.rs`): rilevatore di frequenza fondamentale monofonico YIN (autocorrelazione deterministica su finestra) e pYIN (raffinazione iterativa), con estrattore di formanti tramite DFT di magnitudine su 1024 bin e peak-picking su picchi spettrali. Restituisce `440.0` come fallback su silenzio / nessun tono rilevato.
+
+- **`core_dsp_modules::AutoPhaseAligner`** (`routing_matrix.rs`): allineatore di fase automatico che stima il ritardo tra segnale e riferimento tramite cross-correlazione su finestra mobile e applica correzione tramite coefficiente all-pass (`allpass_coef`). Zero allocazioni heap nel percorso real-time.
+
