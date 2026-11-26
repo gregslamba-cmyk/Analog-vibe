@@ -41,3 +41,13 @@
   2. **Equalizzatori (2 plugin):** Gain principali (`Large`), Frequenze/Q/Attenuazione (`Medium`), curve/filtri/fase in `DropdownSelect`.
   3. **Canali & Console (3 plugin):** `Drive/Trim` + `Master/Output` (`Large`), `Crosstalk/Sat` (`Medium`), `Console Model` / `Topology` in `DropdownSelect`.
   4. **Matrici & Fase (3 plugin):** Controllo primario (`Gain` / `Phase Shift` in `Large`), secondario (`Width` / `Micro-Delay` in `Medium`), polarità in `ToggleSwitch`.
+  5. **Saturatori & Nastro (`greg_tape`, `greg_tube_drive`, `greg_diode_sat`, ecc.):**
+     - `KnobSize::Large` (`64px`): `Input Drive` / `Saturation` e `Output Trim` (controlli hero di calibrazione armonica).
+     - `KnobSize::Medium` (`48px`): `Bias`, `Iron / Transformer %`, `Head Bump`, `HF Roll-off`, `Dry/Wet Mix`.
+     - `DropdownSelect`: `Tape Speed (7.5 / 15 / 30 IPS)`, `EQ Curve (NAB / CCIR)`, `Tube Mode (Triode / Pentode / Dual)`, `Oversampling (1x/2x/4x/8x)`.
+  6. **Riverberi & Spazio 3D (`greg_space`, `greg_ir_reverb`, ecc.):**
+     - `KnobSize::Large` (`64px`): `Decay Time (s)` / `Room Size` e `Dry/Wet Mix` (controlli primari di spazio).
+     - `KnobSize::Medium` (`48px`): `Pre-Delay (ms)`, `Damping`, `Early/Late Mix`, `Diffusion`, `Spatial Width / ITD`, `Modulation Depth`, `Low Cut`, `High Cut`.
+     - `DropdownSelect` / `ToggleSwitch`: `Room Algorithm / Topology`, `Stereo / Binaural Mode`, `Channel Setup`.
+  7. **Layout EQ a Colonne Verticali (`EqBandSpec` — `greg_surgical_eq`, `greg_resonance_killer_eq`, `greg_1073_1081_eq`, `greg_550_560_eq`):**
+     - Ogni banda EQ è renderizzata come una **striscia verticale affiancata da sinistra (`Low`) a destra (`High`)** con `Gain` (`Large`/`Medium` con tacca bipolare a ore 12), `Frequency` (`Medium`), `Q` (`Medium`), selettore tipo filtro (`DropdownSelect`) e pulsanti `Band Enable` + `Band Solo / Resonance Hunt` (`ToggleSwitch`).
