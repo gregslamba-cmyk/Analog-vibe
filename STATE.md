@@ -8,7 +8,7 @@ Copyright (c) 2026 Alberto Gregorio Ferraris. All rights reserved.
   - [x] Audit tecnico `docs/CORE_DSP_AUDIT.md` & Bonifica P0/P1 Parte A (`ZdfSvf`, `CombFilter`, `ADAA1/2`, `TubeStage`, `DualStageProgramDependentRelease`, `TransformerHysteresis`, `PsuSag`, `CabinetSpeaker` con `mic_preamp` persistito, `ChannelFormat`/`TrackSpec` con isolamento `LFE`).
   - [x] Regole `.clinerules` aggiornate con lettura preventiva obbligatoria di `vcinst.md`, `ARCHITECTURE.md` e `GUI_SPEC.md`.
 - **Coda Attiva (`doit.txt` — Task 1..8):**
-  - [ ] Task 1: Bonifica P0/P1 Core-DSP Parte B (Zero-Alloc Real-Time, `FdnReverb` Hadamard $1/\sqrt{8}$, `AcousticRoom`, `Spatial3d` ITD, `PitchShifter` COLA, `LoudnessEngine` ITU-1770-4, `CompiledAudioGraph`).
+  - [x] Task 1: Bonifica P0/P1 Core-DSP Parte B (Zero-Alloc Real-Time, `FdnReverb` Hadamard $1/\sqrt{8}$, `AcousticRoom`, `Spatial3d` ITD, `PitchShifter` COLA, `LoudnessEngine` ITU-1770-4, `CompiledAudioGraph`).
   - [ ] Task 2: Re-export completo `core-dsp/src/lib.rs` + Wavetable, YIN Pitch Tracker e `AutoPhaseAligner`.
   - [ ] Task 3: Rifinitura GUI 2D (`Box::leak` -> static, Ore 12 bipolari, `EqBandSpec`, `ChannelFormat`/`TrackSpec`, barra universale `A/B`, `Copy/Paste`, `Save Default`, Preset Browser).
   - [ ] Task 4: Hardware Reference Matching (`--match-reference`) & Orecchio Percettivo in `clap-validator-host`.
