@@ -199,3 +199,10 @@ Al completamento della suite Analog-Vibe, l'infrastruttura condivisa (`core-dsp`
 - **Architettura Unificata a Bande Dinamiche (`1..=15` filtri):** Invece di 15 binari separati (`g1`..`g15`), un unico plugin chirurgico basato su `EqBandSpec` e `ZdfSvf` pre-allocati (`[ZdfSvf; 15]`) in cui l'utente può aggiungere (`+`) o rimuovere (`-`) bande in tempo reale da 1 fino a 15 filtri, processando nel thread audio esclusivamente le bande attive (`zero overhead` quando si usano poche bande).
 - **Modalità "Resonance Hunt / Solo Sweep":** Pulsante di ascolto isolato per banda (e auto-solo opzionale durante lo sweep di frequenza/Q) con campana stretta fino a `Q = 40.0` per individuare immediatamente risonanze modali, fischi o armoniche dure e attenuarle fino a `-36 dB`.
 - **Analizzatore Spettrale & Rilevamento Picchi:** Visualizzazione FFT ad alta risoluzione in tempo reale (`spectral_analyzer.rs`) con evidenziazione dei picchi risonanti persistiti e supporto Fase Minima / Fase Lineare (`linear_phase_fir.rs`).
+
+---
+
+### Suite Re-Miking & Sincronizzazione Microfoni (`greg_remic`)
+- **Architettura Dual-Engine (`Re-Mic 3D` + `Auto-Phase Sync`):** Unisce in un unico strumento per batteria, chitarre, voci e bassi sia la ricostruzione multi-microfonica virtuale da tracce/sample dry sia l'allineamento automatico di fase tra riprese reali multi-mic.
+- **Moduli Core:** `acoustic_room` (`AcousticRoom`), `spatial_3d` (`Spatial3d`), `cabinet_speaker` (`MicPreampCircuit`), `routing_matrix` (`AutoPhaseAligner` con cross-correlazione, ritardo frazionario e rotazione All-Pass), `transient_splitter` e `fdn_reverb`.
+- **Controlli Principali:** Selettore profilo strumento (`Drums`, `Guitar`, `Bass`, `Vocal`), 3 fader indipendenti (**Close Mic** con Proximity Effect, **Stereo Mid/OH Pair** XY/ORTF/AB con ritardo fisico `d / 343 m/s`, **Room Mic** 3D con compressore FET ambiente), più tasto **Auto-Align Phase** sul riferimento Sidechain.
