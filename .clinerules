@@ -78,3 +78,10 @@ Non mantenere un unico `TODO.md` generico per tutto il monorepo: mantieni sempre
 3. `crates/greg_gui_core/TODO.md` (roadmap del subtree `clap-gui-designer`).
 4. `tools/clap-validator-host/TODO.md` (roadmap del subtree `clap-validator-host`).
 Ogni aggiornamento della roadmap va scritto nel `TODO.md` del repository pertinente e propagato via `git subtree push`.
+
+## Regola Vincolante di Lettura Preventiva (`vcinst.md`, `ARCHITECTURE.md`, `GUI_SPEC.md`)
+Prima di scrivere o modificare qualsiasi riga di codice Rust, è **VIETATO** procedere a memoria; esegui obbligatoriamente questi passi preliminari:
+1. **Sempre (ogni task):** Leggi `vcinst.md` (Sezioni 3, 4 e 5) per verificare vincoli real-time (`f64`, zero `unsafe`, zero allocazioni/lock, `0.0 -> 0.0`, `Channel Setup`, `Mix`, commenti Rustdoc).
+2. **Quando tocchi DSP o nuovi plugin:** Leggi in `ARCHITECTURE.md` esclusivamente le sezioni dei moduli coinvolti e `docs/specs/outboard_hardware_research.md` per l'ordine reale degli stadi fisici.
+3. **Quando tocchi la UI (`greg_gui_core` o `editor()`):** Leggi `GUI_SPEC.md` e le sezioni GUI di `ARCHITECTURE.md` (`A/B`, `Copy/Paste`, `Save Default`, Preset Browser, Ore 12 bipolari, `EqBandSpec` a colonne).
+4. **Dichiara nel primo messaggio:** Elenca esplicitamente i file di specifica letti prima di iniziare a scrivere codice.
