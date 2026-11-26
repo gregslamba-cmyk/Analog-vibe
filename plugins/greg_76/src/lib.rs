@@ -626,7 +626,7 @@ impl Plugin for GregFet76 {
         let params_main = self.params.clone();
         let _params_adv = self.params.clone();
         let param_defs: &'static [greg_gui_core::ParamDef] =
-            Box::leak(vec![
+            greg_gui_core::greg_static_params!(vec![
                 greg_gui_core::ParamDef::knob("Input", Box::new(|cx| {
                     RotaryKnob::new(cx, EditorData::params, |p| &p.input);
                 })),
@@ -663,7 +663,7 @@ impl Plugin for GregFet76 {
                 greg_gui_core::ParamDef::enum_switch("Oversampling", Box::new(|cx| {
                     EnumSwitch::new(cx, EditorData::params, |p| &p.oversampling);
                 })),
-            ].into_boxed_slice(),
+            ]
         );
         create_greg_editor_with_params(
             "Greg 76",

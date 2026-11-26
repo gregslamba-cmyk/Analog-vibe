@@ -130,7 +130,7 @@ impl Plugin for GregPhase {
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params_main = self.params.clone();
         let param_defs: &'static [greg_gui_core::ParamDef] =
-            Box::leak(vec![
+            greg_gui_core::greg_static_params!(vec![
                 greg_gui_core::ParamDef::toggle("Invert Left Polarity", Box::new(|cx| {
                     ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_left);
                 })),
@@ -143,7 +143,7 @@ impl Plugin for GregPhase {
                 greg_gui_core::ParamDef::toggle("Bypass", Box::new(|cx| {
                     ToggleSwitch::new(cx, EditorData::params, |p| &p.bypass);
                 })),
-            ].into_boxed_slice(),
+            ]
         );
         create_greg_editor_with_params(
             "Greg Phase",

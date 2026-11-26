@@ -9,9 +9,17 @@ use core_dsp::core_dsp_modules::{
     routing_matrix::{RoutingMatrix, RoutingMode},
 };
 use nih_plug::prelude::*;
-use greg_gui_core::GuiTelemetry;
+use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params, ParamDef, RotaryKnob, ToggleSwitch, EnumSwitch};
+use greg_gui_core::prelude::*;
 use plugin_support::CommonChannelParams;
 use serde::{Serialize, Deserialize};
+
+#[derive(Clone, Lens)]
+struct EditorData {
+    params: Arc<GregBayParams>,
+}
+
+impl Model for EditorData {}
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
 enum Oversampling {
@@ -317,7 +325,55 @@ impl Plugin for GregBay {
         for delay in &mut self.dry_delays { delay.reset(); }
         for oversampler in &mut self.oversamplers { oversampler.reset(); }
     }
-    fn editor(&mut self, _ae: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> { None }
+    fn editor(&mut self, _ae: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
+    let params_main = self.params.clone();
+    let param_defs: &'static [ParamDef] = greg_gui_core::greg_static_params!(vec![
+        ParamDef::knob("Slot 1 Drive", Box::new(|cx| {
+            RotaryKnob::new(cx, EditorData::params, |p| &p.slot_1);
+        })),
+        ParamDef::knob("Slot 2 Drive", Box::new(|cx| {
+            RotaryKnob::new(cx, EditorData::params, |p| &p.slot_2);
+        })),
+        ParamDef::knob("Slot 3 Drive", Box::new(|cx| {
+            RotaryKnob::new(cx, EditorData::params, |p| &p.slot_3);
+        })),
+        ParamDef::knob("Slot 4 Drive", Box::new(|cx| {
+            RotaryKnob::new(cx, EditorData::params, |p| &p.slot_4);
+        })),
+        ParamDef::enum_switch("Routing Topology", Box::new(|cx| {
+            EnumSwitch::new(cx, EditorData::params, |p| &p.routing);
+        })),
+        ParamDef::enum_switch("Slot 1 Module", Box::new(|cx| {
+            EnumSwitch::new(cx, EditorData::params, |p| &p.slot_1_module);
+        })),
+        ParamDef::enum_switch("Slot 2 Module", Box::new(|cx| {
+            EnumSwitch::new(cx, EditorData::params, |p| &p.slot_2_module);
+        })),
+        ParamDef::enum_switch("Slot 3 Module", Box::new(|cx| {
+            EnumSwitch::new(cx, EditorData::params, |p| &p.slot_3_module);
+        })),
+        ParamDef::enum_switch("Slot 4 Module", Box::new(|cx| {
+            EnumSwitch::new(cx, EditorData::params, |p| &p.slot_4_module);
+        })),
+        ParamDef::toggle("Bypass", Box::new(|cx| {
+            ToggleSwitch::new(cx, EditorData::params, |p| &p.bypass);
+        })),
+        ParamDef::enum_switch("Oversampling", Box::new(|cx| {
+            EnumSwitch::new(cx, EditorData::params, |p| &p.oversampling);
+        })),
+        ParamDef::toggle("Invert Left Polarity", Box::new(|cx| {
+            ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_left);
+        })),
+    ]);
+    create_greg_editor_with_params(
+        "Greg Bay",
+        self.telemetry.clone(),
+        move |_| {},
+        move |_| {},
+        Some(param_defs),
+        move |cx| EditorData { params: params_main.clone() }.build(cx),
+    )
+}
     fn process(&mut self, buffer: &mut Buffer, _aux: &mut AuxiliaryBuffers, _ctx: &mut impl ProcessContext<Self>) -> ProcessStatus {
         if self.panic_protection.is_disabled() { return ProcessStatus::Normal; }
         let bypassed = self.params.bypass.value();

@@ -85,3 +85,11 @@ Prima di scrivere o modificare qualsiasi riga di codice Rust, è **VIETATO** pro
 2. **Quando tocchi DSP o nuovi plugin:** Leggi in `ARCHITECTURE.md` esclusivamente le sezioni dei moduli coinvolti e `docs/specs/outboard_hardware_research.md` per l'ordine reale degli stadi fisici.
 3. **Quando tocchi la UI (`greg_gui_core` o `editor()`):** Leggi `GUI_SPEC.md` e le sezioni GUI di `ARCHITECTURE.md` (`A/B`, `Copy/Paste`, `Save Default`, Preset Browser, Ore 12 bipolari, `EqBandSpec` a colonne).
 4. **Dichiara nel primo messaggio:** Elenca esplicitamente i file di specifica letti prima di iniziare a scrivere codice.
+
+## Gestione Spazio Disco (VM 48 GB)
+- Non eseguire  o  tutti insieme in un colpo solo (superano i 12 GB di ).
+- Compila e testa un crate/plugin alla volta (, ), copia il  in  ed esegui  se lo spazio libero scende sotto i 4 GB.
+
+## Gestione Spazio Disco (VM 48 GB)
+- Non eseguire `cargo build --release --workspace` o `cargo test --workspace` tutti insieme in un colpo solo (superano i 12 GB di `target/`).
+- Compila e testa un crate/plugin alla volta (`cargo test -p <crate>`, `cargo build --release -p <plugin>`), copia il `.clap` in `~/.clap/Analog-vibe/` ed esegui `cargo clean -p <plugin>` se lo spazio libero scende sotto i 4 GB.

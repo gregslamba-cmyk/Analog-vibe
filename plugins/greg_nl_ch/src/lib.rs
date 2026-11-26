@@ -10,7 +10,8 @@ use core_dsp::core_dsp_modules::{
 };
 use nih_plug::prelude::*;
 use plugin_support::CommonChannelParams;
-use greg_gui_core::GuiTelemetry;
+use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params, ParamDef, RotaryKnob, ToggleSwitch, EnumSwitch};
+use greg_gui_core::prelude::*;
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
 enum Oversampling {
@@ -67,6 +68,13 @@ impl Default for GregNlChParams {
         }
     }
 }
+
+#[derive(Clone, Lens)]
+struct EditorData {
+    params: Arc<GregNlChParams>,
+}
+
+impl Model for EditorData {}
 
 struct GregNlCh {
     params: Arc<GregNlChParams>,
@@ -135,7 +143,37 @@ impl Plugin for GregNlCh {
         for delay in &mut self.dry_delays { delay.reset(); }
         for oversampler in &mut self.oversamplers { oversampler.reset(); }
     }
-    fn editor(&mut self, _ae: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> { None }
+    fn editor(&mut self, _ae: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
+    let params_main = self.params.clone();
+    let param_defs: &'static [ParamDef] = greg_gui_core::greg_static_params!(vec![
+        ParamDef::knob("Drive (dB)", Box::new(|cx| {
+            RotaryKnob::new(cx, EditorData::params, |p| &p.drive_db);
+        })),
+        ParamDef::knob("Crosstalk (dB)", Box::new(|cx| {
+            RotaryKnob::new(cx, EditorData::params, |p| &p.crosstalk_db);
+        })),
+        ParamDef::knob("Mix", Box::new(|cx| {
+            RotaryKnob::new(cx, EditorData::params, |p| &p.mix);
+        })),
+        ParamDef::toggle("Bypass", Box::new(|cx| {
+            ToggleSwitch::new(cx, EditorData::params, |p| &p.bypass);
+        })),
+        ParamDef::enum_switch("Oversampling", Box::new(|cx| {
+            EnumSwitch::new(cx, EditorData::params, |p| &p.oversampling);
+        })),
+        ParamDef::toggle("Invert Left Polarity", Box::new(|cx| {
+            ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_left);
+        })),
+    ]);
+    create_greg_editor_with_params(
+        "Greg NL Ch",
+        self.telemetry.clone(),
+        move |_| {},
+        move |_| {},
+        Some(param_defs),
+        move |cx| EditorData { params: params_main.clone() }.build(cx),
+    )
+}
     fn process(&mut self, buffer: &mut Buffer, _aux: &mut AuxiliaryBuffers, _ctx: &mut impl ProcessContext<Self>) -> ProcessStatus {
         if self.panic_protection.is_disabled() { return ProcessStatus::Normal; }
         let bypassed = self.params.bypass.value();

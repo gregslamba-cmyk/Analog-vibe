@@ -21,7 +21,8 @@ use core_dsp::core_dsp_modules::{
 use channel_strip::ConsoleChannelStrip;
 use nih_plug::prelude::*;
 use plugin_support::CommonChannelParams;
-use greg_gui_core::GuiTelemetry;
+use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params, ParamDef, RotaryKnob, ToggleSwitch, EnumSwitch};
+use greg_gui_core::prelude::*;
 
 const MAX_CHANNELS: usize = 24;
 const MAX_BUSES: usize = 8;
@@ -128,6 +129,14 @@ impl Default for GregNlMixerParams {
         }
     }
 }
+
+#[derive(Clone, Lens)]
+struct EditorData {
+    params: Arc<GregNlMixerParams>,
+}
+
+impl Model for EditorData {}
+
 #[derive(Default)]
 #[allow(dead_code)] // Fields are retained for future full console routing; some are not yet read in every code path.
 struct MasterBus {
@@ -225,7 +234,40 @@ impl Plugin for GregNlMixer {
         for i in 1..MAX_BUSES { self.buses[i] = MasterBus::default(); }
         self.metering.begin_block();
     }
-    fn editor(&mut self, _async_executor: AsyncExecutor<GregNlMixer>) -> Option<Box<dyn Editor>> { None }
+    fn editor(&mut self, _async_executor: AsyncExecutor<GregNlMixer>) -> Option<Box<dyn Editor>> {
+    let params_main = self.params.clone();
+    let param_defs: &'static [ParamDef] = greg_gui_core::greg_static_params!(vec![
+        ParamDef::knob("Master Drive", Box::new(|cx| {
+            RotaryKnob::new(cx, EditorData::params, |p| &p.master_drive_db);
+        })),
+        ParamDef::knob("PSU Sag", Box::new(|cx| {
+            RotaryKnob::new(cx, EditorData::params, |p| &p.psu_sag_amount);
+        })),
+        ParamDef::knob("Crosstalk", Box::new(|cx| {
+            RotaryKnob::new(cx, EditorData::params, |p| &p.crosstalk_db);
+        })),
+        ParamDef::knob("Mix", Box::new(|cx| {
+            RotaryKnob::new(cx, EditorData::params, |p| &p.mix);
+        })),
+        ParamDef::toggle("Bypass", Box::new(|cx| {
+            ToggleSwitch::new(cx, EditorData::params, |p| &p.bypass);
+        })),
+        ParamDef::enum_switch("Oversampling", Box::new(|cx| {
+            EnumSwitch::new(cx, EditorData::params, |p| &p.oversampling);
+        })),
+        ParamDef::toggle("Invert Left Polarity", Box::new(|cx| {
+            ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_left);
+        })),
+    ]);
+    create_greg_editor_with_params(
+        "Greg NL Console",
+        self.telemetry.clone(),
+        move |_| {},
+        move |_| {},
+        Some(param_defs),
+        move |cx| EditorData { params: params_main.clone() }.build(cx),
+    )
+}
     fn process(&mut self, buffer: &mut Buffer, _aux: &mut AuxiliaryBuffers, _ctx: &mut impl ProcessContext<Self>) -> ProcessStatus {
         if self.panic_protection.is_disabled() { return ProcessStatus::Normal; }
         let bypassed = self.params.bypass.value();

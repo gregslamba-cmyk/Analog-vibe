@@ -471,7 +471,7 @@ impl Plugin for GregLimiter {
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params_arc_main = self.params.clone();
         let param_defs: &'static [greg_gui_core::ParamDef] =
-            Box::leak(vec![
+            greg_gui_core::greg_static_params!(vec![
                 greg_gui_core::ParamDef::knob("Input", Box::new(|cx| {
                     RotaryKnob::new(cx, GregLimiterGuiData::params, |p| &p.input);
                 })),
@@ -493,7 +493,7 @@ impl Plugin for GregLimiter {
                 greg_gui_core::ParamDef::toggle("Bypass", Box::new(|cx| {
                     ToggleSwitch::new(cx, GregLimiterGuiData::params, |p| &p.bypass);
                 })),
-            ].into_boxed_slice(),
+            ]
         );
         create_greg_editor_with_params(
             "Greg Limiter",

@@ -516,7 +516,7 @@ impl Plugin for GregDbx165 {
         let params_arc = self.params.clone();
         let params_arc_main = params_arc.clone();
         let param_defs: &'static [greg_gui_core::ParamDef] =
-            Box::leak(vec![
+            greg_gui_core::greg_static_params!(vec![
                 greg_gui_core::ParamDef::knob("Input", Box::new(|cx| {
                     RotaryKnob::new(cx, Dbx165GuiData::params, |p| &p.input);
                 })),
@@ -544,7 +544,7 @@ impl Plugin for GregDbx165 {
                 greg_gui_core::ParamDef::enum_switch("Oversampling", Box::new(|cx| {
                     EnumSwitch::new(cx, Dbx165GuiData::params, |p| &p.oversampling);
                 })),
-            ].into_boxed_slice(),
+            ]
         );
         create_greg_editor_with_params(
             "Greg DBX 165",
