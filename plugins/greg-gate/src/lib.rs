@@ -117,6 +117,7 @@ impl Default for GregGateParams {
         }
     }
 }
+#[allow(dead_code)] // sample_rate is retained for future use but currently unused in signal path.
 struct GregGate {
     params: Arc<GregGateParams>,
     routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix,
@@ -275,7 +276,7 @@ impl Plugin for GregGate {
         let mut _program_change = None;
         while let Some(event) = context.next_event() {
             match event {
-                nih_plug::prelude::NoteEvent::NoteOn { note: _, .. } => {
+                nih_plug::prelude::NoteEvent::NoteOn { .. } => {
                     gate_opened = true;
                 }
                 nih_plug::prelude::NoteEvent::NoteOff { .. } => {

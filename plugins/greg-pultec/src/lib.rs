@@ -472,7 +472,6 @@ impl Plugin for GregPultec {
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params_main = self.params.clone();
-        let params_adv = self.params.clone();
         let param_defs: &'static [greg_gui_core::ParamDef] =
             Box::leak(vec![
                 greg_gui_core::ParamDef::toggle("Bypass", Box::new(|cx| {
@@ -522,7 +521,7 @@ impl Plugin for GregPultec {
             move |_| {
                 // EditorData is built via the dedicated `model_builder` argument.
             },
-            move |cx| {},
+            move |_cx| {},
             Some(param_defs),
             move |cx| EditorData { params: params_main.clone() }.build(cx),
         )
@@ -720,18 +719,15 @@ impl Plugin for GregPultec {
 impl GregPultec {
     fn configure_filters(&mut self) {
         let sr = self.sample_rate;
-        if let Some(f) = self.params.low_boost_freq.value().freq() {
-            if f > 0.0 && f < sr * 0.49 {
+        if let Some(f) = self.params.low_boost_freq.value().freq() && f > 0.0 && f < sr * 0.49 {
                 let g = self.params.low_boost_gain.value() as f64;
                 let g_db = if g.is_finite() { g } else { 0.0 };
                 self.low_boost_l
                     .configure(sr, FilterType::LowShelf, f, 1.4, g_db, 0.5);
                 self.low_boost_r
                     .configure(sr, FilterType::LowShelf, f, 1.4, g_db, 0.5);
-            }
         }
-        if let Some(f) = self.params.low_atten_freq.value().freq() {
-            if f > 0.0 && f < sr * 0.49 {
+        if let Some(f) = self.params.low_atten_freq.value().freq() && f > 0.0 && f < sr * 0.49 {
                 let g = self.params.low_atten_gain.value() as f64;
                 let g_db = if g.is_finite() { g } else { 0.0 };
                 self.low_atten_l
@@ -739,9 +735,7 @@ impl GregPultec {
                 self.low_atten_r
                     .configure(sr, FilterType::LowShelf, f, 1.4, g_db, 0.5);
             }
-        }
-        if let Some(f) = self.params.high_peak_freq.value().freq() {
-            if f > 0.0 && f < sr * 0.49 {
+        if let Some(f) = self.params.high_peak_freq.value().freq() && f > 0.0 && f < sr * 0.49 {
                 let g = self.params.high_peak_gain.value() as f64;
                 let g_db = if g.is_finite() { g } else { 0.0 };
                 self.high_peak_l
@@ -749,9 +743,7 @@ impl GregPultec {
                 self.high_peak_r
                     .configure(sr, FilterType::Bell, f, 1.0, g_db, 0.4);
             }
-        }
-        if let Some(f) = self.params.high_atten_freq.value().freq() {
-            if f > 0.0 && f < sr * 0.49 {
+        if let Some(f) = self.params.high_atten_freq.value().freq() && f > 0.0 && f < sr * 0.49 {
                 let g = self.params.high_atten_gain.value() as f64;
                 let g_db = if g.is_finite() { g } else { 0.0 };
                 self.high_atten_l
@@ -759,7 +751,6 @@ impl GregPultec {
                 self.high_atten_r
                     .configure(sr, FilterType::HighShelf, f, 1.0, g_db, 0.4);
             }
-        }
         let out_db = if self.params.output_gain.value().is_finite() {
             self.params.output_gain.value() as f64
         } else {
@@ -772,6 +763,7 @@ impl GregPultec {
 }
 
 #[inline(always)]
+#[allow(clippy::too_many_arguments)]
 fn process_channel(
     input: f64,
     channel: usize,
@@ -882,13 +874,11 @@ fn process_channel(
     } else {
         transformer_r.process(ac_out, 1.4, 0.3, 0.5)
     };
-    let slewed = if channel == 0 {
+    if channel == 0 {
         slew_l.process(trans_out, sample_rate * 0.5, sample_rate, 0)
     } else {
         slew_r.process(trans_out, sample_rate * 0.5, sample_rate, 1)
-    };
-
-    slewed
+    }
 }
 
 fn silence_buffer(buffer: &mut Buffer) {
@@ -983,6 +973,5 @@ mod tests {
 
             assert!(pultec.initialize(&layout, &config, &mut TestInitContext));
         }
-        assert!(true);
     }
 }

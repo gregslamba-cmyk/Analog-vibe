@@ -1,4 +1,5 @@
 #![forbid(unsafe_code)]
+#![allow(unknown_lints, semicolon_in_expressions_from_non_local_macros)]
 //! Greg NL Console — Complete Analog Mixing Console
 //! Dynamic channel/bus pooling (24 ch + 8 bus, default 4+1), Neve/SSL/API strips,
 //! 2 inserts/ch + sends, master bus with crosstalk + virtual earth + bus comp.
@@ -20,12 +21,10 @@ use core_dsp::core_dsp_modules::{
 use channel_strip::ConsoleChannelStrip;
 use nih_plug::prelude::*;
 use plugin_support::CommonChannelParams;
-use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
-use greg_gui_core::prelude::*;
+use greg_gui_core::GuiTelemetry;
 
 const MAX_CHANNELS: usize = 24;
 const MAX_BUSES: usize = 8;
-const DEFAULT_CHANNELS: usize = 4;
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
 enum Oversampling {
@@ -55,6 +54,7 @@ impl From<Oversampling> for OversamplingFactor {
 }
 
 #[derive(Params)]
+#[allow(dead_code)] // Params are part of the public CLAP interface even if not yet wired into every signal path.
 struct GregNlMixerParams {
     console_type: IntParam,
     #[id = "bypass"]
@@ -129,6 +129,7 @@ impl Default for GregNlMixerParams {
     }
 }
 #[derive(Default)]
+#[allow(dead_code)] // Fields are retained for future full console routing; some are not yet read in every code path.
 struct MasterBus {
     active: bool, crosstalk: Option<AdjacentCrosstalkMatrix>,
     summer: Option<VirtualEarthSummer>, comp_env: f64,
@@ -196,7 +197,7 @@ impl Plugin for GregNlMixer {
         for delay in &mut self.dry_delays { delay.reset(); let _ = delay.set_delay_samples(latency_samples as usize); }
         _context.set_latency_samples(latency_samples);
         let sr = (buffer_config.sample_rate as f64).max(48_000.0);
-        let mix = self.params.mix.value() as f64;
+        let _mix = self.params.mix.value() as f64;
         for ch in &mut self.channels { ch.prepare(sr); ch.fader_db = 0.0; ch.pan = 0.0; ch.muted = false; ch.solo = false; }
         self.buses[0] = MasterBus {
             active: true,
@@ -245,9 +246,9 @@ impl Plugin for GregNlMixer {
         let invert_left = self.params.invert_left.value();
         let mix = self.params.mix.value() as f64;
         let master_drive = 10.0_f64.powf((self.params.master_drive_db.value() / 20.0).into()).max(0.001);
-        let crosstalk_db = self.params.crosstalk_db.value() as f64;
+        let _crosstalk_db = self.params.crosstalk_db.value() as f64;
         let ch_fader_db: [f64; MAX_CHANNELS] = std::array::from_fn(|i| self.channels[i].fader_db);
-        let ch_pan: [f64; MAX_CHANNELS] = std::array::from_fn(|i| self.channels[i].pan);
+        let _ch_pan: [f64; MAX_CHANNELS] = std::array::from_fn(|i| self.channels[i].pan);
         let ch_enabled: [bool; MAX_CHANNELS] = std::array::from_fn(|i| self.channels[i].enabled);
         let ch_mute: [bool; MAX_CHANNELS] = std::array::from_fn(|i| self.channels[i].muted);
         let ch_solo: [bool; MAX_CHANNELS] = std::array::from_fn(|i| self.channels[i].solo);
@@ -262,9 +263,9 @@ impl Plugin for GregNlMixer {
                 let xl = if invert_left { -li } else { li };
                 let input_left = li as f64;
                 // Right sample
-                let mut rs_opt = samples.next();
+                let rs_opt = samples.next();
                 let ri = if let Some(rs) = rs_opt.as_deref() { finite(*rs) as f64 } else { 0.0_f64 };
-                let input_right = ri as f64;
+                let input_right = ri;
 
                 // Parallel summation: process every active channel independently and sum their outputs.
                 let mut sum_left = 0.0_f64;
@@ -309,7 +310,7 @@ impl Plugin for GregNlMixer {
                 let out_l = finite(self.bypass_crossfades[0].process(dry_l, mixed_l as f32));
                 let out_r = finite(self.bypass_crossfades[1].process(dry_r, mixed_r as f32));
                 *ls = out_l;
-                if let Some(rs) = rs_opt.as_deref_mut() {
+                if let Some(rs) = rs_opt {
                     *rs = out_r;
                 }
                 self.metering.record_sample(li, out_l, 0.0);
@@ -329,4 +330,4 @@ impl Plugin for GregNlMixer {
 }
 fn finite(s: f32) -> f32 { if s.is_finite() { s } else { 0.0 } }
 fn silence_buffer(buffer: &mut Buffer) { for mut fs in buffer.iter_samples() { for s in fs.iter_mut() { *s = 0.0; } } }
-core_dsp::export_greg_plugin!(GregNlMixer, "com.greg.audio.greg-nl-console", "Analog console emulator", utility);
+core_dsp::export_greg_plugin!{GregNlMixer, "com.greg.audio.greg-nl-console", "Analog console emulator", utility}

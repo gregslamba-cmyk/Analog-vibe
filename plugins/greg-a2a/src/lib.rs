@@ -458,7 +458,6 @@ impl Plugin for GregA2a {
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params_main = self.params.clone();
-        let params_adv = self.params.clone();
         let param_defs: &'static [greg_gui_core::ParamDef] =
             Box::leak(vec![
                 greg_gui_core::ParamDef::knob("Peak Reduction", Box::new(|cx| {

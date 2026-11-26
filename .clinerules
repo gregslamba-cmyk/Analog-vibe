@@ -43,3 +43,30 @@ Consulta `vcinst.md` (e `GUI_SPEC.md` quando lavori sulla UI) per i dettagli com
   5. Lifecycle GUI (`create`, `set_scale`, `show`, `hide`, `destroy`) attivo su tutti i plugin.
   6. Budget CPU Real-Time entro le soglie di sicurezza.
 - **Hardware Reference Matching (`clap-validator-host --match-reference`):** Qualsiasi modifica alle curve di saturazione, inviluppi, ginocchi di compressione o EQ analogici deve essere validata tramite `--match-reference` verificando che curva di trasferimento (`±0.35 dB`), tempi di attacco/rilascio e spettro armonico (`H2–H5` entro `±1.5 dB`) restino allineati ai profili fisici di riferimento.
+
+## Regola Obbligatoria Sincronizzazione Subtree GitHub
+Ogni volta che esegui `git push` su `origin main` (o al completamento di qualsiasi task), esegui immediatamente anche i seguenti comandi per mantenere sincronizzati tutti i repository subtree su GitHub:
+```bash
+git subtree push --prefix=core-dsp dsp main && git subtree push --prefix=crates/greg_gui_core gui main && git subtree push --prefix=tools/clap-validator-host validator main
+```
+
+
+## Regola Topologia Canali Adiacenti (Stereo, Mid/Side, Surround & TrackSpec)
+In `core-dsp` (`routing_matrix.rs` / `analog_summing.rs`), `ChannelFormat` e `TrackSpec` devono definire esplicitamente la mappa dei **canali fisicamente adiacenti** per il crosstalk (`AdjacentCrosstalkMatrix`) e il link di dinamica:
+- **Mono (1ch):** nessun canale adiacente.
+- **Stereo (2ch):** `0 <-> 1` (`L <-> R`).
+- **Mid/Side (2ch):** `0 <-> 1` (`Mid <-> Side`).
+- **LCR (3ch):** `0 <-> 2 <-> 1` (`L <-> C <-> R`).
+- **Quad (4ch):** `0 <-> 1` (`L <-> R`) e `2 <-> 3` (`Ls <-> Rs`).
+- **Surround 5.1 (6ch SMPTE: L, R, C, LFE, Ls, Rs):** `L <-> R`, `L <-> C <-> R`, `Ls <-> Rs`; canale `LFE` (indice 3) **sempre isolato** dal crosstalk.
+- **Surround 7.1 (8ch SMPTE: L, R, C, LFE, Ls, Rs, Lrs, Rrs):** `L <-> R`, `Ls <-> Rs`, `Lrs <-> Rrs`; canale `LFE` (indice 3) **sempre isolato**.
+- **Isolamento tra Tracce:** Nei plugin standard (`greg_76`, `greg-a2a`, ecc.) il crosstalk opera esclusivamente tra canali appartenenti alla stessa `TrackSpec`; solo in `greg_nl_mixer` opera anche tra strisce adiacenti del banco.
+
+## Regola Obbligatoria Documentazione, Licenze Subtree & Copyright
+Ogni modifica o nuovo modulo/plugin deve rispettare tassativamente questi requisiti:
+1. **Proprietà Intellettuale & Copyright:** Ogni file sorgente, plugin, documentazione e subtree è di proprietà esclusiva di **Alberto Gregorio Ferraris** (`Copyright (c) 2026 Alberto Gregorio Ferraris. All rights reserved.`). Assicurati che i metadati dei plugin (`VENDOR`, header dei file principali e file di licenza) riportino questa attribuzione e il modello Dual Licensing (**GNU GPLv3 or later** + **Licenza Commerciale Proprietaria**).
+2. **Documentazione In-Code (Rustdoc):** Tutte le struct, enum, trait, funzioni pubbliche e formule DSP devono avere commenti doc (`///` e `//!`) chiari, aggiornati e compilabili senza warning con `cargo doc --no-deps --workspace`.
+3. **Documentazione Out-of-Code (Developer & User):**
+   - **Per Sviluppatori (`README.txt`, `ARCHITECTURE.md`, `GUI_SPEC.md`):** Mantieni sempre allineate le firme API, i diagrammi, i flussi DSP e le istruzioni di build/test ogni volta che aggiungi o modifichi un modulo.
+   - **Per Utenti / Fonici (`README.md`, `docs/USER_MANUAL.md`):** Mantieni sempre aggiornata la guida d'uso chiara con spiegazione pratica dei controlli `MAIN` e `ADVANCED` e consigli di utilizzo in mix.
+4. **Licenza e Documentazione Completa in Ogni Subtree Folder:** Ogni cartella esportata come subtree su GitHub (`core-dsp/`, `crates/greg_gui_core/`, `tools/clap-validator-host/`) deve contenere al suo interno sia il proprio file **`LICENSE`** (GNU GPLv3 + nota Dual License Commerciale intestata ad **Alberto Gregorio Ferraris**) sia un **`README.md` / `README.txt`** completo e auto-contenuto per chi clona o usa quel singolo repository separatamente.

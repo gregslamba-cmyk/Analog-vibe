@@ -2,7 +2,6 @@
 #![allow(unknown_lints, semicolon_in_expressions_from_non_local_macros)]
 use std::sync::{Arc, atomic::Ordering};
 use core_dsp::core_dsp_modules::{
-    dsp_graph::{CompiledAudioGraph, DspGraphNode, GainPanNode},
     metering::Metering,
     panic_protection::{PanicProtection, ProtectionResult},
     realtime_controls::{BypassCrossfade, LatencyDelay},
@@ -10,9 +9,8 @@ use core_dsp::core_dsp_modules::{
     routing_matrix::{RoutingMatrix, RoutingMode},
 };
 use nih_plug::prelude::*;
+use greg_gui_core::GuiTelemetry;
 use plugin_support::CommonChannelParams;
-use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
-use greg_gui_core::prelude::*;
 use serde::{Serialize, Deserialize};
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
@@ -68,6 +66,7 @@ struct GregBayParams {
     oversampling: EnumParam<Oversampling>,
     #[id = "invert_left"]
     invert_left: BoolParam,
+    #[allow(dead_code)]
     channel_setup: CommonChannelParams,
 }
 
@@ -109,7 +108,7 @@ impl Default for GregBayParams {
 
 /// Available DSP modules that can be loaded into each slot.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
-enum SlotModule {
+pub enum SlotModule {
     #[id = "none"]
     #[name = "None"]
     None,
@@ -138,7 +137,7 @@ enum SlotModule {
 
 /// Available routing topologies for the 4-slot patchbay.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
-enum RoutingTopology {
+pub enum RoutingTopology {
     #[id = "serial"]
     #[name = "Serial"]
     Serial,      // Slot1 -> Slot2 -> Slot3 -> Slot4
@@ -188,13 +187,15 @@ impl Default for ChainState {
 /// Chain manager: handles loading/saving patchbay chains via serde_json.
 /// Operates only on the non-audio thread; never allocates in process().
 struct ChainManager {
+    #[allow(dead_code)]
     chains_dir: std::path::PathBuf,
 }
 
+#[allow(dead_code)]
 impl ChainManager {
     fn new() -> Self {
         let dir = dirs::config_dir()
-            .unwrap_or_else(|| std::env::temp_dir())
+            .unwrap_or_else(std::env::temp_dir)
             .join("analog-vibe")
             .join("greg_bay_chains");
         let _ = std::fs::create_dir_all(&dir);
@@ -224,10 +225,10 @@ impl ChainManager {
         if let Ok(entries) = std::fs::read_dir(&self.chains_dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
-                if path.extension().and_then(|s| s.to_str()) == Some("json") {
-                    if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
-                        names.push(stem.to_string());
-                    }
+                if path.extension().and_then(|s| s.to_str()) == Some("json")
+                    && let Some(stem) = path.file_stem().and_then(|s| s.to_str())
+                {
+                    names.push(stem.to_string());
                 }
             }
         }
@@ -252,7 +253,9 @@ struct GregBay {
     panic_protection: PanicProtection,
     metering: Metering,
     telemetry: Arc<GuiTelemetry>,
+    #[allow(dead_code)]
     chain_manager: ChainManager,
+    #[allow(dead_code)]
     current_chain: Option<String>,
     chain_state: ChainState,
 }

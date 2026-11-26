@@ -29,6 +29,7 @@ struct MidSideDecoderParams {
     invert_right: BoolParam,
     #[id = "bypass"]
     bypass: BoolParam,
+    #[allow(dead_code)]
     channel_setup: CommonChannelParams,
 }
 
@@ -157,7 +158,6 @@ impl Plugin for GregMsDecoder {
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params_main = self.params.clone();
-        let params_adv = self.params.clone();
         let param_defs: &'static [greg_gui_core::ParamDef] =
             Box::leak(vec![
                 greg_gui_core::ParamDef::knob("Mid Trim", Box::new(|cx| {

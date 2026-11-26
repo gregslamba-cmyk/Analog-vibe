@@ -447,7 +447,6 @@ impl Plugin for GregChild {
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params_main = self.params.clone();
-        let params_adv = self.params.clone();
         let param_defs: &'static [greg_gui_core::ParamDef] =
             Box::leak(vec![
                 greg_gui_core::ParamDef::knob("Input", Box::new(|cx| {
@@ -473,7 +472,7 @@ impl Plugin for GregChild {
         create_greg_editor_with_params(
             "Greg Child",
             self.telemetry.clone(),
-            move |cx| {},
+            move |_cx| {},
             move |cx| {
                 ToggleSwitch::new(cx, EditorData::params, |p| &p.stereo_link);
                 ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_left);
@@ -595,8 +594,8 @@ impl Plugin for GregChild {
                             max_key = k;
                         }
                     }
-                    for ch in 0..channel_count {
-                        keys[ch] = max_key;
+                    for key in keys.iter_mut().take(channel_count) {
+                        *key = max_key;
                     }
                 }
 

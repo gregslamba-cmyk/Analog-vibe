@@ -230,6 +230,10 @@ struct GregFet76Params {
     release: FloatParam,
     #[id = "output_gain"]
     output_gain: FloatParam,
+    #[id = "mix"]
+    mix: FloatParam,
+    #[id = "stereo_link"]
+    stereo_link: FloatParam,
     #[id = "transformer_iron"]
     transformer_iron: FloatParam,
     #[id = "analog_drift"]
@@ -301,6 +305,18 @@ impl Default for GregFet76Params {
                 FloatRange::Linear { min: -12.0, max: 12.0 },
             )
             .with_unit(" dB"),
+            mix: FloatParam::new(
+                "Mix",
+                100.0,
+                FloatRange::Linear { min: 0.0, max: 100.0 },
+            )
+            .with_unit("%"),
+            stereo_link: FloatParam::new(
+                "Stereo Link",
+                100.0,
+                FloatRange::Linear { min: 0.0, max: 100.0 },
+            )
+            .with_unit("%"),
             transformer_iron: FloatParam::new(
                 "Transformer Iron",
                 0.7,
@@ -522,10 +538,8 @@ impl Plugin for GregFet76 {
         for t in &mut self.output_transformers {
             t.reset();
         }
-        for t in &mut self.input_transformers {
-            if let Some(t) = t {
-                t.reset();
-            }
+        for t in self.input_transformers.iter_mut().flatten() {
+            t.reset();
         }
         for ac in &mut self.ac_couplings {
             ac.reset();
@@ -577,10 +591,8 @@ impl Plugin for GregFet76 {
         for t in &mut self.output_transformers {
             t.reset();
         }
-        for t in &mut self.input_transformers {
-            if let Some(t) = t {
-                t.reset();
-            }
+        for t in self.input_transformers.iter_mut().flatten() {
+            t.reset();
         }
         for ac in &mut self.ac_couplings {
             ac.reset();
@@ -597,15 +609,11 @@ impl Plugin for GregFet76 {
         for jfet in &mut self.jfet_stages {
             jfet.reset();
         }
-        for tube in &mut self.output_tubes {
-            if let Some(t) = tube {
-                t.reset();
-            }
+        for t in self.output_tubes.iter_mut().flatten() {
+            t.reset();
         }
-        for ss in &mut self.output_solid_states {
-            if let Some(s) = ss {
-                s.reset();
-            }
+        for s in self.output_solid_states.iter_mut().flatten() {
+            s.reset();
         }
         self.thermal_drift.reset();
         self.last_bypassed = self.params.bypass.value();
@@ -640,6 +648,12 @@ impl Plugin for GregFet76 {
                 greg_gui_core::ParamDef::knob("Output Gain", Box::new(|cx| {
                     RotaryKnob::new(cx, EditorData::params, |p| &p.output_gain);
                 })),
+                greg_gui_core::ParamDef::knob("Mix", Box::new(|cx| {
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.mix);
+                })),
+                greg_gui_core::ParamDef::toggle("Stereo Link", Box::new(|cx| {
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.stereo_link);
+                })),
                 greg_gui_core::ParamDef::knob("Transformer Iron", Box::new(|cx| {
                     RotaryKnob::new(cx, EditorData::params, |p| &p.transformer_iron);
                 })),
@@ -664,6 +678,8 @@ impl Plugin for GregFet76 {
                     RotaryKnob::new(cx, EditorData::params, |p| &p.attack).width(Pixels(115.0)).height(Pixels(24.0));
                     RotaryKnob::new(cx, EditorData::params, |p| &p.release).width(Pixels(115.0)).height(Pixels(24.0));
                     RotaryKnob::new(cx, EditorData::params, |p| &p.output_gain).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.mix).width(Pixels(115.0)).height(Pixels(24.0));
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.stereo_link).width(Pixels(115.0)).height(Pixels(24.0));
                     RotaryKnob::new(cx, EditorData::params, |p| &p.transformer_iron).width(Pixels(115.0)).height(Pixels(24.0));
                     RotaryKnob::new(cx, EditorData::params, |p| &p.analog_drift).width(Pixels(115.0)).height(Pixels(24.0));
                     EnumSwitch::new(cx, EditorData::params, |p| &p.oversampling).width(Pixels(115.0)).height(Pixels(24.0));
@@ -674,6 +690,8 @@ impl Plugin for GregFet76 {
                 VStack::new(cx, |cx| {
                     Label::new(cx, "Advanced Parameters").font_size(12.0).color(Color::rgb(210, 215, 225)).bottom(Pixels(6.0));
                     ToggleSwitch::new(cx, EditorData::params, |p| &p.bypass).width(Pixels(115.0)).height(Pixels(24.0));
+                    RotaryKnob::new(cx, EditorData::params, |p| &p.mix).width(Pixels(115.0)).height(Pixels(24.0));
+                    ToggleSwitch::new(cx, EditorData::params, |p| &p.stereo_link).width(Pixels(115.0)).height(Pixels(24.0));
                     ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_left).width(Pixels(115.0)).height(Pixels(24.0));
                     ToggleSwitch::new(cx, EditorData::params, |p| &p.invert_right).width(Pixels(115.0)).height(Pixels(24.0));
                     ToggleSwitch::new(cx, EditorData::params, |p| &p.external_sidechain).width(Pixels(115.0)).height(Pixels(24.0));
@@ -747,12 +765,28 @@ fn process(
             .first_mut()
             .map(|sidechain| sidechain.as_slice_immutable());
 
+        let stereo_link = self.params.stereo_link.value().clamp(0.0, 100.0) / 100.0;
+        let mix = self.params.mix.value().clamp(0.0, 100.0) / 100.0;
+
         self.metering.begin_block();
         let protection_result = self.panic_protection.run(|| {
             let mut frame_index = 0;
             for mut channel_samples in buffer.iter_samples() {
+                let ch_count = channel_samples.len().min(plugin_support::MAX_AUDIO_CHANNELS);
+                if ch_count == 0 {
+                    continue;
+                }
+
+                // Phase 1: gather raw inputs, dry signals, and keys per channel
+                let mut inputs = [0.0_f32; plugin_support::MAX_AUDIO_CHANNELS];
+                let mut phase_inputs = [0.0_f32; plugin_support::MAX_AUDIO_CHANNELS];
+                let mut drys = [0.0_f32; plugin_support::MAX_AUDIO_CHANNELS];
+                let mut keys = [0.0_f32; plugin_support::MAX_AUDIO_CHANNELS];
+
                 for (channel, sample) in channel_samples.iter_mut().enumerate() {
                     let input = finite(*sample);
+                    inputs[channel] = input;
+
                     let invert = if (channel == 0 && self.params.invert_left.value())
                         || (channel == 1 && self.params.invert_right.value())
                     {
@@ -761,21 +795,54 @@ fn process(
                         1.0
                     };
                     let phase_input = input * invert * input_gain;
+                    phase_inputs[channel] = phase_input;
+
                     let dry = self.dry_delays[channel].process(phase_input);
+                    drys[channel] = dry;
 
                     let external_key = external_sidechain.as_ref().and_then(|channels| {
                         self.routing_matrix
                             .sidechain_channel(channel, channels.len())
-                            .and_then(|sidechain_channel| channels.get(sidechain_channel))
+                            .and_then(|sc_ch| channels.get(sc_ch))
                             .and_then(|samples| samples.get(frame_index))
                             .copied()
-                            .filter(|value| value.is_finite())
+                            .filter(|v| v.is_finite())
                     });
+
                     let key = self.sidechains[channel].process_key(
                         phase_input,
                         external_key,
                         use_external,
                     );
+                    keys[channel] = key;
+                }
+
+                // Phase 2: stereo link blending
+                if stereo_link > 0.0 && ch_count >= 2 {
+                    let mut max_key = 0.0_f32;
+                    for &k in &keys[0..ch_count] {
+                        if k > max_key {
+                            max_key = k;
+                        }
+                    }
+                    for key in keys.iter_mut().take(ch_count) {
+                        *key = *key * (1.0 - stereo_link) + max_key * stereo_link;
+                    }
+                }
+
+                // Phase 3: process each channel with linked keys
+                let revision = self.params.revision.value();
+                let jfet_bias = revision.jfet_bias_shift(ratio);
+
+                for (channel, sample) in channel_samples.iter_mut().enumerate() {
+                    if channel >= ch_count {
+                        break;
+                    }
+                    let input = inputs[channel];
+                    let phase_input = phase_inputs[channel];
+                    let dry = drys[channel];
+                    let key = keys[channel];
+
                     if self.params.sidechain_listen.value() {
                         *sample = finite(key);
                         self.metering.record_sample(input, *sample, 0.0);
@@ -783,8 +850,6 @@ fn process(
                     }
 
                     let level_db = 20.0 * key.max(1.0e-12).log10();
-                    let revision = self.params.revision.value();
-                    let jfet_bias = revision.jfet_bias_shift(ratio);
                     let gr = fet_gain_reduction(level_db, threshold_db, ratio);
                     let compressed = phase_input * util::db_to_gain(-gr);
 
@@ -795,27 +860,23 @@ fn process(
                         self.analog_variance.right_gain
                     };
 
-                    // 1. Apply input transformer if revision has one
                     let mut transformer_out = self.input_transformers[channel]
                         .as_mut()
                         .map(|t| t.process(compressed as f64, 0.0, 0.5, 0.2))
                         .unwrap_or(compressed as f64);
 
-                    // 2. JFET gain reduction stage
                     let jfet_out = self.jfet_stages[channel].process_sample(transformer_out, jfet_bias);
 
-                    // 3. Output stage selection per revision
                     let (output_tube, output_solid_state) = revision.output_stage();
                     let post_jfet = jfet_out;
 
                     if let Some(tube_model) = output_tube {
-                        // Tube output stage
-                        let drive_db = 0.5; // fixed for Class A
-                        let tube_out = tube_stage_process(tube_model, self.sample_rate as f64, post_jfet as f64, drive_db);
+                        let drive_db = 0.5;
+                        let tube_out =
+                            tube_stage_process(tube_model, self.sample_rate as f64, post_jfet as f64, drive_db);
                         transformer_out = tube_out;
                     } else if let Some(_solid_model) = output_solid_state {
-                        // Solid-state output stage
-                        let drive_db = 0.3; // different drive for SS
+                        let drive_db = 0.3;
                         let ss_out = self.output_solid_states[channel]
                             .as_mut()
                             .unwrap()
@@ -823,50 +884,45 @@ fn process(
                         transformer_out = ss_out;
                     }
 
-                    // 4. Output transformer (all revisions use UtcA10)
-                    let final_txfm = self.output_transformers[channel].process(transformer_out, 1.0, 0.5, 0.2);
-
-                    // 5. Slew rate limiting on the transformer output
+                    let final_txfm =
+                        self.output_transformers[channel].process(transformer_out, 1.0, 0.5, 0.2);
                     let slew_out = self.slew_limiters[channel].process(
                         final_txfm,
                         self.sample_rate as f64 * 2.0,
                         self.sample_rate as f64,
                         channel,
                     );
-
-                    // 6. Miller rolloff for high-frequency rolloff
                     let miller_out = self.miller_rolloffs[channel].process(
                         slew_out,
                         1.0 + transformer_iron,
                         channel,
                     );
-
-                    // 7. PSU sag and dynamic variance
                     let sag_gain = self.power_sags[channel].gain(miller_out as f32);
-                    let pre_emph = self.pre_emphases[channel]
-                        .pre_emphasis(miller_out as f64 * drift * (sag_gain as f64), 0.3, channel);
+                    let pre_emph = self.pre_emphases[channel].pre_emphasis(
+                        miller_out as f64 * drift * (sag_gain as f64),
+                        0.3,
+                        channel,
+                    );
 
-                    // 8. Final oversampling and saturation
                     let oversampler = &mut self.oversamplers[channel];
                     let saturated = oversampler.process(
                         pre_emph as f32,
                         factor,
                         |value| tube_saturate(value as f64, 1.0 + transformer_iron * 0.5) as f32,
                     );
-
-                    // 9. De-emphasis
                     let de_emph = self.pre_emphases[channel].de_emphasis(saturated as f64, 0.3, channel);
-
-                    // 10. Final AC coupling
                     let ac_coupled = self.ac_couplings[channel].process(de_emph, channel);
 
-                    // 11. Bypass crossfade
                     let wet = ac_coupled * (util::db_to_gain(self.params.output_gain.value()) as f64);
-                    *sample = finite(self.bypass_crossfades[channel].process(dry, wet as f32));
+                    let processed = finite(self.bypass_crossfades[channel].process(dry, wet as f32));
+                    let mixed = dry * (1.0 - mix) + processed * mix;
+                    *sample = finite(mixed);
+
                     self.metering.record_sample(input, *sample, gr);
                     self.telemetry.push_in_peak(channel, input);
                     self.telemetry.push_out_peak(channel, *sample);
                 }
+
                 frame_index += 1;
             }
         });
@@ -878,7 +934,6 @@ fn process(
         ProcessStatus::Normal
     }
 }
-
 #[inline]
 fn fet_gain_reduction(level_db: f32, threshold_db: f32, ratio: f32) -> f32 {
     if level_db <= threshold_db {

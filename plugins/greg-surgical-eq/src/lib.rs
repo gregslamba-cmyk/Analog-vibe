@@ -115,6 +115,7 @@ struct GregSurgicalEqParams {
     bypass: BoolParam,
     #[nested(array, group = "Bands")]
     bands: [EqBandParams; BAND_COUNT],
+    #[allow(dead_code)]
     channel_setup: CommonChannelParams,
 }
 
@@ -308,7 +309,6 @@ impl Plugin for GregSurgicalEq {
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params_main = self.params.clone();
-        let params_adv = self.params.clone();
         let mut param_defs: Vec<greg_gui_core::ParamDef> = vec![
             greg_gui_core::ParamDef::enum_switch("Phase Mode", Box::new(|cx| {
                 EnumSwitch::new(cx, EditorData::params, |p| &p.phase_mode);
@@ -357,7 +357,7 @@ impl Plugin for GregSurgicalEq {
             move |_| {
                 // EditorData is built via the dedicated `model_builder` argument.
             },
-            move |cx| {},
+            move |_cx| {},
             Some(param_defs),
             move |cx| EditorData { params: params_main.clone() }.build(cx),
         )

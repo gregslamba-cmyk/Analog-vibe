@@ -470,7 +470,6 @@ impl Plugin for GregLimiter {
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params_arc_main = self.params.clone();
-        let params_arc_adv = self.params.clone();
         let param_defs: &'static [greg_gui_core::ParamDef] =
             Box::leak(vec![
                 greg_gui_core::ParamDef::knob("Input", Box::new(|cx| {
@@ -641,8 +640,8 @@ impl Plugin for GregLimiter {
                             max_key = k;
                         }
                     }
-                    for ch in 0..channel_count {
-                        keys[ch] = max_key;
+                    for k in keys.iter_mut().take(channel_count) {
+                        *k = max_key;
                     }
                 }
 

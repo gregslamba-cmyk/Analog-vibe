@@ -10,10 +10,13 @@ use core_dsp::core_dsp_modules::{
     transformer_hysteresis::TransformerHysteresis,
 };
 
+#[allow(dead_code)] // Public constants reserved for future channel/bus expansion.
 pub const MAX_CONSOLE_CHANNELS: usize = 24;
+#[allow(dead_code)] // Public constants reserved for future channel/bus expansion.
 pub const MAX_CONSOLE_BUSES: usize = 8;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[allow(dead_code)] // Variants are used via match arms but may not be constructed externally yet.
 pub enum ConsoleType {
     #[default]
     Neve8078,
@@ -22,6 +25,7 @@ pub enum ConsoleType {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[allow(dead_code)] // Variants are used via insert_stage but not all may be wired yet.
 pub enum InsertType {
     #[default]
     None,

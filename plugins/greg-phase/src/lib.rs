@@ -25,6 +25,7 @@ struct GregPhaseParams {
     invert_both: BoolParam,
     #[id = "bypass"]
     bypass: BoolParam,
+    #[allow(dead_code)] // Part of CommonChannelParams trait, kept for future multi-channel extensions.
     channel_setup: CommonChannelParams,
 }
 
@@ -128,7 +129,6 @@ impl Plugin for GregPhase {
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
         let params_main = self.params.clone();
-        let params_adv = self.params.clone();
         let param_defs: &'static [greg_gui_core::ParamDef] =
             Box::leak(vec![
                 greg_gui_core::ParamDef::toggle("Invert Left Polarity", Box::new(|cx| {

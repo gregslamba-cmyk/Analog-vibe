@@ -117,7 +117,7 @@ pub trait MonoChannelProcessor<T: Float>: Sized + Default {
 ///
 /// # Type Parameters
 /// - `P`: Mono processor type implementing `MonoChannelProcessor<f64>`.
-///        Must be usable in a fixed-size array `[P; MAX_AUDIO_CHANNELS]`.
+///   Must be usable in a fixed-size array `[P; MAX_AUDIO_CHANNELS]`.
 ///
 /// # Real-Time Guarantees
 /// - Zero heap allocations in `process()`.

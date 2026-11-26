@@ -10,8 +10,7 @@ use core_dsp::core_dsp_modules::{
 };
 use nih_plug::prelude::*;
 use plugin_support::CommonChannelParams;
-use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
-use greg_gui_core::prelude::*;
+use greg_gui_core::GuiTelemetry;
 
 #[derive(Enum, Debug, PartialEq, Eq, Clone, Copy)]
 enum Oversampling {
@@ -41,6 +40,7 @@ impl From<Oversampling> for OversamplingFactor {
 }
 
 #[derive(Params)]
+#[allow(dead_code)] // channel_setup is part of CommonChannelParams trait, retained for future multi-channel routing.
 struct GregNlChParams {
     #[id = "drive"] drive_db: FloatParam,
     #[id = "crosstalk"] crosstalk_db: FloatParam,

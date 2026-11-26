@@ -634,3 +634,57 @@ impl SynthEngine {
 - **Oscillatori Band-Limited (`synth_engine`):** PolyBLEP e PolyBLAMP analitici in `f64`.
 - **Audio 3D Continuo (`spatial_3d`):** Interpolazione sferica HRIR bilineare senza artefatti di commutazione.
 - **Dinamica Dual-Stage (`component_models`):** Rilascio program-dependent a doppio condensatore accoppiato.
+
+---
+
+## Two-Tier Compressor Functional Standard (MAIN / ADVANCED)
+
+Ogni suite di compressione (`greg_76`, `greg-a2a`, `greg-a3a`, `greg-child`, `greg_dbx_160`, `greg_dbx_165`, `greg_api_2500`, `greg-bus-comp`, …) espone i controlli organizzati in due sezioni formali, ereditabili da `plugin-support` e coerenti con `GUI_SPEC.md`:
+
+### MAIN — Controlli Hardware-Stile (architettonici, processano il segnale)
+Questa sezione replica i comandi fisici dell'unità di riferimento e influenza direttamente il percorso audio:
+
+| Controllo | Tipo | Default | Range | Note |
+|---|---|---|---|---|
+| **Input** | Gain in ingresso (dB) | `0.0` | −24 … +24 dB | Guida il trasformatore/valvola di ingresso |
+| **Threshold** | Soglia di compressione | −10 dBu | −20 … +10 dBu | Punto di attivazione del gain reduction |
+| **Ratio** | Tasto rapporto | 2:1 | 1:1 … ∞:1 | Scelta del rapporto hardware |
+| **Knee** | Morbidezza ginocchio | Hard | Hard / Soft | Geometria del ginocchio |
+| **Attack** | Tempo di attacco | 1 ms | 0.03 … 30 ms | |
+| **Release** | Tempo di rilascio | 1 s | 0.05 … 2.0 s | |
+| **Makeup / Output Gain** | Guida in uscita | 0 dB | −20 … +20 dB | Tarato a 0 VU = −18 dBFS |
+| **VU / GR Meter** | Misuratori | — | — | Ingresso, Uscita, Gain Reduction; 0 VU = −18 dBFS |
+
+Tutti i controlli MAIN sono parametri esportati da `export_greg_plugin!` (licenza `GPL-3.0-or-later`) e rimangono attivi con bypass click-free e sample-rate dinamico (`initialize()` / `reset()`).
+
+### ADVANCED — Controlli Moderni di Mixing (opzionali, paralleli al percorso MAIN)
+Questa sezione aggiunge funzionalità da mixing moderno senza alterare il comportamento hardware di MAIN:
+
+| Controllo | Tipo | Default | Range | Note |
+|---|---|---|---|---|
+| **Mix / Dry-Wet** | Parallelo fase-compensato | 100 % | 0 % … 100 % | 0 % = solo Dry, 100 % = solo Wet |
+| **Sidechain HPF** | Filtro passa-alto sidechain | Off | Off / 20 Hz … 500 Hz | Simbolo filtro; esclude le basse dal rilevatore |
+| **External Sidechain** | Sidechain esterno | Off | Off / On | Attiva l'ingresso aux sidechain |
+| **Stereo Link** | Collegamento canali | 100 % Linked | 0 % Dual-Mono … 100 % Linked | |
+| **Oversampling** | Anti-aliasing | 1x | 1x / 2x / 4x / 8x | Latenza esatta (0/15/22/25 campioni) compensata sul Dry |
+| **Auto-Gain / Output Trim** | Guida automatica | Off | Off / On | Calibrato a 0 VU = −18 dBFS |
+
+Il parametro **Mix Dry/Wet** compensa esattamente la latenza di oversampling (`Oversampler::latency_samples`) tramite `LatencyDelay` sul percorso Dry, evitando pettinature (comb filtering).
+
+Il mix di output si applica sempre *dopo* il bypass crossfade (`BypassCrossfade`), quindi bypassato → Dry puro indipendentemente da Mix.
+
+**Implementazione reference:** `plugins/greg_api_2500` (`mix_blend`, `external_sidechain`, `sc_filter`/`sc_freq`, `stereo_link`, `oversampling`, `makeup_gain`); `plugins/greg_dbx_160` / `greg_dbx_165` (`DynamicsExtendedParams` / `CommonChannelParams`).
+
+**Stato di completamento per suite:** vedi `STATE.md` e `TODO.md`.
+
+
+## Regola Topologia Canali Adiacenti (Stereo, Mid/Side, Surround & TrackSpec)
+In `core-dsp` (`routing_matrix.rs` / `analog_summing.rs`), `ChannelFormat` e `TrackSpec` devono definire esplicitamente la mappa dei **canali fisicamente adiacenti** per il crosstalk (`AdjacentCrosstalkMatrix`) e il link di dinamica:
+- **Mono (1ch):** nessun canale adiacente.
+- **Stereo (2ch):** `0 <-> 1` (`L <-> R`).
+- **Mid/Side (2ch):** `0 <-> 1` (`Mid <-> Side`).
+- **LCR (3ch):** `0 <-> 2 <-> 1` (`L <-> C <-> R`).
+- **Quad (4ch):** `0 <-> 1` (`L <-> R`) e `2 <-> 3` (`Ls <-> Rs`).
+- **Surround 5.1 (6ch SMPTE: L, R, C, LFE, Ls, Rs):** `L <-> R`, `L <-> C <-> R`, `Ls <-> Rs`; canale `LFE` (indice 3) **sempre isolato** dal crosstalk.
+- **Surround 7.1 (8ch SMPTE: L, R, C, LFE, Ls, Rs, Lrs, Rrs):** `L <-> R`, `Ls <-> Rs`, `Lrs <-> Rrs`; canale `LFE` (indice 3) **sempre isolato**.
+- **Isolamento tra Tracce:** Nei plugin standard (`greg_76`, `greg-a2a`, ecc.) il crosstalk opera esclusivamente tra canali appartenenti alla stessa `TrackSpec`; solo in `greg_nl_mixer` opera anche tra strisce adiacenti del banco.
