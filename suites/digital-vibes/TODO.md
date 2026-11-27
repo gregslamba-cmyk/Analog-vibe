@@ -1,0 +1,6 @@
+# TODO — Digital-Vibe (Alberto Gregorio Ferraris)
+
+- [ ] **Estrazione Plugin Digitali da `Analog-Vibe`:** Spostare/collegare `greg_surgical_eq`, `greg_limiter`, `greg_gate`, `greg_phase`, `greg_ms_encoder`, `greg_ms_decoder` (e i futuri `greg_space`, `greg_resonance_killer_eq`, `greg_remic`) nella suite `Digital-Vibe` condividendo i 3 subtree (`core-dsp`, `greg_gui_core`, `clap-validator-host`).
+- [ ] **Nuovo Plugin `greg_bitcrusher`:** Riduzione bit-depth (`1..24 bit`), sample-rate reducer (`100 Hz..48 kHz`), clock jitter, filtri pre/post anti-aliasing ZDF e dithering TPDF / Noise-Shaping (`resampler_bitdepth.rs`).
+- [ ] **Nuovo Plugin `greg_delay_studio`:** Delay multi-motore ad 8 algoritmi (Digital, Dual/Ping-Pong, 8-Tap Pattern, BBD, Multi-Head Tape, Diffusion Cloud, Shimmer, Reverse/Freeze) con ritardi frazionari Lagrange/Thiran, filtri ZDF nel loop di feedback e Ducking integrato.
+- [ ] **Nuovo Plugin `greg_harmonizer`:** Harmonizer polifonico a 4 voci + Micro-Pitch Doubler basato su `polyphonic_pitch.rs` con Phase-Locking verticale COLA (zero distorsione/artefatti metallici), Formant Preservation indipendente, protezione transienti e aggancio armonico a scale (`music_theory.rs`) o MIDI.
