@@ -153,5 +153,5 @@ Prima di considerare completato qualsiasi plugin della suite Analog-Vibe, verifi
 *Added on 2026-11-23 by Direttore Tecnico.*
 
 ## Sincronizzazione Repository `Digital-Vibe` (Subtree `suites/digital-vibes`)
-- Remote GitHub: `digital` (`https://github.com`)
+- Remote GitHub: `digital` (`https://github.com/gregslamba-cmyk/Digital-Vibe.git`)
 - Comando push subtree: `git subtree push --prefix=suites/digital-vibes digital main`
