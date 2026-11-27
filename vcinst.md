@@ -140,3 +140,14 @@ Prima di considerare completato qualsiasi plugin della suite Analog-Vibe, verifi
 3. **Composizione Modulare dei Channel Strip (`dsp_graph` + Riuso Moduli Singoli + Host CLAP/VST3):**
    - I motori DSP dei singoli moduli (**Preamp**, **EQ**, **Compressore/Dynamics**, già accorpati per revisioni storiche come da Sez. 3) devono essere esportati con `crate-type = ["cdylib", "rlib"]` affinché lo stesso codice funzioni sia come **plugin singolo** sia come **blocco DSP dentro i Channel Strip**.
    - Ogni **Channel Strip** (`greg_1073_strip`, `greg_4000_strip`, `greg_vision_strip`, ecc.) deve comporre tali moduli dentro `dsp_graph` (con ordine commutabile `Pre → EQ → Dyn` / `Pre → Dyn → EQ`), includere `aux_send` + `fader_console`, e integrare un **Sub-Host CLAP/VST3** per ospitare plugin esterni con PDC automatico al singolo campione.
+
+## Layout Files
+- **Physical storage**: Each plugin’s `gui_layout.json` must reside in the plugin’s root directory under `plugins/<name>/gui_layout.json`.  
+  Examples:
+  - `/home/greg/analog-vibes/plugins/greg_76/gui_layout.json`
+  - `/home/greg/analog-vibes/plugins/greg_a2a/gui_layout.json`
+  - `/home/greg/analog-vibes/plugins/greg_pultec/gui_layout.json`
+  - … (all 18 plugins)
+- **Rule**: Do NOT place any other layout‑related files outside these directories. All references in `lib.rs` and `create_greg_editor_with_params` must point to the same relative path (`main` & `advanced` sections).
+
+*Added on 2026-11-23 by Direttore Tecnico.*

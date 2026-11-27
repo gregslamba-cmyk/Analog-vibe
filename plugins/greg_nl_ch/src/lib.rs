@@ -79,9 +79,9 @@ impl Model for EditorData {}
 struct GregNlCh {
     params: Arc<GregNlChParams>,
     routing_matrix: RoutingMatrix,
-    bypass_crossfades: [BypassCrossfade<f32>; plugin_support::MAX_AUDIO_CHANNELS],
-    oversamplers: [Oversampler<f32>; plugin_support::MAX_AUDIO_CHANNELS],
-    dry_delays: [LatencyDelay<f32, 32>; plugin_support::MAX_AUDIO_CHANNELS],
+    bypass_crossfades: [BypassCrossfade<f64>; plugin_support::MAX_AUDIO_CHANNELS],
+    oversamplers: [Oversampler<f64>; plugin_support::MAX_AUDIO_CHANNELS],
+    dry_delays: [LatencyDelay<f64, 32>; plugin_support::MAX_AUDIO_CHANNELS],
     last_oversampling: Oversampling,
     last_bypassed: bool,
     bypass_ramp_samples: u32,
@@ -130,7 +130,7 @@ impl Plugin for GregNlCh {
         let oversampling = self.params.oversampling.value();
         self.last_oversampling = oversampling;
         let factor = OversamplingFactor::from(oversampling);
-        let latency_samples = Oversampler::<f32>::latency_samples(factor);
+        let latency_samples = Oversampler::<f64>::latency_samples(factor);
         for oversampler in &mut self.oversamplers { oversampler.reset(); }
         for delay in &mut self.dry_delays { delay.reset(); let _ = delay.set_delay_samples(latency_samples as usize); }
         _context.set_latency_samples(latency_samples);
@@ -184,11 +184,10 @@ impl Plugin for GregNlCh {
         let oversampling = self.params.oversampling.value();
         if oversampling != self.last_oversampling {
             let factor = OversamplingFactor::from(oversampling);
-            let latency_samples = Oversampler::<f32>::latency_samples(factor);
+            let latency_samples = Oversampler::<f64>::latency_samples(factor);
             for oversampler in &mut self.oversamplers { oversampler.reset(); }
             for delay in &mut self.dry_delays { delay.reset(); let _ = delay.set_delay_samples(latency_samples as usize); }
             self.last_oversampling = oversampling;
-            _ctx.set_latency_samples(latency_samples);
         }
         let factor = OversamplingFactor::from(oversampling);
         let invert_left = self.params.invert_left.value();
@@ -197,22 +196,16 @@ impl Plugin for GregNlCh {
         self.metering.begin_block();
         let pr = self.panic_protection.run(|| {
             for mut frame in buffer.iter_samples() {
-                let mut samples = frame.iter_mut();
-                let Some(ls) = samples.next() else { continue; };
-                let li = finite(*ls);
-                let Some(rs) = samples.next() else { *ls = li; continue; };
-                let ri = finite(*rs);
-                let xl = if invert_left { -li } else { li };
-                let wet_l = self.oversamplers[0].process(xl, factor, |x| (x as f64 * drive_lin).tanh() as f32);
-                let wet_r = self.oversamplers[1].process(ri, factor, |x| (x as f64 * drive_lin).tanh() as f32);
-                let dry_l = self.dry_delays[0].process(xl);
-                let dry_r = self.dry_delays[1].process(ri);
-                let lmo = dry_l + (wet_l - dry_l) * mix;
-                let rmo = dry_r + (wet_r - dry_r) * mix;
-                *ls = finite(self.bypass_crossfades[0].process(dry_l, lmo));
-                *rs = finite(self.bypass_crossfades[1].process(dry_r, rmo));
-                self.metering.record_sample(li, *ls, 0.0);
-                self.metering.record_sample(ri, *rs, 0.0);
+                for (channel, sample) in frame.iter_mut().enumerate() {
+                    let input = if sample.is_finite() { *sample } else { 0.0 };
+                    let xl = if invert_left && channel == 0 { -input as f64 } else { input as f64 };
+                    let wet = self.oversamplers[channel].process(xl, factor, |x| (x * drive_lin).tanh());
+                    let dry = self.dry_delays[channel].process(xl);
+                    let mix_f = mix as f64;
+                    let lmo = dry + (wet - dry) * mix_f;
+                    *sample = finite(self.bypass_crossfades[channel].process(dry, lmo) as f32);
+                    self.metering.record_sample(input, *sample, 0.0);
+                }
             }
         });
         self.metering.publish_block();

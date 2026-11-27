@@ -6,7 +6,7 @@ use std::{
     ptr,
 };
 
-use clap_sys_wrapper::ffi::clap_sys::{
+use clap_sys::{
     audio_buffer::clap_audio_buffer,
     entry::clap_plugin_entry,
     events::{
@@ -29,6 +29,8 @@ use clap_sys_wrapper::ffi::clap_sys::{
     version::CLAP_VERSION,
 };
 
+mod ffi_safe;
+
 const SAMPLE_RATE: f64 = 48_000.0;
 const DEFAULT_BLOCK_SIZE: usize = 256;
 const SIGNAL_FRAMES: usize = 48_000;
@@ -47,10 +49,10 @@ static A3A_CLAP_ID: &CStr = c"com.greg.audio.greg-a3a";
 static CHILD_CLAP_ID: &CStr = c"com.greg.audio.greg-child";
 static LIMITER_CLAP_ID: &CStr = c"com.greg.audio.greg-limiter";
 
-static HOST_THREAD_CHECK: clap_sys_wrapper::ffi::clap_sys::ext::thread_check::clap_host_thread_check =
-    clap_sys_wrapper::ffi::clap_sys::ext::thread_check::clap_host_thread_check {
-        is_main_thread: Some(clap_sys_wrapper::ffi::host_is_thread),
-        is_audio_thread: Some(clap_sys_wrapper::ffi::host_is_thread),
+static HOST_THREAD_CHECK: clap_sys::ext::thread_check::clap_host_thread_check =
+    clap_sys::ext::thread_check::clap_host_thread_check {
+        is_main_thread: Some(clap_sys_wrapper::host::host_is_thread),
+        is_audio_thread: Some(clap_sys_wrapper::host::host_is_thread),
     };
 
 static HOST_PARAMS: clap_sys::ext::params::clap_host_params =
@@ -98,6 +100,10 @@ struct PluginInstance {
 
 impl Drop for PluginInstance {
     fn drop(&mut self) {
+        // Bug fix: mai dereferenziare un plugin nullo, nemmeno in Drop.
+        if self.plugin.is_null() {
+            return;
+        }
         unsafe {
             if self.processing
                 && let Some(stop) = (*self.plugin).stop_processing
@@ -1629,11 +1635,7 @@ fn run_case(
     let left_input_rms = (left_input_square_sum / SIGNAL_FRAMES as f64).sqrt() as f32;
     let right_input_rms = (right_input_square_sum / SIGNAL_FRAMES as f64).sqrt() as f32;
     let db_difference = |input: f64, output: f64| {
-        if input <= f64::MIN_POSITIVE || output <= f64::MIN_POSITIVE {
-            f64::NEG_INFINITY
-        } else {
-            20.0 * (output / input).log10()
-        }
+        20.0 * (output / input).max(1e-10).log10()
     };
     let left_peak_difference_db = db_difference(f64::from(left_input_peak), f64::from(left_peak));
     let right_peak_difference_db =

@@ -141,14 +141,14 @@ impl Default for GregSurgicalEqParams {
 struct GregSurgicalEq {
     params: Arc<GregSurgicalEqParams>,
     routing_matrix: core_dsp::core_dsp_modules::routing_matrix::RoutingMatrix,
-    filters: [SurgicalEq<BAND_COUNT, LINEAR_PHASE_TAPS, f32>; plugin_support::MAX_AUDIO_CHANNELS],
-    bypass_crossfades: [BypassCrossfade<f32>; plugin_support::MAX_AUDIO_CHANNELS],
-    dry_delays: [LatencyDelay<f32, MAX_DRY_DELAY>; plugin_support::MAX_AUDIO_CHANNELS],
-    last_bands: [EqBand<f32>; BAND_COUNT],
+    filters: [SurgicalEq<BAND_COUNT, LINEAR_PHASE_TAPS, f64>; plugin_support::MAX_AUDIO_CHANNELS],
+    bypass_crossfades: [BypassCrossfade<f64>; plugin_support::MAX_AUDIO_CHANNELS],
+    dry_delays: [LatencyDelay<f64, MAX_DRY_DELAY>; plugin_support::MAX_AUDIO_CHANNELS],
+    last_bands: [EqBand<f64>; BAND_COUNT],
     last_phase_mode: PhaseMode,
     last_bypassed: bool,
     bypass_ramp_samples: u32,
-    sample_rate: f32,
+    sample_rate: f64,
     initialized: bool,
     panic_protection: PanicProtection,
     metering: Metering,
@@ -177,7 +177,7 @@ impl Default for GregSurgicalEq {
 }
 
 impl GregSurgicalEq {
-    fn band_settings(&self) -> [EqBand<f32>; BAND_COUNT] {
+    fn band_settings(&self) -> [EqBand<f64>; BAND_COUNT] {
         array::from_fn(|index| {
             let band = &self.params.bands[index];
             EqBand {
@@ -191,17 +191,17 @@ impl GregSurgicalEq {
                     EqFilterKind::Notch => FilterType::Notch,
                     EqFilterKind::BandPass => FilterType::BandPass,
                 },
-                frequency_hz: band.frequency.value().min(self.sample_rate * 0.49).max(1.0),
-                q: band.q.value(),
-                gain_db: band.gain.value(),
+                frequency_hz: (band.frequency.value() as f64).min(self.sample_rate * 0.49).max(1.0),
+                q: band.q.value() as f64,
+                gain_db: band.gain.value() as f64,
             }
         })
     }
 
     fn configure_filters(
         &mut self,
-        sample_rate: f32,
-        bands: &[EqBand<f32>; BAND_COUNT],
+        sample_rate: f64,
+        bands: &[EqBand<f64>; BAND_COUNT],
         phase_mode: PhaseMode,
     ) -> bool {
         let dsp_phase_mode = match phase_mode {
@@ -223,7 +223,7 @@ impl GregSurgicalEq {
         match phase_mode {
             PhaseMode::MinimumPhase => 0,
             PhaseMode::LinearPhase => {
-                SurgicalEq::<BAND_COUNT, LINEAR_PHASE_TAPS, f32>::latency_samples(
+                SurgicalEq::<BAND_COUNT, LINEAR_PHASE_TAPS, f64>::latency_samples(
                     EqPhaseMode::LinearPhase,
                 )
             }
@@ -268,7 +268,7 @@ impl Plugin for GregSurgicalEq {
         ) {
             return false;
         }
-        self.sample_rate = buffer_config.sample_rate;
+        self.sample_rate = buffer_config.sample_rate as f64;
         let bands = self.band_settings();
         let phase_mode = self.params.phase_mode.value();
         let latency_samples = Self::latency(phase_mode);
@@ -277,7 +277,7 @@ impl Plugin for GregSurgicalEq {
             .iter_mut()
             .all(|delay| delay.set_delay_samples(latency_samples as usize));
         let filters_initialized =
-            self.configure_filters(buffer_config.sample_rate, &bands, phase_mode);
+            self.configure_filters(buffer_config.sample_rate as f64, &bands, phase_mode);
         if !delay_initialized || !filters_initialized {
             return false;
         }
@@ -368,7 +368,7 @@ impl Plugin for GregSurgicalEq {
         &mut self,
         buffer: &mut Buffer,
         _aux: &mut AuxiliaryBuffers,
-        context: &mut impl ProcessContext<Self>,
+        _context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
         if self.panic_protection.is_disabled() {
             return ProcessStatus::Normal;
@@ -390,7 +390,6 @@ impl Plugin for GregSurgicalEq {
                     return ProcessStatus::Error("EQ latency exceeds dry delay storage");
                 }
             }
-            context.set_latency_samples(latency_samples);
         }
 
         let bypassed = self.params.bypass.value();
@@ -406,9 +405,9 @@ impl Plugin for GregSurgicalEq {
             for mut channel_samples in buffer.iter_samples() {
                 for (channel, sample) in channel_samples.iter_mut().enumerate() {
                     let input = if sample.is_finite() { *sample } else { 0.0 };
-                    let dry = self.dry_delays[channel].process(input);
-                    let wet = self.filters[channel].process(input);
-                    *sample = self.bypass_crossfades[channel].process(dry, wet);
+                    let dry = self.dry_delays[channel].process(input as f64);
+                    let wet = self.filters[channel].process(input as f64);
+                    *sample = self.bypass_crossfades[channel].process(dry, wet) as f32;
                     self.metering.record_sample(input, *sample, 0.0);
                     self.telemetry.push_in_peak(channel, input);
                     self.telemetry.push_out_peak(channel, *sample);

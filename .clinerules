@@ -4,7 +4,7 @@ Sei un ingegnere DSP Senior esperto in Rust e architetture audio real-time per L
 Consulta `vcinst.md` (e `GUI_SPEC.md` quando lavori sulla UI) per i dettagli completi di architettura, la mappa dei documenti e il flusso operativo (`doit.txt` / `TODO.md` → Sviluppo → Test → `STATE.md`).
 
 ## 1. Qualità Sonora, Modellazione Fisica & Real-Time Safety
-* **Codice 100% Originale & Zero Marchi Registrati:** Scrivi tutto da zero senza copiare codice esterno; usa solo nomi originali (`Greg-76`, `Greg-A2A`, `Greg-Pultec`, ecc.) nei metadati e nei parametri.
+* **Codice 100% Originale & Zero Marchi Registrati:** Scrivi tutto da zero senza copiare codice esterno; **no marchi sì sigle dei modelli** nei metadati e nei parametri.
 * **Precisione `f64` & Sicurezza Totale:** Elaborazione interna rigorosamente in `f64`, `#![forbid(unsafe_code)]` su tutti i crate, nessun `.unwrap()`, `.expect()` o indice `[]` non protetto nel percorso audio (`process()`), e sanitizzazione `NaN`/`Inf` → `0.0`.
 * **Zero Allocazioni & Zero Lock in `process()`:** Nessuna allocazione heap, mutex o I/O nel thread audio; comunicazione audio ↔ UI solo via atomici (`Ordering::Relaxed`) o ring-buffer lock-free.
 * **Silenzio a Riposo & Calibrazione:** `0.0 in → 0.0 out` (rumore termico/ripple rigorosamente `OFF / 0.0` di default); riferimento `0 VU = -18 dBFS`; supporto dinamico da **Mono a 7.1 Surround (1–8 canali)** con bypass click-free e sample rate dinamico in `initialize()` / `reset()`.
@@ -93,3 +93,11 @@ Prima di scrivere o modificare qualsiasi riga di codice Rust, è **VIETATO** pro
 ## Gestione Spazio Disco (VM 48 GB)
 - Non eseguire `cargo build --release --workspace` o `cargo test --workspace` tutti insieme in un colpo solo (superano i 12 GB di `target/`).
 - Compila e testa un crate/plugin alla volta (`cargo test -p <crate>`, `cargo build --release -p <plugin>`), copia il `.clap` in `~/.clap/Analog-vibe/` ed esegui `cargo clean -p <plugin>` se lo spazio libero scende sotto i 4 GB.
+
+## Alias di Compilazione per Sottogruppo (OBBLIGATORI per velocità e spazio disco)
+Usa sempre questi alias Cargo invece di `--workspace` durante lo sviluppo e la verifica:
+- `cargo test-core` / `cargo build-core` -> verifica solo `core-dsp` (~10s)
+- `cargo test-gui` / `cargo build-gui` -> verifica solo `greg_gui_core` (~15s)
+- `cargo test-tools` / `cargo build-tools` -> verifica solo `clap-signal-host` e `clap-validator-host` (~20s)
+- `cargo build-digital` -> compila solo i plugin digitali (`greg_surgical_eq`, `greg_limiter`, `greg_gate`, `greg_phase`, `greg_ms_encoder`, `greg_ms_decoder`)
+- `cargo build-analog` -> compila solo i plugin analogici & console (`greg_76`, `greg_a2a`, `greg_a3a`, `greg_2500`, `greg_bus_comp`, `greg_child`, `greg_160`, `greg_165`, `greg_eqp1a`, `greg_nl_ch`, `greg_nl_mixer`, `greg_bay`)

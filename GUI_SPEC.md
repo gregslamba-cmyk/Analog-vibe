@@ -3,8 +3,8 @@
 ## 1. Filosofia Estetica & Ergonomia Studio
 - **Stile Hardware Autentico ma Leggibile:** Pannelli scuri antiriflesso (`#181A1F` / `#20232A`), accenti caldi ambra/ottone (`#E5A93B`), scale graduate nitide e feedback visivo immediato senza affaticamento in lunghe sessioni di mix.
 - **Identità Visiva per Famiglia Hardware:**
-  - *Vintage Tube / Opto (`greg-a2a`, `greg-child`, `greg-pultec`):* manopole stile Bakelite / Chickenhead, tonalità calde e VU meter ambrati.
-  - *British Console / FET (`greg_76`, `greg-bus-comp`, `Neve/SSL`):* selettori a scatti colorati (stile Marconi/SSL) e indicatori LED ad alto contrasto.
+  - *Vintage Tube / Opto (`greg-a2a`, `greg-child`, `greg-eq`):* manopole stile Bakelite / Chickenhead, tonalità calde e VU meter ambrati.
+  - *British Console / FET (`greg_76`, `greg-bus-comp`):* selettori a scatti colorati e indicatori LED ad alto contrasto.
   - *Surgical / Modern (`greg-surgical-eq`, `greg-limiter`, `greg_bay`):* grafica tecnica pulita, curve vettoriali nitide e lettura numerica diretta.
 - **Gerarchia a Due Livelli:**
   - **Main Panel (sempre visibile):** solo i controlli primari dell'unità hardware reale + meter `IN` / `OUT` / `GR`.

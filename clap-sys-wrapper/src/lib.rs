@@ -1,4 +1,5 @@
 #![allow(unsafe_code)]
+use std::ffi::c_void;
 
 /// Wrapper crate for clap-sys FFI functions with unsafe code isolation.
 /// Main crates should depend on this crate instead of directly on clap-sys for FFI operations.

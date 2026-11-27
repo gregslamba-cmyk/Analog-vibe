@@ -1,4 +1,9 @@
 #![allow(unsafe_code)]
+// FFI boundary crate: tutte le funzioni `unsafe extern "C"` sono callback CLAP
+// invocate dal plugin/host secondo l'ABI C. Il contratto di sicurezza è
+// "il chiamante deve passare puntatori validi conformi all'ABI CLAP", quindi
+// la documentazione `# Safety` di clippy non è applicabile a questi shim.
+#![allow(clippy::missing_safety_doc)]
 
 /// Wrapper crate for clap-sys FFI functions with unsafe code isolation.
 /// Main crates should depend on this crate instead of directly on clap-sys for FFI operations.
@@ -24,9 +29,8 @@ pub mod ffi {
         plugin::clap_plugin,
         process::clap_process,
         version::CLAP_VERSION,
-        stream::clap_stream,
+        stream::{clap_istream, clap_ostream},
         string_sizes::{CLAP_NAME_SIZE, CLAP_PATH_SIZE},
-        fixed_size::clap_fixed_size,
     };
 }
 
@@ -36,11 +40,13 @@ pub mod ffi {
 /// All FFI‑unsafe code lives here so that consumer crates stay free of
 /// `unsafe extern "C"` definitions.
 pub mod host {
-    use std::ffi::CStr;
+    use std::ffi::{c_char, c_void, CStr};
     use std::ptr;
 
     use super::ffi::*;
-    use clap_sys_wrapper::ffi::clap_host;
+    use clap_sys::ext::latency::clap_host_latency;
+    use clap_sys::ext::params::clap_host_params;
+    use clap_sys::ext::thread_check::clap_host_thread_check;
 
     // -----------------------------------------------------------------------
     // Host identity
@@ -53,29 +59,26 @@ pub mod host {
     // -----------------------------------------------------------------------
     // Thread‑check extension
     // -----------------------------------------------------------------------
-    pub static HOST_THREAD_CHECK: clap_sys_wrapper::ffi::clap_sys::ext::thread_check::clap_host_thread_check =
-        clap_sys_wrapper::ffi::clap_sys::ext::thread_check::clap_host_thread_check {
-            is_main_thread: Some(host_is_thread),
-            is_audio_thread: Some(host_is_thread),
-        };
+    pub static HOST_THREAD_CHECK: clap_host_thread_check = clap_host_thread_check {
+        is_main_thread: Some(host_is_thread),
+        is_audio_thread: Some(host_is_thread),
+    };
 
     // -----------------------------------------------------------------------
     // Params extension
     // -----------------------------------------------------------------------
-    pub static HOST_PARAMS: clap_sys_wrapper::ffi::clap_sys::ext::params::clap_host_params =
-        clap_sys_wrapper::ffi::clap_sys::ext::params::clap_host_params {
-            rescan: Some(host_params_rescan),
-            clear: Some(host_params_clear),
-            request_flush: Some(host_request_flush),
-        };
+    pub static HOST_PARAMS: clap_host_params = clap_host_params {
+        rescan: Some(host_params_rescan),
+        clear: Some(host_params_clear),
+        request_flush: Some(host_request_flush),
+    };
 
     // -----------------------------------------------------------------------
     // Latency extension
     // -----------------------------------------------------------------------
-    pub static HOST_LATENCY: clap_sys_wrapper::ffi::clap_sys::ext::latency::clap_host_latency =
-        clap_sys_wrapper::ffi::clap_sys::ext::latency::clap_host_latency {
-            changed: Some(host_latency_changed),
-        };
+    pub static HOST_LATENCY: clap_host_latency = clap_host_latency {
+        changed: Some(host_latency_changed),
+    };
 
     // -----------------------------------------------------------------------
     // Unsafe extern “C” callbacks
@@ -89,11 +92,11 @@ pub mod host {
         }
         let extension_id = unsafe { CStr::from_ptr(extension_id) };
         if extension_id == CLAP_EXT_THREAD_CHECK {
-            (&HOST_THREAD_CHECK as *const clap_sys_wrapper::ffi::clap_sys::ext::thread_check::clap_host_thread_check).cast()
+            (&HOST_THREAD_CHECK as *const clap_host_thread_check).cast()
         } else if extension_id == CLAP_EXT_PARAMS {
-            (&HOST_PARAMS as *const clap_sys_wrapper::ffi::clap_sys::ext::params::clap_host_params).cast()
+            (&HOST_PARAMS as *const clap_host_params).cast()
         } else if extension_id == CLAP_EXT_LATENCY {
-            (&HOST_LATENCY as *const clap_sys_wrapper::ffi::clap_sys::ext::latency::clap_host_latency).cast()
+            (&HOST_LATENCY as *const clap_host_latency).cast()
         } else {
             ptr::null()
         }
@@ -137,7 +140,7 @@ pub mod host {
             return ptr::null();
         }
         let context = unsafe { (*events).ctx };
-        context.cast::<clap_sys_wrapper::ffi::clap_sys::events::clap_event_param_value>().cast()
+        context.cast::<clap_event_param_value>().cast()
     }
 
     pub unsafe extern "C" fn accept_output_event(
