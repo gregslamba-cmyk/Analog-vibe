@@ -31,7 +31,7 @@ Channel position mapping follows the standard film/TV surround convention where 
 ### `plugin-support/src/lib.rs` — I/O layout constants
 
 - **`CHANNELS = [2, 1, 3, 4, 5, 6, 7, 8]`** — Stereo first, then Mono, LCR, Quad, 5.0, 5.1, 7.0, 7.1.
-- **`SURROUND_IO_LAYOUTS`**: 8 layouts (Stereo/Mono/LCR/Quad/5.0/5.1/7.0/7.1) without aux sidechain. Used by utility plugins without sidechain (Phase, M/S Encoder/Decoder, Surgical EQ, Pultec).
+- **`SURROUND_IO_LAYOUTS`**: 8 layouts (Stereo/Mono/LCR/Quad/5.0/5.1/7.0/7.1) without aux sidechain. Used by utility plugins without sidechain (Phase, M/S Encoder/Decoder, Surgical EQ, EQ).
 - **`DYNAMICS_IO_LAYOUTS`**: 21 layouts (Stereo, Mono, Quad, 5.0, 5.1, 7.0, 7.1 × each aux sidechain MONO or STEREO). Used by dynamics plugins (compressors, limiters, gates). Every layout declares the aux `Sidechain` port, so sidechain is always exposed when the plugin has it.
 
 Each layout declares `main_input_channels`, `main_output_channels`, and optionally `aux_input_ports` with port name `"Sidechain"`. The host negotiates one layout per plugin instance.
@@ -64,7 +64,7 @@ The telemetry snapshots (`input_peak_dbfs`, `output_peak_dbfs`, `gain_reduction_
 
 ### Multi-channel stereo-link
 
-For plugins exposing `stereo_link` (Bus Comp, Child, Limiter, API 2500, DBX 160/165), linking no longer binds only channels 0 and 1. Instead it:
+For plugins exposing `stereo_link` (Bus Comp, Child, Limiter, 2500, 160/165), linking no longer binds only channels 0 and 1. Instead it:
 
 1. Computes `max_key = max(keys[0..channel_count])` across all active channels.
 2. Writes `max_key` back to every channel `0..channel_count`.
@@ -763,3 +763,33 @@ Tre nuove estensioni mirate per le suite future sono state aggiunte a `core-dsp`
 
 - **`core_dsp_modules::AutoPhaseAligner`** (`routing_matrix.rs`): allineatore di fase automatico che stima il ritardo tra segnale e riferimento tramite cross-correlazione su finestra mobile e applica correzione tramite coefficiente all-pass (`allpass_coef`). Zero allocazioni heap nel percorso real-time.
 
+
+---
+
+## Suddivisione Ecosistema: Analog-Vibe vs Digital-Vibe vs Mastering-Vibe
+
+L'ecosistema Greg Audio (`core-dsp` + `greg_gui_core` + `clap-validator-host`) è organizzato in tre suite distinte per filosofia sonora e flusso di lavoro in studio:
+
+### 1. `Analog-Vibe` (`~/analog-vibes`) — Hardware Modeling & Colore Analogico
+* **Concetto:** Emulazione fisica e circuitale di macchine da studio classiche (valvole termoioniche, trasformatori con isteresi magnetica, induttori, stadi FET/Opto/VCA/Vari-Mu, console e registratori a nastro) con dispersione dei componenti (`analog_variance`), alimentazione (`psu_sag`) e sovracampionamento ADAA1/ADAA2.
+* **Catalogo (59 Plugin tra implementati e pianificati):**
+  * *Compressori Hardware (20):* `greg_76`, `greg_a2a`, `greg_a3a`, `greg_child`, `greg_bus_comp`, `greg_160`, `greg_165`, `greg_2500`, `greg_sr22`, `greg_225l`, `greg_t25`, `greg_525`, `greg_527`, `greg_529`, `greg_2254_comp`, `greg_4000_dyn`, `greg_32c_comp`, `greg_vari_mu_comp`, `greg_xpress_comp`, `greg_doublewide`.
+  * *EQ & Preamp da Banco / Serie 500 (15):* `greg_eqp1a`, `greg_4000_pre`, `greg_292_242_eq`, `greg_1073_pre`, `greg_1073_1081_eq`, `greg_512_pre`, `greg_550_560_eq`, `greg_32c_pre`, `greg_32c_eq`, `greg_massive_eq`, `greg_gama_pre`, `greg_redblue_pre`, `greg_12428_pre`, `greg_air_eq`, `greg_tape_500`.
+  * *Saturatori & Coloratori Analogici (6):* `greg_tape`, `greg_tube_drive`, `greg_xfmr_box`, `greg_multiband_sat`, `greg_wavefolder_clip`, `greg_diode_sat`.
+  * *Console & Channel Strip (18):* `greg_nl_ch`, `greg_nl_mixer`, `greg_bay` + 15 Channel Strip (`greg_1073_strip` .. `greg_jh500_strip`).
+
+### 2. Concetto & Architettura `Digital-Vibe` (`~/Documenti/digital-vibes`) — Precisione Chirurgica & Sound Design `f64`
+* **Concetto:** Processori audio puramente digitali in doppia precisione `f64`, privi di qualsiasi emulazione analogica, rumore di fondo o saturazione parassita non richiesta. Progettati per massima trasparenza chirurgica, controllo dinamico/spettrale, spazializzazione 3D, pitch-shifting polifonico phase-locked senza artefatti e sound design creativo.
+* **Catalogo Completo (31 Plugin):**
+  * *EQ & Dinamica Chirurgica (11):* `greg_surgical_eq`, `greg_lin_eq`, `greg_resonance_killer_eq` (1..15 bande + Band Solo), `greg_deharsh`, `greg_de_esser`, `greg_limiter`, `greg_lin_comp`, `greg_multiband_comp`, `greg_gate`, `greg_split_dyn`, `greg_trans_mono` & `greg_trans_multi`.
+  * *Pitch, Voce & Drum Trigger (4):* `greg_harmonizer` (4 voci indipendenti Phase-Locked COLA + Formant Preservation + scale `music_theory.rs` / MIDI + Micro-Pitch Doubler + Ducking), `greg_pitch_clean`, `greg_pitch_formant`, `greg_trigger` (multi-layer + mini-editor per layer).
+  * *Spazio, Riverberi & Multi-Delay (4):* `greg_space` (3D/FDN), `greg_ir_reverb` (`partitioned_convolver`), `greg_delay_studio` (8 motori: Pure Digital, Dual/Ping-Pong, 8-Tap Pattern, BBD, Multi-Head Tape Echo, Diffusion Cloud, Shimmer Pitch-Delay, Reverse/Freeze + filtri ZDF nel feedback + Ducking), `greg_pingpong`.
+  * *Modulazioni Studio & Sound Design (6):* `greg_mod_studio` (Through-Zero Flanger, Tri-Chorus 3–6 voci, Multi-Stage Phaser 2–24 poli, Rotary Doppler, Rhythmic Tremolo & Auto-Panner), `greg_bitcrusher` (`greg_destroyer`: 1–24 bit, Sample-Rate Reducer, Jitter, TPDF/Noise-Shaped Dither), `greg_freq_shifter` (Hilbert + Ring Mod), `greg_granular` (Granular Cloud & Spectral Freeze), `greg_vocoder` (16–32 bande), `greg_filter_motion` (Auto-Wah & Morphing Formant).
+  * *Immagine Stereo, Fase & Utility `f64` (6):* `greg_phase`, `greg_remic` (Auto-Align multi-microfono), `greg_ms_encoder`, `greg_ms_decoder`, `greg_stereo_imager` (Multiband Width + Mono-Maker + Haas).
+
+### 3. `Mastering-Vibe` (`~/Documenti/mastering-vibes`) — Mastering, Restauro Audio & Metering
+* **Concetto:** Strumenti di chiusura, analisi broadcast/streaming ITU-R BS.1770-4, simulazione di ascolto in studio/ambiente e restauro chirurgico non distruttivo.
+* **Catalogo (15 Plugin):**
+  * *Restauro Audio (5):* `greg_de_intersample_clipper` (rimozione clip, click, pop e picchi intersample True-Peak ISP 4x/8x con `Delta / Listen Diff`), `greg_denoiser`, `greg_declipper`, `greg_dehummer`, `greg_declicker`.
+  * *Mastering Enhancer (6):* `greg_sub_synth`, `greg_harmonic_bass`, `greg_low_enhancer`, `greg_air_exciter`, `greg_exciter`, `greg_dynamic_tilt`.
+  * *Metering & Simulazione Ascolti (4):* `greg_master_meter`, `greg_scope_analyzer`, `greg_tonal_balance`, `greg_speaker_sim` (32 Diffusori x 10 Ambienti + SPL/Codec/Noise Check).
