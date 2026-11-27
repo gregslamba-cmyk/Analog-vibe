@@ -6,7 +6,7 @@ use std::{
     ptr,
 };
 
-use clap_sys::{
+use clap_sys_wrapper::ffi::clap_sys::{
     audio_buffer::clap_audio_buffer,
     entry::clap_plugin_entry,
     events::{
@@ -47,10 +47,11 @@ static A3A_CLAP_ID: &CStr = c"com.greg.audio.greg-a3a";
 static CHILD_CLAP_ID: &CStr = c"com.greg.audio.greg-child";
 static LIMITER_CLAP_ID: &CStr = c"com.greg.audio.greg-limiter";
 
-static HOST_THREAD_CHECK: clap_host_thread_check = clap_host_thread_check {
-    is_main_thread: Some(host_is_thread),
-    is_audio_thread: Some(host_is_thread),
-};
+static HOST_THREAD_CHECK: clap_sys_wrapper::ffi::clap_sys::ext::thread_check::clap_host_thread_check =
+    clap_sys_wrapper::ffi::clap_sys::ext::thread_check::clap_host_thread_check {
+        is_main_thread: Some(clap_sys_wrapper::ffi::host_is_thread),
+        is_audio_thread: Some(clap_sys_wrapper::ffi::host_is_thread),
+    };
 
 static HOST_PARAMS: clap_sys::ext::params::clap_host_params =
     clap_sys::ext::params::clap_host_params {

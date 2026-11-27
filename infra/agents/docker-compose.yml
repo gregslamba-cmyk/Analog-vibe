@@ -1,0 +1,72 @@
+# /home/greg/analog-vibes/infra/agents/docker-compose.yml
+# Docker agent pool per Greg Audio — Livello 2 (container leggeri)
+# Limiti di risorse conservativi per VM da ~10 GB RAM / 6 core.
+# Attivazione SU RICHIESTA: usare `docker compose run --rm <servizio> <comando>`
+# (non lasciare i container accesi in permanenza con `up -d`).
+
+version: "3.8"
+
+services:
+  # --- Agente: Web Research & Hardware Scout ---
+  agent-web-research:
+    image: greg-audio/web-research:latest
+    container_name: agent-web-research
+    mem_limit: 1024m        # 1 GB RAM
+    cpus: "1.0"             # 1 core
+    restart: "no"
+    volumes:
+      - ../../workspace:/workspace:rw
+    working_dir: /workspace
+    networks:
+      - agent-net
+
+  # --- Agente: Rust Code Reviewer ---
+  agent-rust-review:
+    image: greg-audio/rust-review:latest
+    container_name: agent-rust-review
+    mem_limit: 512m         # 512 MiB RAM
+    cpus: "0.5"             # 0.5 core
+    restart: "no"
+    volumes:
+      - ../../workspace:/workspace:rw
+    working_dir: /workspace
+    networks:
+      - agent-net
+
+  # --- Agente: DSP & Audio Architect ---
+  agent-dsp-architect:
+    image: greg-audio/dsp-architect:latest
+    container_name: agent-dsp-architect
+    mem_limit: 768m         # 768 MiB RAM
+    cpus: "0.75"            # 0.75 core
+    restart: "no"
+    volumes:
+      - ../../workspace:/workspace:rw
+    working_dir: /workspace
+    networks:
+      - agent-net
+
+  # --- Agente: Sandbox (operazioni ad alto rischio) ---
+  agent-sandbox:
+    image: alpine:3.19
+    container_name: agent-sandbox
+    mem_limit: 128m         # 128 MiB RAM
+    cpus: "0.25"            # 0.25 core
+    restart: "no"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    network_mode: none
+    volumes:
+      - ../../workspace:/workspace:ro   # read-only: inietta solo se serve scrivere
+    working_dir: /workspace
+    networks:
+      - agent-net
+
+networks:
+  agent-net:
+    driver: bridge

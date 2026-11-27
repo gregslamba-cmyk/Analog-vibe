@@ -1,0 +1,18 @@
+# /home/greg/analog-vibes/infra/agents/Dockerfile.rust-review
+# Immagine per Rust Code Reviewer
+FROM rust:1.75-slim AS builder
+WORKDIR /app
+COPY Cargo.toml Cargo.lock ./
+RUN cargo fetch
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /usr/local/cargo /usr/local/cargo
+COPY --from=builder /usr/local/rustup /usr/local/rustup
+ENV PATH="/usr/local/cargo/bin:${PATH}"
+
+WORKDIR /workspace
+ENTRYPOINT ["cargo"]

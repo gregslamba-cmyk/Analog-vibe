@@ -120,18 +120,18 @@ pub enum SlotModule {
     #[id = "none"]
     #[name = "None"]
     None,
-    #[id = "pultec"]
-    #[name = "Pultec EQP-1A"]
-    Pultec,
-    #[id = "1176"]
-    #[name = "1176 FET Compressor"]
-    FET1176,
-    #[id = "la2a"]
-    #[name = "LA-2A Opto Compressor"]
-    LA2A,
-    #[id = "neve"]
-    #[name = "Neve 1073 Preamp"]
-    Neve1073,
+    #[id = "greg_q-1a"]
+    #[name = "greg q-1a"]
+    VintageEq,
+    #[id = "greg_76"]
+    #[name = "greg 76"]
+    FetComp,
+    #[id = "greg_a2a"]
+    #[name = "greg a2a"]
+    OptoComp,
+    #[id = "greg_73"]
+    #[name = "greg 73"]
+    ConsolePre,
     #[id = "tape"]
     #[name = "Tape Emulation"]
     Tape,

@@ -10,4 +10,5 @@ path = "src/main.rs"
 
 [dependencies]
 clap-sys = { git = "https://github.com/micahrj/clap-sys.git", rev = "25d7f53fdb6363ad63fbd80049cb7a42a97ac156" }
+clap-sys-wrapper = { path = "../clap-sys-wrapper" }
 libc = "0.2"

@@ -25,6 +25,8 @@ members = [
     "plugins/greg_nl_ch",
     "plugins/greg_nl_mixer",
     "plugins/greg_bay",
+    "plugins/greg_space",
+    "plugins/greg_tape",
 ]
 
 [workspace.package]

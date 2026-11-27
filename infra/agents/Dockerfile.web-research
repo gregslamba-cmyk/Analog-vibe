@@ -1,0 +1,15 @@
+# /home/greg/analog-vibes/infra/agents/Dockerfile.web-research
+# Immagine per Web Research & Hardware Scout
+FROM python:3.11-slim
+
+# Dipendenze di sistema per Playwright / browser headless
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Installa Playwright + Chromium
+RUN pip install --no-cache-dir playwright && \
+    playwright install chromium
+
+WORKDIR /workspace
+ENTRYPOINT ["python"]

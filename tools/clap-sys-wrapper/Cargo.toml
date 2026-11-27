@@ -1,0 +1,7 @@
+[package]
+name = "clap-sys-wrapper"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap-sys = { git = "https://github.com/micahrj/clap-sys.git", rev = "25d7f53fdb6363ad63fbd80049cb7a42a97ac156" }

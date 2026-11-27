@@ -1,57 +1,145 @@
-task 3 — RIFINITURA GUI 2D COMPLETATA (`A/B`, `Copy/Paste`, `Save Default`, Preset Browser) & Astrazioni Core [DONE]
-  * Item 1 — Rimozione `Box::leak` nelle GUI con `greg_static_params!` (`OnceLock`) — DONE: `plugins/greg-surgical-eq/src/lib.rs`, commit `df93e53`, pushato su `origin main`.
-  * Item 2 — Pulsanti/Switch cliccabili & GUI Console su `greg_nl_ch`, `greg_nl_mixer`, `greg_bay` — già presenti (`greg_static_params!`).
-  * Item 3 — Barra superiore universale (A/B, Copy/Paste, Save Default, Preset Browser) — già implementata in `crates/greg_gui_core/src/lib.rs` (`create_greg_editor_full`).
-  * Item 4 — Astrazioni `EqBandSpec` (colonne verticali) & `ChannelFormat`/`TrackSpec` — già definite e adottate su compressori/EQ/utility.
-  * Item 5 — Verifica & Release — `cargo check -p greg-surgical-eq` passato (0 warning progetto; solo nota `xcb` future-incompat da dipendenza esterna). Verifica workspace `clap-signal-host` in attesa di spazio disco.
-Leggi `crates/greg_gui_core/src/lib.rs`, `GUI_SPEC.md`, `ARCHITECTURE.md` e `plugins/`:
-1. **Rimozione `Box::leak` nelle GUI:** Sostituisci `Box::leak(vec![...])` dentro `fn editor(...)` con slice `&'static [ParamDef]` statiche o `OnceLock`.
-2. **Pulsanti/Switch Cliccabili, GUI Console & Ore 12 Bipolari:** Rendi cliccabili tutti i toggle/dropdown su tutti i plugin, attiva la GUI 2D standard anche su `greg_nl_ch`, `greg_nl_mixer` e `greg_bay`, e allinea lo `0.0` dei parametri bipolari esattamente a `0°` (ore 12).
-3. **Barra Superiore Universale `greg_gui_core` (Thread UI puro, zero I/O nel thread audio):**
-   - **`A/B` Compare:** Doppio slot istantaneo in memoria UI.
-   - **`Copy` / `Paste` Parametri:** Serializza tutti i parametri (`MAIN` + `ADVANCED`) in `~/.cache/analog-vibe/param_clipboard.json` per copiare tra istanze identiche e trasferire parametri comuni tra plugin compatibili.
-   - **`Save Default`:** Salva lo stato corrente in `~/.config/analog-vibe/<plugin_id>.json` e lo carica esclusivamente in `initialize()`.
-   - **Preset Browser a File Singolo (1 file = 1 preset condivisibile):** Menu a tendina con frecce `<` / `>` + tasto **`Save Preset`** che salva ciascun preset come singolo file JSON in `~/.config/analog-vibe/presets/<plugin_id>/<preset_name>.json`.
-4. **Astrazioni `EqBandSpec` (a colonne verticali) & `ChannelFormat`/`TrackSpec`:** Adottale su compressori, EQ e utility.
-5. **Verifica & Release:** Esegui `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings` (`0` warning), `cargo build --release --workspace` e `clap-signal-host` 18/18 PASS, installa i 18 `.clap` in `~/.clap/Analog-vibe/`, cancella questo `task 3` da `doit.txt` e fai `git commit -m "[GUI & Core] Rimozione Box::leak, Ore 12 bipolari, EqBandSpec, ChannelFormat/TrackSpec e barra universale A/B Copy/Paste SaveDefault PresetBrowser" && git push` (inclusi i 3 subtree).
+[ref: tool0turn0]
+# DOIT — Analog-Vibe (Riordinato per Priorità)
+Copyright (c) 2026 Alberto Gregorio Ferraris. All rights reserved.
 
-task 5 — Nuovi Plugin di Collaudo Reale (Lotto 1/3): `greg_space` & `greg_tape` (18 → 20 Plugin)
-Leggi `docs/INVENTARIO.txt`, `docs/PLUGIN_CATALOG.md`, `ARCHITECTURE.md` e `vcinst.md`. Implementa i primi 2 nuovi plugin CLAP + VST3:
-1. **`plugins/greg_space` (Riverbero Acustico 3D & FDN Studio Suite):** `FdnReverb` + `AcousticRoom` + `Spatial3d` + `zdf_filters` (`MAIN`: `Algorithm [Booth / Room / Chamber / Plate / Hall / Cathedral]`, `Decay Time / RT60 (0.15–20s)`, `Room Size`, `Pre-Delay (0–250ms)`, `HF Damping`, `Early/Late Mix`, `Dry/Wet`; `ADVANCED`: `Early Density`, `Early Spread`, `Tail Density`, `Tail Diffusion`, `Low Decay Mult (0.5x–2.0x)`, `Modulation Rate`, `Modulation Depth`, `Spatial Width / ITD`, `Low Cut`, `High Cut`, `Freeze Tail`, `Channel Setup`, `Output Trim`).
-2. **`plugins/greg_tape` (Master Tape 7.5/15/30 IPS NAB/CCIR):** `TapePhysics` + `TransformerHysteresis` + `ADAA2` + `Oversampler` (`MAIN`: Input Drive, Tape Speed 7.5/15/30 IPS, EQ Curve NAB/CCIR, Bias, Saturation/Iron, Output Trim, Dry/Wet; `ADVANCED`: Head Bump, HF Roll-off, Wow & Flutter default 0.0%, Oversampling 1x–8x, Crosstalk, Channel Setup).
-3. **Verifica & Release (20/20 PASS):** Aggiorna `Cargo.toml`, `docs/INVENTARIO.txt` e schede `docs/plugins/`. Esegui `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings` (`0` warning), `cargo build --release --workspace`, `clap-signal-host` `20/20 PASS`, installa i 20 `.clap` in `~/.clap/Analog-vibe/`, cancella questo `task 5` da `doit.txt` e fai `git commit -m "[Plugins] Implementati greg_space e greg_tape (20/20 PASS)" && git push` (inclusi i 3 subtree).
+===============================================================================
+P0 — BLOCCANTI (da risolvere prima di qualsiasi altro task o rilascio)
+===============================================================================
 
-task 6 — Nuovi Plugin di Collaudo Reale (Lotto 2/3): `greg_tube_drive` & `greg_resonance_killer_eq` (20 → 22 Plugin)
-Leggi `docs/INVENTARIO.txt`, `docs/PLUGIN_CATALOG.md`, `ARCHITECTURE.md` e `vcinst.md`. Implementa i seguenti 2 plugin CLAP + VST3:
-1. **`plugins/greg_tube_drive` (Saturatore Valvolare Triodo/Pentodo & Trasformatore):** `TubeStage` (Triodo 12AX7 / Pentodo EL34) + `PsuSag` + `TransformerHysteresis` + `ADAA1`/`ADAA2` + `Oversampler` (`MAIN`: Drive, Tube Mode, Bias, Iron/Transformer, Output Trim, Dry/Wet; `ADVANCED`: PSU Sag, Miller Roll-Off, Low Cut, Oversampling 1x–8x, Crosstalk, Channel Setup).
-2. **`plugins/greg_resonance_killer_eq` (EQ Chirurgico Anti-Risonanze Scalabile 1..15 Bande):** `[ZdfSvf; 15]` pre-allocati + `EqBandSpec` + `SpectralAnalyzer`, aggiunta/rimozione dinamica bande (`1..=15`), `Frequency`, `Gain`, `Q` fino a `40.0`, pulsante **Band Solo / Resonance Hunt**, `Channel Setup`, `Output Trim`, `Dry/Wet`.
-3. **Verifica & Release (22/22 PASS):** Aggiorna `Cargo.toml`, `docs/INVENTARIO.txt` e schede `docs/plugins/`. Esegui `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings` (`0` warning), `cargo build --release --workspace`, `clap-signal-host` `22/22 PASS`, installa i 22 `.clap` in `~/.clap/Analog-vibe/`, cancella questo `task 6` da `doit.txt` e fai `git commit -m "[Plugins] Implementati greg_tube_drive e greg_resonance_killer_eq (22/22 PASS)" && git push` (inclusi i 3 subtree).
+task P0-1 — Rimozione Marchi Registrati da `greg-bay` (SlotModule enum)
+  File: `plugins/greg-bay/src/lib.rs`
+  1. Rinominare tutte le varianti `SlotModule` eliminando riferimenti a
+     Pultec, 1176, LA-2A, Neve 1073 (marchi registrati).
+     Usare nomi originali Greg (es. `GregPassiveEq`, `Greg FetComp`, `Greg OptoComp`,
+     `Greg ClassABook`).
+  2. Aggiornare eventuali match/映射 e documentazione.
+  3. Verifica: `cargo check -p greg-bay` + `grep -ri "pultec\|1176\|la-2a\|neve" plugins/greg-bay/`
 
-task 7 — Nuovi Plugin di Collaudo Reale (Lotto 3/3): `greg_1073_1081_eq` & `greg_550_560_eq` (22 → 24 Plugin)
-Leggi `docs/INVENTARIO.txt`, `docs/PLUGIN_CATALOG.md`, `docs/specs/outboard_hardware_research.md` e `vcinst.md`. Implementa i 2 EQ vintage storici CLAP + VST3:
-1. **`plugins/greg_1073_1081_eq` (EQ Vintage Britannico Classe A a Induttori — Selettore `1073` / `1081`):** `zdf_filters` + `EqBandSpec` + `TransformerHysteresis` + `component_models` + `analog_variance` (`MAIN`: Model 1073/1081, Input Preamp Drive, HPF, LF Shelf, LMF Bell, HMF Bell, HF Shelf, Phase Invert, EQ In/Out; `ADVANCED`: Transformer Iron %, Analog Drift, Crosstalk, Oversampling, Channel Setup, Output Trim, Dry/Wet).
-2. **`plugins/greg_550_560_eq` (EQ Vintage Americano Proportional-Q — Selettore `550A` / `550B` / `560`):** `zdf_filters` Proportional-Q + `EqBandSpec` + `component_models` (2520) + `TransformerHysteresis` (`MAIN`: Model 550A/550B/560, bande EQ a colonne verticali, Filter/Bandpass, EQ In/Out; `ADVANCED`: Proportional-Q Curve, Op-Amp 2520 Drive/Iron, Analog Drift, Crosstalk, Oversampling, Channel Setup, Output Trim, Dry/Wet).
-3. **Verifica & Release (24/24 PASS):** Aggiorna `Cargo.toml`, `docs/INVENTARIO.txt` e schede `docs/plugins/`. Esegui `cargo test --workspace`, `cargo clippy --workspace --all-targets -- -D warnings` (`0` warning), `cargo build --release --workspace`, `clap-signal-host` `24/24 PASS`, installa tutti i 24 `.clap` in `~/.clap/Analog-vibe/`, cancella questo `task 7` da `doit.txt` e fai `git commit -m "[Plugins] Implementati greg_1073_1081_eq e greg_550_560_eq — Suite completa 24/24 PASS" && git push` (inclusi i 3 subtree).
+task P0-2 — Isolare FFI Unsafe in Crate Wrapper (task 10 Item 1) — [ ] TODO
+  Titolo: Industrial hardening — incapsulare TUTTO l'unsafe FFI in un modulo dedicato
+         `ffi_safe` (o `unsafe_ffi`) all'interno del crate host, con wrapper `safe_*` che
+         verificano null pointer PRIMA di dereferenziare, restituiscono `Result<_, FfiError>`
+         o `Option`, e sono le uniche ad contenere blocchi `unsafe`.
+  File target: `tools/clap-signal-host/src/main.rs`
+  1. Aggiungere wrapper `safe_*` da creare:
+     - `safe_load_library`
+     - `safe_get_plugin_entry`
+     - `safe_entry_init`
+     - `safe_create_plugin`
+     - `safe_plugin_init`
+     - `safe_plugin_activate`
+     - `safe_plugin_start_processing`
+     - `safe_plugin_process`
+     - `safe_plugin_audio_ports_get`
+     - `safe_plugin_params`
+     - `safe_plugin_destroy`
+     - `safe_entry_deinit`
+  2. Aggiungere null-check espliciti su: `clap_plugin_entry` (entry pointer e
+     entry.init/deinit/plugin_factory), `plugin->init`, `plugin->activate`,
+     `plugin->start_processing`, `plugin->process`, `plugin->audio_ports` ext e
+     `clap_plugin_audio_ports->get`, `plugin->params` ext, `plugin->destroy`.
+  3. Rendere Drop sicuri:
+     - `EntryGuard::drop` verifica `!self.0.is_null()` prima di `(*self.0).deinit`.
+     - `PluginInstance::drop` verifica `!self.plugin.is_null()`.
+  4. Non lasciare più `unsafe` fuori dal modulo `ffi_safe`.
+  5. Mantenere invariato il comportamento funzionale e l'output del test host
+     (18/18 PASS).
+  Criteri di accettazione:
+    - Zero `unsafe` fuori da `ffi_safe`.
+    - Ogni dereferenziazione preceduta da null-check.
+    - `cargo test -p clap-signal-host` e l'esecuzione del binario OK.
+    - `clap-signal-host` 18/18 PASS.
+    - `cargo clippy --workspace --all-targets -- -D warnings` pulito.
+  Nota: la scrittura del codice va eseguita da Cline.
 
-task 8 — `ROADMAP.md` Collegata ai 4 `TODO.md` Separati per Repository
-1. **Creazione `ROADMAP.md` alla radice:** 4 Milestone (`v0.9 Bonifica Core-DSP P0/P1`, `v1.0 Analog-Vibe & Hardware Reference`, `v1.1 Nuovi Plugin 24/24 & Copertura Moduli Core`, `v2.0 Suite Mastering/Amp/Creative & PipeWire Matrix`) collegate ai 4 `TODO.md`.
-2. **Split dei `TODO.md` per Repository:** Organizza i task futuri nei 4 file dedicati: `TODO.md` (`Analog-Vibe`), `core-dsp/TODO.md` (`Rust_Dsp_Core`), `crates/greg_gui_core/TODO.md` (`clap-gui-designer`) e `tools/clap-validator-host/TODO.md` (`clap-validator-host`), intestati ad **Alberto Gregorio Ferraris**.
-3. **Verifica & Sync Subtree:** Svuota `doit.txt` (`# DOIT - Tutti i task completati`), fai `git commit -m "[Docs] Creata ROADMAP.md collegata ai 4 TODO.md separati per repository" && git push` (inclusi i 3 subtree `dsp`, `gui`, `validator`).
+task P0-3 — Eliminazione `.unwrap()` in `surgical_eq.rs` (P1 code review)
+  File: `core-dsp/src/core_dsp_modules/surgical_eq.rs`
+  1. Sostituire `.unwrap()` su conversioni numeriche in `EqBand::default()`
+     e `LinearPhaseFir::configure` con `.unwrap_or(T::zero())` o cast saturante.
+  2. Verifica: `cargo clippy -p core-dsp -- -D warnings` (0 warning su unwrap).
 
-task 9 — Mattoni Core per Intonazione Automatica & Pitch-Shifter Polifonico (`polyphonic_pitch.rs` in `core-dsp`)
-Leggi `vcinst.md`, `ARCHITECTURE.md`, `core-dsp/src/core_dsp_modules/pitch_shifter.rs` e `core-dsp/src/core_dsp_modules/music_theory.rs`. Implementa il nuovo modulo real-time safe (`f64`, `#![forbid(unsafe_code)]`, zero allocazioni heap in `process()`) `core-dsp/src/core_dsp_modules/polyphonic_pitch.rs` (riesportato in `core-dsp/src/lib.rs`, zero marchi registrati in nomi/commenti/codice):
-1. **Rilevamento Polifonico Multi-F0 (`PolyphonicPitchDetector`):** Stima simultanea fino a 8 altezze fondamentali (`F0`) e relative ampiezze armoniche tramite analisi spettrale ad alta risoluzione e decomposizione armonica pre-allocata su buffer fissi.
-2. **Spostamento Polifonico & Formant Preservation (`PolyphonicNoteShifter`):** Permette di trasporre indipendentemente singole note all'interno di un accordo polifonico con phase-locking verticale COLA e preservazione separata dell'inviluppo formantico (`Formant Shift`).
-3. **Motore Correzione Intonazione Integrato con `music_theory` (`AutoPitchProcessor`):**
-   - Aggancia l'intonazione rilevata alle scale di `music_theory.rs` (occidentali, modali, microtonali `.scl`) o a target MIDI esterni.
-   - Espone parametri professionali: `Retune Speed (0.0 – 400.0 ms)`, `Humanize` (preservazione del vibrato naturale), `Natural Vibrato Depth`, `Formant Shift (-12..+12 st)` e `Dry/Wet`.
-4. **Verifica & Sync Subtree:** Aggiungi unit test deterministici (riconoscimento bicordo/triade polifonica, snap-to-scale su scala maggiore, `Retune Speed`, preservazione formanti, `0.0 in -> 0.0 out`, zero allocazioni in `process()`), aggiorna `ARCHITECTURE.md` e `core-dsp/README.txt`, esegui `cargo test --workspace` e `cargo clippy --workspace --all-targets -- -D warnings` (`0` warning), svuota `doit.txt` (`# DOIT - Tutti i task completati`) e fai `git commit -m "[Core DSP] Aggiunto polyphonic_pitch.rs: rilevamento multi-F0, pitch-shift polifonico e correzione intonazione con music_theory" && git push` (inclusi i 3 subtree `dsp`, `gui`, `validator`).
+===============================================================================
+P1 — ALTA PRIORITÀ (precisione numerica & real-time safety)
+===============================================================================
 
-task 10 — Audit & Fix Numerici/FFI su `clap-signal-host` e `clap-validator-host`
-Leggi `tools/clap-signal-host/src/main.rs` e `tools/clap-validator-host/src/main.rs`. Senza aggiungere nuove dipendenze esterne né nuovi crate:
-1. **Sicurezza FFI C-ABI:** Aggiungi null-check su `clap_plugin_entry`, `plugin->init()`, `plugin->process()`, `audio_input` e `audio_output`, e documenta con `// SAFETY:` i blocchi `unsafe extern "C"` nei due tool host (mantenendo `#![forbid(unsafe_code)]` su `core-dsp`, `greg_gui_core` e tutti i plugin).
-2. **Fix Matematici & Diagnostici:**
-   - Correggi `gain_db` in `20.0 * (out_rms / in_rms).max(1e-10).log10()`.
-   - Implementa il controllo reale `nan_detected` (`is_nan()` / `is_infinite()`) sui campioni di uscita in `clap-validator-host`.
-   - Sostituisci la cross-correlazione O(N^2) per la latenza con cross-correlazione FFT (`realfft` già presente), aggiungi finestra Hann + soglia noise floor in `thd_percent_full` e allinea la finestra di `bode_from_fft` a `latency_samples`.
-3. **Verifica & Sync Subtree:** Esegui `cargo test -p clap-signal-host -p clap-validator-host` e `cargo clippy -p clap-signal-host -p clap-validator-host --all-targets -- -D warnings` (`0` warning), spunta la voce in `TODO.md` e `tools/clap-validator-host/TODO.md`, svuota `doit.txt` (`# DOIT - Tutti i task completati`) e fai `git commit -m "[Tools] Fix numerici gain_db/THD/Bode, cross-correlazione FFT latenza e null-check FFI" && git push` (incluso `git subtree push --prefix=tools/clap-validator-host validator main`).
+task P1-1 — Portare Tutti i Plugin a `f64` Interno (task 10 + code review)
+  File: `plugins/greg-bay/src/lib.rs`, `plugins/greg-nl_ch/src/lib.rs`,
+        `plugins/greg-surgical-eq/src/lib.rs`
+  1. Sostituire `f32` con `f64` in tutta la catena DSP interna.
+  2. Cast a `f32` solo al confine host/plugin (`process()` I/O buffer).
+  3. Aggiornare parametri `FloatParam` con `f64` dove applicabile.
+  4. Verifica: `cargo test -p greg-bay -p greg-nl_ch -p greg-surgical-eq`
+
+task P1-2 — Supporto 1–8 Canali su `greg-bay` e `greg-nl_ch`
+  File: `plugins/greg-bay/src/lib.rs`, `plugins/greg-nl_ch/src/lib.rs`
+  1. Sostituire l'hard-coding stereo (canali 0–1) con iterazione su
+     `buffer.iter_samples()` + conteggio reale canali (1..=8).
+  2. Allineare al pattern già presente in `greg-surgical-eq`.
+  3. Verifica: `clap-signal-host` con canali Mono, 2.0, 5.1, 7.1.
+
+task P1-3 — Fix Matematici & Diagnostici Host (task 10 Item 2)
+  File: `tools/clap-signal-host/src/main.rs`, `tools/clap-validator-host/src/main.rs`
+  1. Correggere `gain_db` in `20.0 * (out_rms / in_rms).max(1e-10).log10()`.
+  2. Implementare `nan_detected` reale (`is_nan()` / `is_infinite()`)
+     sui campioni di uscita in `clap-validator-host`.
+  3. Sostituire cross-correlazione O(N²) per latenza con cross-correlazione
+     FFT (`realfft` già presente) + finestra Hann + soglia noise floor.
+  4. Allineare finestra `bode_from_fft` a `latency_samples`
+     (trim/pad se `latency_samples > fft_size/2`).
+  5. Verifica: `cargo test -p clap-signal-host -p clap-validator-host`
+
+task P1-4 — Spostare `set_latency_samples` Fuori da `process()`
+  File: `plugins/greg-bay/src/lib.rs`, `plugins/greg-surgical-eq/src/lib.rs`
+  1. Rimuovere `ctx.set_latency_samples()` dal percorso audio `process()`.
+  2. Spostare la notifica di latenza in `initialize()` o `reset()`.
+  3. Verifica: assenza di click/pop nel test di latenza variabile.
+
+===============================================================================
+P2 — MEDIA PRIORITÀ (manutenibilità & UI)
+===============================================================================
+
+task P2-1 — Refattorizzare `designer.rs` con Template Engine
+  File: `tools/clap-validator-host/src/designer.rs`
+  1. Sostituire stringhe HTML annidate con `minijinja` o template statici.
+  2. Esportare `gui_layout.json` strutturato (non stringhe concatenate).
+  3. Verifica: `cargo test -p clap-validator-host`
+
+task P2-2 — Attivare GUI 2D su Tutti i Plugin + Ore 12 Bipolari (task 3 Item 2)
+  File: `plugins/greg_nl_ch/src/lib.rs`, `plugins/greg_nl_mixer/src/lib.rs`,
+        `plugins/greg_bay/src/lib.rs`
+  1. Rendere cliccabili tutti i toggle/dropdown.
+  2. Attivare GUI 2D standard anche su `greg_nl_ch`, `greg_nl_mixer`, `greg_bay`.
+  3. Allineare lo `0.0` dei parametri bipolari esattamente a `0°` (ore 12).
+  4. Verifica: `cargo check` + ispezione visiva GUI.
+
+task P2-3 — Rimozione `Cargo.lock` da `.clineignore`
+  1. Rimuovere `Cargo.lock` da `.clineignore` per build riproducibili.
+  2. Verifica: `git status` mostra `Cargo.lock` tracciato.
+
+===============================================================================
+P3 — Bassa Priorità (nuovi plugin & documentazione)
+===============================================================================
+
+  (Descrizione invariata dal doit.txt originale)
+
+task P3-2 — Nuovi Plugin Lotto 2/3: `greg_tube_drive` & `greg_resonance_killer_eq` (20 → 22) [task 6]
+  (Descrizione invariata dal doit.txt originale)
+
+task P3-3 — Nuovi Plugin Lotto 3/3: `greg_1073_1081_eq` & `greg_550_560_eq` (22 → 24) [task 7]
+  (Descrizione invariata dal doit.txt originale)
+
+task P3-4 — Aggiornamento Documentazione
+  1. Aggiornare `docs/INVENTARIO.txt`, `docs/PLUGIN_CATALOG.md`,
+     `specs/outboard_hardware_research.md`, `core-dsp/README.txt`,
+     `ARCHITECTURE.md`.
+  2. Aggiornare `STATE.md`, `ROADMAP.md`, `TODO.md`.
+
+===============================================================================
+VERIFICA FINALE (da eseguire dopo ogni task P0/P1)
+===============================================================================
+
+  cargo test --workspace
+  cargo clippy --workspace --all-targets -- -D warnings  (0 warning)
+  cargo build --release --workspace
+  clap-signal-host  (18/18 PASS — 20/20 dopo P3-1, 22/22 dopo P3-2, 24/24 dopo P3-3)
+  Installa .clap in ~/.clap/Analog-vibe/

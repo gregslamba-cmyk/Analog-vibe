@@ -7,12 +7,13 @@ I riferimenti hardware e le specifiche documentate per le emulazioni analogiche 
 Stato "pianificato" significa non implementato; la presenza della scheda non equivale al completamento.
 
 ================================================================================
-1. STATO IMPLEMENTAZIONE ATTUALE (18 PLUGIN COMPILATI IN RELEASE CLAP + VST3)
+1. STATO IMPLEMENTAZIONE ATTUALE (20 PLUGIN COMPILATI IN RELEASE CLAP + VST3)
 ================================================================================
 - Dinamica (10): greg_76 (Rev A/D/E/F + All-Buttons), greg_a2a (Silverface/Vintage), greg_a3a, greg_2500 (2500/2500+), greg_bus_comp, greg_child (670/660), greg_160 (160VU/160X/160A), greg_165 (165/165A PeakStop), greg_gate, greg_limiter.
 - Equalizzatori (2): greg_eqp1a (EQP-1A/EQP-1A3), greg_surgical_eq.
 - Matrici & Utility (3): greg_ms_encoder, greg_ms_decoder, greg_phase.
 - Console & Routing Modulare (3): greg_nl_ch (stadio console non lineare), greg_nl_mixer (console analogica modulare dinamica 24ch + 8 bus), greg_bay (modular patchbay & sub-host CLAP).
+- Spazializzazione & Riverbero (2): greg_space (Riverbero Acustico 3D & FDN Studio Suite con posizionamento ITD/HRIR), greg_tape (Master Tape 7.5/15/30 IPS NAB/CCIR con isteresi magnetica e oversampling).
 
 ================================================================================
 2. COPERTURA COMPLETA DEL CATALOGO (IMPLEMENTATI + PIANIFICATI)

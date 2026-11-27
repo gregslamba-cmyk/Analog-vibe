@@ -1,0 +1,6 @@
+# /home/greg/analog-vibes/infra/agents/Dockerfile.dsp-architect
+# Immagine per DSP & Audio Architect (C/C++ compiler)
+FROM gcc:13-slim
+
+WORKDIR /workspace
+ENTRYPOINT ["gcc"]

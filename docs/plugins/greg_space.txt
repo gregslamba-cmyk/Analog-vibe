@@ -1,7 +1,7 @@
 ID: greg_space
-Categoria: processore di spaziatura audio
-Stato: pianificato
-Scopo: controllare larghezza stereo e posizione spaziale senza compromettere la compatibilita mono.
+Categoria: processore di spaziatura audio e riverbero
+Stato: implementato (release build OK)
+Scopo: riverbero acustico 3D con modulo FDN (Feedback Delay Network) e stanza acustica simulata, posizionamento spaziale (ITD/HRIR), larghezza stereo dipendente dalla frequenza, pan/depth e misura correlazione; bypass click-free e dry/wet crossfade.
 Requisiti: width dipendente dalla frequenza, pan/depth e misura correlazione; evitare effetti comb non dichiarati.
 Riutilizzare: routing_matrix, filtri e phase_inversion.
 Da documentare all'implementazione: routing, fase, controlli e test mono-compatibility.
