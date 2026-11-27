@@ -151,3 +151,7 @@ Prima di considerare completato qualsiasi plugin della suite Analog-Vibe, verifi
 - **Rule**: Do NOT place any other layout‑related files outside these directories. All references in `lib.rs` and `create_greg_editor_with_params` must point to the same relative path (`main` & `advanced` sections).
 
 *Added on 2026-11-23 by Direttore Tecnico.*
+
+## Sincronizzazione Repository `Digital-Vibe` (Subtree `suites/digital-vibes`)
+- Remote GitHub: `digital` (`https://github.com`)
+- Comando push subtree: `git subtree push --prefix=suites/digital-vibes digital main`

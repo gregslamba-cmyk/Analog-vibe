@@ -101,3 +101,9 @@ Usa sempre questi alias Cargo invece di `--workspace` durante lo sviluppo e la v
 - `cargo test-tools` / `cargo build-tools` -> verifica solo `clap-signal-host` e `clap-validator-host` (~20s)
 - `cargo build-digital` -> compila solo i plugin digitali (`greg_surgical_eq`, `greg_limiter`, `greg_gate`, `greg_phase`, `greg_ms_encoder`, `greg_ms_decoder`)
 - `cargo build-analog` -> compila solo i plugin analogici & console (`greg_76`, `greg_a2a`, `greg_a3a`, `greg_2500`, `greg_bus_comp`, `greg_child`, `greg_160`, `greg_165`, `greg_eqp1a`, `greg_nl_ch`, `greg_nl_mixer`, `greg_bay`)
+
+## Sincronizzazione 4° Subtree (`Digital-Vibe`)
+Ad ogni commit che tocca la suite `Digital-Vibe` (`suites/digital-vibes/`), oltre ai 3 subtree storici (`dsp`, `gui`, `validator`), esegui anche:
+```bash
+git subtree push --prefix=suites/digital-vibes digital main
+```
