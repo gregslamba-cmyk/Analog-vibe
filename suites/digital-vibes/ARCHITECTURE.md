@@ -40,4 +40,4 @@ Dual Licensing: GNU GPLv3+ / Licenza Commerciale Proprietaria.
 26. `greg_remic` — Allineamento di Fase & Tempo Multi-Microfono automatico (`AutoPhaseAligner`)
 27. `greg_ms_encoder` & `greg_ms_decoder` — Matrice Mid/Side pura f64
 28. `greg_stereo_imager` — Stereo Imager multibanda con Mono-Maker e micro-ritardo Haas
-29. `greg_resonator` — Micro-Feedback & Comb Resonator (`0.05 ms – 50.0 ms`, `Feedback Volume` bipolare `-100%..+100%`, `Damping` nel loop e limiter morbido anti-esplosione per risonanze metalliche, tubolari e Karplus-Strong)
+29. `greg_resonator` — Creative Micro-Feedback & Harmonic Sculptor (`0.05 ms – 50.0 ms` / `Hz` / `Note`, `Feedback Volume` bipolare `-100%..+100%`, Gate con Isteresi nel loop, EQ completo HPF/LPF + 2 bande parametriche ZDF nel feedback, Saturatori analogici selezionabili [Clean / Triode / Pentode / Transformer / Tape] e LFO multi-forma d'onda [Sine/Tri/Saw/Square/S&H/Random] su Volume, Feedback e Micro-Time)
