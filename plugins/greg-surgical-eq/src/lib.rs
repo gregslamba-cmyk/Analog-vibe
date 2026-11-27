@@ -14,6 +14,7 @@ use core_dsp::core_dsp_modules::{
 use nih_plug_vizia::vizia::prelude::*;
 use greg_gui_core::{GuiTelemetry, create_greg_editor_with_params};
 use greg_gui_core::prelude::*;
+use greg_gui_core::greg_static_params;
 use nih_plug::prelude::*;
 use plugin_support::CommonChannelParams;
 
@@ -350,7 +351,7 @@ impl Plugin for GregSurgicalEq {
                 }),
             ));
         }
-        let param_defs: &'static [greg_gui_core::ParamDef] = Box::leak(param_defs.into_boxed_slice());
+        let param_defs: &'static [greg_gui_core::ParamDef] = greg_static_params!(param_defs);
         create_greg_editor_with_params(
             "Greg Surgical EQ",
             self.telemetry.clone(),
