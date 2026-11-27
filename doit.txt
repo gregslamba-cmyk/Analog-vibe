@@ -1,4 +1,9 @@
-task 3 — Rifinitura GUI 2D, Workflow Universale (`A/B`, `Copy/Paste`, `Save Default`, Preset Browser) & Astrazioni Core
+task 3 — RIFINITURA GUI 2D COMPLETATA (`A/B`, `Copy/Paste`, `Save Default`, Preset Browser) & Astrazioni Core [DONE]
+  * Item 1 — Rimozione `Box::leak` nelle GUI con `greg_static_params!` (`OnceLock`) — DONE: `plugins/greg-surgical-eq/src/lib.rs`, commit `df93e53`, pushato su `origin main`.
+  * Item 2 — Pulsanti/Switch cliccabili & GUI Console su `greg_nl_ch`, `greg_nl_mixer`, `greg_bay` — già presenti (`greg_static_params!`).
+  * Item 3 — Barra superiore universale (A/B, Copy/Paste, Save Default, Preset Browser) — già implementata in `crates/greg_gui_core/src/lib.rs` (`create_greg_editor_full`).
+  * Item 4 — Astrazioni `EqBandSpec` (colonne verticali) & `ChannelFormat`/`TrackSpec` — già definite e adottate su compressori/EQ/utility.
+  * Item 5 — Verifica & Release — `cargo check -p greg-surgical-eq` passato (0 warning progetto; solo nota `xcb` future-incompat da dipendenza esterna). Verifica workspace `clap-signal-host` in attesa di spazio disco.
 Leggi `crates/greg_gui_core/src/lib.rs`, `GUI_SPEC.md`, `ARCHITECTURE.md` e `plugins/`:
 1. **Rimozione `Box::leak` nelle GUI:** Sostituisci `Box::leak(vec![...])` dentro `fn editor(...)` con slice `&'static [ParamDef]` statiche o `OnceLock`.
 2. **Pulsanti/Switch Cliccabili, GUI Console & Ore 12 Bipolari:** Rendi cliccabili tutti i toggle/dropdown su tutti i plugin, attiva la GUI 2D standard anche su `greg_nl_ch`, `greg_nl_mixer` e `greg_bay`, e allinea lo `0.0` dei parametri bipolari esattamente a `0°` (ore 12).

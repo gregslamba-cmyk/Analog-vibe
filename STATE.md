@@ -10,6 +10,6 @@ Copyright (c) 2026 Alberto Gregorio Ferraris. All rights reserved.
   - [x] Task 1: Bonifica P0/P1 Core-DSP Parte B (Zero-Alloc Real-Time, `FdnReverb` Hadamard $1/\sqrt{8}$, `AcousticRoom`, `Spatial3d` ITD, `PitchShifter` COLA, `LoudnessEngine` ITU-1770-4, `CompiledAudioGraph`).
 - **Coda Attiva (`doit.txt` — Task 3..8):**
   - [x] Task 2: Re-export completo `core-dsp/src/lib.rs` (`pub use core_dsp_modules::*`) + `WavetableOscillator` band-limited mip-mapped con morphing continuo (`synth_engine/wavetable_oscillator.rs`), `PitchTracker` YIN/pYIN + estrattore formanti (`pitch_shifter.rs`), `AutoPhaseAligner` cross-correlazione/ritardo frazionario/All-Pass (`routing_matrix.rs`).
-  - [ ] Task 3: Rifinitura GUI 2D (`Box::leak` -> static, Ore 12 bipolari, `EqBandSpec`, `ChannelFormat`/`TrackSpec`, barra universale `A/B`, `Copy/Paste`, `Save Default`, Preset Browser).
+  - [x] Task 3: GUI 2D rifinita — Box::leak rimosso con `greg_static_params!`, pulsanti cliccabili, GUI console su `greg_nl_ch/mixer/bay`, ore 12 BipolarKnob, EqBandSpec, ChannelFormat/TrackSpec, barra universale A/B/Copy/Paste/SaveDefault/PresetBrowser. Commit `df93e53`, pushato su `origin main`.
   - [x] Task 4: Hardware Reference Matching (`--match-reference`) & Orecchio Percettivo in `clap-validator-host`.
   - [ ] Task 5..7: Nuovi plugin da inventario ufficiale (`greg_space`, `greg_tape`, `greg_tube_drive`, `greg_resonance_killer_eq`, `greg_1073_1081_eq`, `greg_550_560_eq` → 24/24 PASS).
