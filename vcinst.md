@@ -155,3 +155,12 @@ Prima di considerare completato qualsiasi plugin della suite Analog-Vibe, verifi
 ## Sincronizzazione Repository `Digital-Vibe` (Subtree `suites/digital-vibes`)
 - Remote GitHub: `digital` (`https://github.com/gregslamba-cmyk/Digital-Vibe.git`)
 - Comando push subtree: `git subtree push --prefix=suites/digital-vibes digital main`
+
+## Sistema di Classificazione Bug & Quality Gate (Codice Colore)
+Ogni plugin, modulo `core-dsp` o tool host viene classificato su 5 livelli:
+- **NERO (Bloccante — Crash & Sicurezza):** Segfault, panic/`.unwrap()` nel thread audio, FFI senza null-check, out-of-bounds, allocazioni heap in `process()`, vulnerabilità nei parser preset/JSON.
+- **ROSSO (Bloccante — Matematica & Copyright):** Formule DSP errate, poli instabili, mancato silenzio `0.0 -> 0.0`, bug che passano il validatore ma degradano l'audio, **marchi registrati** in nomi/codice/UI/preset.
+- **GIALLO (Non pronto — Dimenticanze):** Funzioni non chiuse, controlli UI inerti o test mancanti che non causano bug audio né crash.
+- **BIANCO (Soglia Minima Test Audio):** Solo rifiniture minori/cosmetiche; **livello minimo obbligatorio prima di aprire un plugin per il test audio in DAW**.
+- **VERDE (Release Ready):** Nessun problema rilevato, `0` warning `clippy`, validatore `PASS` al 100%.
+
