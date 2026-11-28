@@ -5,58 +5,135 @@ Copyright (c) 2026 Alberto Gregorio Ferraris. All rights reserved.
 P0 — BLOCCANTI (Marchi Registrati & Zero-Panic Core-DSP)
 ===============================================================================
 
-task P0-1 — Rimozione Marchi Registrati da `greg-bay` (`SlotModule` enum) [Sottogruppo: Analog]
-  File: `plugins/greg_bay/src/lib.rs` (o `plugins/greg-bay/src/lib.rs`)
-  1. Rinominare tutte le varianti `SlotModule` eliminando qualsiasi marchio registrato (Pultec, 1176, LA-2A, Neve, 1073, SSL, API, DBX, Fairchild). Usare esclusivamente nomi descrittivi originali Greg Audio (es. `PassiveTubeEq`, `FetLimiter`, `OptoLeveler`, `ClassAPreEq`, `VariMuComp`, `VcaBusComp`, `VcaPunchComp`).
+task P0-1 — Rimozione Marchi Registrati da `greg_bay` (`SlotModule` enum) [Sottogruppo: Analog]
+  File: `plugins/greg_bay/src/lib.rs`
+  1. Rinominare tutte le varianti `SlotModule` eliminando qualsiasi marchio registrato (Pultec, 1176, LA-2A, Neve, 1073, SSL, API, DBX, Fairchild, Teletronix). Usare esclusivamente nomi descrittivi originali Greg Audio (es. `PassiveTubeEq`, `FetLimiter`, `OptoLeveler`, `ClassAPreEq`, `VariMuComp`, `VcaBusComp`, `VcaPunchComp`).
   2. Aggiornare match, etichette UI e commenti nel file.
-  3. Verifica: `cargo check -p greg_bay` (o nome crate reale) + `grep -riE "pultec|1176|la-2a|neve|1073|fairchild|dbx" plugins/greg_bay/` (0 risultati) + `cargo build-analog` + `clap-signal-host` su `libgreg_bay.so`.
+  3. Verifica: `cargo check -p greg_bay` + `grep -riE "pultec|1176|la-2a|neve|1073|fairchild|dbx|teletronix" plugins/greg_bay/` (0 risultati) + `cargo build-analog` + `clap-signal-host` su `libgreg_bay.so`.
 
 task P0-2 — Eliminazione di ogni `.unwrap()` in `core-dsp` [Sottogruppo: Core-DSP]
-  File: `core-dsp/src/core_dsp_modules/*.rs` (inclusi `surgical_eq.rs`, `vari_mu.rs`, `filters.rs`)
+  File: `core-dsp/src/core_dsp_modules/*.rs` (inclusi `surgical_eq.rs`, `vari_mu.rs`, `opto_compressor.rs`, `fdn_reverb.rs`)
   1. Cercare tutti i `.unwrap()` in `core-dsp/src/core_dsp_modules/` e sostituirli con `.unwrap_or(T::zero())`, `.unwrap_or_default()` o cast saturanti deterministi (zero panic nel thread audio).
-  2. Verifica: `cargo test-core` + `cargo clippy -p core-dsp -- -D warnings` (0 warning) + `git subtree push --prefix=core-dsp dsp main`.
+  2. Verifica: `cargo build-core` + `cargo clippy -p core-dsp -- -D warnings` + test `cargo test-core`.
+
+task P0-3 — `.unwrap()` in `surgical_eq.rs` (P0-3) [Sottogruppo: Core-DSP]
+  File: `core-dsp/src/core_dsp_modules/surgical_eq.rs`
+  1. Trovare e sostituire ogni `.unwrap()` con gestione deterministica sicura (zero panic).
+  2. Verifica: `cargo build-core` + `cargo clippy -p core-dsp -- -D warnings`.
+
+task P0-4 — Brand word "Fairchild" in `vari_mu.rs` header/comments [Sottogruppo: Core-DSP]
+  File: `core-dsp/src/core_dsp_modules/vari_mu.rs`
+  1. Rimuovere ogni riferimento al marchio "Fairchild 670/660" dal doc comment e dalle stringhe costanti.
+  2. Sostituire con nomenclatura tecnica Greg Audio (es. "Vari-Mu valve comp topology", "stadio valvolare a transconduttanza variabile").
+  3. Verifica: `grep -riE "fairchild" core-dsp/` (0 risultati) + `cargo build-core` + `cargo clippy -p core-dsp -- -D warnings`.
+
+task P0-5 — Brand word "Teletronix" in `opto_compressor.rs` header/comments [Sottogruppo: Core-DSP]
+  File: `core-dsp/src/core_dsp_modules/opto_compressor.rs`
+  1. Rimuovere ogni riferimento al marchio "Teletronix T4A/T4B" e "LA-2A & LA-3A" dal doc comment.
+  2. Sostituire con nomenclatura tecnica Greg Audio (es. "cella elettro-optica modello Greg-A2A / Greg-A3A").
+  3. Verifica: `grep -riE "teletronix|la-2a|la-3a" core-dsp/` (0 risultati) + `cargo build-core` + `cargo clippy -p core-dsp -- -D warnings`.
+
+task P0-6 — Aggiunta `#![forbid(unsafe_code)]` ai moduli core-dsp mancanti [Sottogruppo: Core-DSP]
+  File: `core-dsp/src/core_dsp_modules/acoustic_room.rs`, `spatial_3d.rs`, `panic_protection.rs`, `realtime_controls.rs`
+  1. Aggiungere `#![forbid(unsafe_code)]` all'inizio di ogni file (dopo il doc comment).
+  2. Verifica: `cargo build-core` + `cargo clippy -p core-dsp -- -D warnings` + grep `#![forbid(unsafe_code)]` in tutti i file `core_dsp_modules/*.rs` (tutti devono averlo).
+
+task P0-7 — Correzione normalizzazione matrice Hadamard FDN per N=16 [Sottogruppo: Core-DSP]
+  File: `core-dsp/src/core_dsp_modules/fdn_reverb.rs`
+  1. Verificare e correggere la normalizzazione della matrice Hadamard per il caso 16 linee (norm fattore 1/sqrt(16), non 1/sqrt(8)).
+  2. Verifica: `cargo build-core` + test unitari FDN se presenti + `cargo test-core`.
+
+task P0-8 — Sweep brand word rimanente nei moduli `core-dsp` già auditati [Sottogruppo: Core-DSP]
+  File: `core-dsp/src/core_dsp_modules/acoustic_room.rs`, `spatial_3d.rs`, `loudness_metering.rs`, `reference_profiles.rs`, `panic_protection.rs`, `realtime_controls.rs`
+  1. Cerca ogni parola proibita (Neve, SSL, Pultec, API, dbx, Urei, Fairchild, Teletronix, Lexicon, Genelec, Studer, Dolby, Marshall, Fender, Moog, Avantone, Adam) in doc comment, costanti, etichette parametri e preset.
+  2. Rimuovere o rinominare con nomenclatura tecnica Greg Audio.
+  3. Verifica: `grep -riE "pultec|1176|la-2a|neve|1073|fairchild|dbx|teletronix|ssl|api|dbx|urei|lexicon|genelec|studer|dolby|marshall|fender|moog|avantone|adam" core-dsp/` (0 risultati).
+
+task P2-10 — `gui_layout.json` assente [Sottogruppo: GUI]
+  File: `crates/clap-gui-designer/`
+  1. Creare fallback procedurale `GuiLayoutSpec` in Rust o definire `gui_layout.json` con griglia Vizia, tacche a ore 12, colori hardware.
+  2. Verifica: `cargo build-gui` + `cargo test-gui`.
 
 ===============================================================================
-P1 — ALTA PRIORITÀ (Perfezionamento Matematico `core-dsp` & Host FFT)
+P1 — ALTA PRIORITÀ (Perfezionamento Matematico core-dsp & Host)
 ===============================================================================
 
-task P1-1 — Fix Matematici Residui Host (`clap-signal-host` & `clap-validator-host`) [Sottogruppo: Tools]
-  File: `tools/clap-signal-host/src/main.rs`, `tools/clap-validator-host/src/main.rs`
-  1. Sostituire la cross-correlazione O(N^2) per la stima della latenza con cross-correlazione FFT (`realfft` già presente nelle dipendenze) + finestra Hann + soglia noise floor in `thd_percent_full`.
-  2. Assicurare che `bode_from_fft` gestisca correttamente anche `latency_samples > fft_size / 2` (trim/pad allineato).
-  3. Verifica: `cargo test-tools` + `cargo clippy -p clap-signal-host -p clap-validator-host -- -D warnings` + `git subtree push --prefix=tools/clap-validator-host validator main`.
+task P1-1 — Verifica equazioni ZDF & biquad stabili [Sottogruppo: Core-DSP]
+  File: `core-dsp/src/core_dsp_modules/zdf_filters.rs`, `filters.rs`
+  1. Conferma poles/zeros dentro unit circle per tutte le modulazioni rapide.
+  2. Verifica: `cargo build-core` + `cargo test-core`.
 
-task P1-2 — Perfezionamento `core-dsp` (RLC 2° Ordine, `AutoPhaseAligner`, `MATH_TABLES.md` & Safety Test) [Sottogruppo: Core-DSP]
-  File: `core-dsp/src/core_dsp_modules/*.rs`, `docs/MATH_TABLES.md`, `core-dsp/tests/core_dsp_numeric_safety.rs`
-  1. Audit `analog_variance.rs` e `analog_summing.rs`: verificare `f64` puro e zero allocazioni heap in `process()`.
-  2. Aggiungere `rlc_series.rs` e `rlc_parallel.rs` (reti RLC discretizzate con bilinear pre-warping `f64`) e `AutoPhaseAligner` in `routing_matrix.rs` (zero-alloc, `f64`, anti-click).
-  3. Creare `docs/MATH_TABLES.md` documentando formule e coefficienti di FDN Hadamard, K-Weighting ITU-R BS.1770-4, curve ISO 226 / Bark, filtri ZDF e isteresi Jiles-Atherton.
-  4. Aggiungere `core-dsp/tests/core_dsp_numeric_safety.rs` testando `0.0`, `f64::MAX`, `f64::NAN`, `f64::INF` su tutti i moduli `core-dsp`.
-  5. Verifica: `cargo test-core` + `cargo clippy -p core-dsp -- -D warnings` (0 warning) + `git subtree push --prefix=core-dsp dsp main`.
+task P1-2 — Filtro oversampling & resampling [Sottogruppo: Core-DSP]
+  File: `core-dsp/src/core_dsp_modules/resampler_bitdepth.rs`
+  1. Conferma che oversampling risiede in `resampler_bitdepth.rs` (non in `oversampler.rs`).
+  2. Verifica: `cargo build-core`.
 
-===============================================================================
-P2 — MEDIA PRIORITÀ (Pulizia Workspace & Layout GUI)
-===============================================================================
-
-task P2-1 — Tracciamento `Cargo.lock` & Template Statici `designer.rs` [Sottogruppo: Tools & GUI]
-  1. Rimuovere `Cargo.lock` da `.clineignore` così le build restano riproducibili.
-  2. Rifattorizzare `tools/clap-validator-host/src/designer.rs` separando i template HTML/JS statici (senza aggiungere dipendenze esterne) ed esportando `gui_layout.json` strutturato.
-  3. Verifica: `cargo test-tools` + `cargo clippy -p clap-validator-host -- -D warnings` + `git subtree push --prefix=tools/clap-validator-host validator main`.
+task P1-3 — Dynamic EQ, M/S per banda e Auto-Gain in `greg_surgical_eq` [Sottogruppo: GUI]
+  File: `crates/clap-gui-designer/`, `plugins/greg_surgical_eq/`
+  1. Layout a colonne verticali per banda (Freq, Gain, Q, Type, Solo/Bypass).
+  2. Curve interattive e controlli moderni.
+  3. Verifica: `cargo build-gui`.
 
 ===============================================================================
-P3 — NUOVI PLUGIN & MODULI FUTURI (Lotti di Espansione)
+P2 — MEDIA PRIORITÀ (GUI, Layout, Documentazione)
 ===============================================================================
 
-task P3-1 — Nuovi Plugin Lotto 2/3: `greg_tube_drive` & `greg_resonance_killer_eq` (20 -> 22 Plugin)
-  1. Implementare `plugins/greg_tube_drive` (`TubeStage` Triodo/Pentodo + `PsuSag` + `TransformerHysteresis` + `ADAA2` + `Oversampler`).
-  2. Implementare `plugins/greg_resonance_killer_eq` (`[ZdfSvf; 15]` + `EqBandSpec` + `SpectralAnalyzer` + Band Solo).
-  3. Verifica per sottogruppo (`cargo build -p greg_tube_drive -p greg_resonance_killer_eq` + `clap-signal-host` + installazione `.clap` in `~/.clap/Analog-vibe/`).
+task P2-10 — `gui_layout.json` assente (duplicato P0-10 per tracciamento GUI)
+  Vedi sopra.
 
-task P3-2 — Nuovi Plugin Lotto 3/3: `greg_1073_1081_eq` & `greg_550_560_eq` (22 -> 24 Plugin)
-  1. Implementare `plugins/greg_1073_1081_eq` (EQ britannico Classe A a induttori con selettore `1073` / `1081`).
-  2. Implementare `plugins/greg_550_560_eq` (EQ americano Proportional-Q con selettore `550A` / `550B` / `560`).
-  3. Verifica per sottogruppo (`cargo build -p greg_1073_1081_eq -p greg_550_560_eq` + `clap-signal-host` + installazione `.clap` in `~/.clap/Analog-vibe/`).
+task P2-11 — Aggiornamento `ARCHITECTURE.md` e `GUI_SPEC.md` [Sottogruppo: Doc]
+  File: `ARCHITECTURE.md`, `GUI_SPEC.md`
+  1. Rimuovere brand word "Pultec", "Neve", "SSL", "Marconi" e riferimenti legacy `greg_resonance_killer_eq`, `greg_1073_1081_eq`, `greg_550_560_eq`, `greg_ir_reverb`.
+  2. Mantieni sigle/numeri modello (es. `1a`, `76`, `a2a`, `73`, `2500`, `160`, `165`).
+  3. Aggiorna riferimento oversampling a `resampler_bitdepth.rs`.
 
-task P3-3 — Modulo Core Pitch Polifonico & Intonazione (`polyphonic_pitch.rs` in `core-dsp`)
-  1. Implementare `core-dsp/src/core_dsp_modules/polyphonic_pitch.rs` (`PolyphonicPitchDetector`, `PolyphonicNoteShifter` con phase-locking COLA e Formant Preservation, `AutoPitchProcessor` collegato a `music_theory.rs`), base per `greg_harmonizer` e `greg_pitch_clean` in `Digital-Vibe`.
+task P2-12 — Aggiornamento `docs/INVENTARIO.txt`, `STATE.md` [Sottogruppo: Doc]
+  1. Allinea con task completati e nuove milestone.
+
+===============================================================================
+P3 — BASSA PRIORITÀ (Nuovi moduli & plugin futuri)
+===============================================================================
+
+task P3-1 — Modulo Pitch Polifonico `polyphonic_pitch.rs` [Sottogruppo: Core-DSP]
+  File: `core-dsp/src/core_dsp_modules/polyphonic_pitch.rs`
+  1. Implementare `PolyphonicPitchDetector`, `PolyphonicNoteShifter` con phase-locking COLA e Formant Preservation, `AutoPitchProcessor` collegato a `music_theory.rs`.
   2. Verifica: `cargo test-core` + `cargo clippy -p core-dsp -- -D warnings` + `git subtree push --prefix=core-dsp dsp main`.
+
+task P3-2 — Plugin `greg_harmonizer` e `greg_pitch_clean` [Sottogruppo: Digital-Vibe]
+  File: `plugins/greg_harmonizer/`, `plugins/greg_pitch_clean/`
+  1. Implementazione skeleton CLAP/VST3 con GUI Vizia 2D e controlli hardware-style.
+  2. Verifica: `cargo build-digital` + `clap-signal-host`.
+
+===============================================================================
+Alias Cargo obbligatori (compilazione a lotti, spazio disco VM)
+===============================================================================
+# Verifica solo core-dsp (~10s):
+cargo test-core
+cargo build-core
+
+# Verifica solo GUI (~15s):
+cargo test-gui
+cargo build-gui
+
+# Verifica solo tools (~20s):
+cargo test-tools
+cargo build-tools
+
+# Plugin digitali / analogici a lotti:
+cargo build-digital
+cargo build-analog
+
+===============================================================================
+NEXT STEPS (priority order — dispatch Cline in lotti)
+===============================================================================
+1. Dispatch P0-7 (FDN Hadamard N=16 fix) + P0-4 (Fairchild) + P0-5 (Teletronix) → `cargo build-core` + `cargo test-core`.
+2. Dispatch P0-6 (`#![forbid(unsafe_code)]` in 4 moduli) → `cargo build-core` + clippy -D warnings.
+3. Dispatch P0-2 + P0-3 (eliminazione `.unwrap()` core-dsp + surgical_eq) → `cargo test-core` + clippy.
+4. Dispatch P0-8 (sweep brand word rimanente) → grep banned-list = 0.
+5. Dispatch P0-1 (brand removal greg_bay) → `cargo build-analog` + `clap-signal-host`.
+6. Dispatch P2-10 (gui_layout.json fallback procedurale) → `cargo build-gui`.
+7. `cargo check --workspace` + banned-list grep = 0; aggiorna `Cargo.toml` members, `docs/INVENTARIO.txt`, `STATE.md`.
+8. Eseguire `cargo build-analog` su lotti di 2-3 plugin, pulire `target/release/incremental` se libero < 2 GB.
+9. Continuare sweep trademark su eventuali remainder dei 20 plugin e documentazione.
+10. Ripristinare audit `core-dsp` su eventuali moduli non ancora verificati (es. `console_mixer.rs`, `component_models.rs`, `modulation_engine.rs`).
+Task P0-7: Fix Hadamard normalization factor in fdn_reverb.rs (1/sqrt(N) instead of 1/sqrt(8)) and re-run cargo build-core and cargo test-core.\n

@@ -120,18 +120,18 @@ pub enum SlotModule {
     #[id = "none"]
     #[name = "None"]
     None,
-    #[id = "greg_q-1a"]
-    #[name = "greg q-1a"]
-    VintageEq,
-    #[id = "greg_76"]
-    #[name = "greg 76"]
-    FetComp,
-    #[id = "greg_a2a"]
-    #[name = "greg a2a"]
-    OptoComp,
-    #[id = "greg_73"]
-    #[name = "greg 73"]
-    ConsolePre,
+    #[id = "greg_passive_tube_eq"]
+    #[name = "greg passive tube eq"]
+    PassiveTubeEq,
+    #[id = "greg_fet_limiter"]
+    #[name = "greg fet limiter"]
+    FetLimiter,
+    #[id = "greg_opto_leveler"]
+    #[name = "greg opto leveler"]
+    OptoLeveler,
+    #[id = "greg_class_a_pre_eq"]
+    #[name = "greg class a pre eq"]
+    ClassAPreEq,
     #[id = "tape"]
     #[name = "Tape Emulation"]
     Tape,
@@ -391,20 +391,32 @@ impl Plugin for GregBay {
         }
         let factor = OversamplingFactor::from(oversampling);
         let invert_left = self.params.invert_left.value();
-        let slot1 = 10.0f64.powf((self.params.slot_1.value() / 20.0).into());
-        let slot2 = 10.0f64.powf((self.params.slot_2.value() / 20.0).into());
-        let slot3 = 10.0f64.powf((self.params.slot_3.value() / 20.0).into());
-        let slot4 = 10.0f64.powf((self.params.slot_4.value() / 20.0).into());
+        // Clamp drive params to [-24, +24] dB before powf to prevent Inf/NaN from host automation overshoot
+        let clamp_db = |v: f32| -> f32 { v.clamp(-24.0, 24.0) };
+        let slot_drives = [
+            10.0f64.powf((clamp_db(self.params.slot_1.value()) / 20.0) as f64),
+            10.0f64.powf((clamp_db(self.params.slot_2.value()) / 20.0) as f64),
+            10.0f64.powf((clamp_db(self.params.slot_3.value()) / 20.0) as f64),
+            10.0f64.powf((clamp_db(self.params.slot_4.value()) / 20.0) as f64),
+        ];
         self.metering.begin_block();
         let pr = self.panic_protection.run(|| {
             for mut frame in buffer.iter_samples() {
                 for (channel, sample) in frame.iter_mut().enumerate() {
                     let input = if sample.is_finite() { *sample } else { 0.0 };
-                    let xl = if invert_left && channel == 0 { -input as f64 } else { input as f64 };
-                    let (drive, gain) = if channel % 2 == 0 { (slot1, slot3) } else { (slot2, slot4) };
-                    let wet = self.oversamplers[channel].process(xl, factor, |x| (x * drive).tanh() * gain);
-                    let dry = self.dry_delays[channel].process(xl);
-                    *sample = finite(self.bypass_crossfades[channel].process(dry, wet) as f32);
+                    let inv = if invert_left && channel == 0 { -1.0 } else { 1.0 };
+                    let base = input as f64 * inv;
+                    let mut xl = base;
+                    // Apply all 4 slots in series (Serial topology baseline);
+                    // RoutingMatrix handles topology switching when modules are instantiated.
+                    for drive in slot_drives {
+                        xl = (xl * drive).tanh();
+                    }
+                    let wet = self.oversamplers[channel].process(xl, factor, |x| x);
+                    let dry = self.dry_delays[channel].process(base);
+                    let out = self.bypass_crossfades[channel].process(dry, wet);
+                    *sample = finite(out as f32);
+                    // Third arg: gain reduction (dB), 0.0 until dynamics modules are implemented
                     self.metering.record_sample(input, *sample, 0.0);
                 }
             }
